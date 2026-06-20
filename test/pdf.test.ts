@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activitiesToPdf } from "../src/index.js";
-import type { DailyAction } from "../src/index.js";
+import { activitiesToPdf, growthToPdf, timelineToPdf } from "../src/index.js";
+import type { DailyAction, GrowthEntry } from "../src/index.js";
 
 describe("PDF exports", () => {
   it("creates a valid deterministic single-page PDF", () => {
@@ -47,6 +47,53 @@ describe("PDF exports", () => {
     expect(pdf).not.toContain("before");
     expect(pdf).not.toContain("after");
   });
+
+  it("exports growth rows and app-equivalent chart categories", () => {
+    const pdf = new TextDecoder().decode(growthToPdf([
+      growth({ uid: "a", dateMillis: Date.UTC(2026, 0, 1), weight: 5, height: 60, headSize: 40, notes: "First" }),
+      growth({ uid: "b", dateMillis: Date.UTC(2026, 1, 1), weight: 6, height: 62, headSize: 41 }),
+      growth({ uid: "deleted", dateMillis: Date.UTC(2026, 2, 1), weight: 7, deleted: true }),
+    ], {
+      babyName: "Ada",
+      generatedAt: 0,
+      weightUnit: "lb",
+      lengthUnit: "in",
+    }));
+    expect(pdf).toContain("Baby Daybook growth report");
+    expect(pdf).toContain("Measurements: 2");
+    expect(pdf).toContain("11.02");
+    expect(pdf).toContain("23.62");
+    expect(pdf).toContain("Weight chart: 2 points");
+    expect(pdf).toContain("Height chart: 2 points");
+    expect(pdf).toContain("Head-size chart: 2 points");
+    expectValidXref(pdf);
+  });
+
+  it("supports selecting growth chart categories", () => {
+    const pdf = new TextDecoder().decode(growthToPdf([], {
+      generatedAt: 0,
+      includeWeightChart: false,
+      includeHeightChart: true,
+      includeHeadSizeChart: false,
+    }));
+    expect(pdf).not.toContain("Weight chart");
+    expect(pdf).toContain("Height chart: no data");
+    expect(pdf).not.toContain("Head-size chart");
+  });
+
+  it("exports a day-grouped activity timeline with configurable hour labels", () => {
+    const pdf = new TextDecoder().decode(timelineToPdf([
+      activity({ uid: "a", type: "sleeping", startMillis: Date.UTC(2026, 0, 1, 20), endMillis: Date.UTC(2026, 0, 1, 22) }),
+      activity({ uid: "b", type: "bottle", startMillis: Date.UTC(2026, 0, 2, 1), duration: 15 * 60_000, notes: "Night feed" }),
+    ], { generatedAt: 0, hourLabelInterval: 6 }));
+    expect(pdf).toContain("Baby Daybook timeline report");
+    expect(pdf).toContain("Hour labels: every 6 hours");
+    expect(pdf).toContain("Hours: 00:00 06:00 12:00 18:00");
+    expect(pdf).toContain("2026-01-01");
+    expect(pdf).toContain("2026-01-02");
+    expect(pdf).toContain("Night feed");
+    expectValidXref(pdf);
+  });
 });
 
 function expectValidXref(pdf: string): void {
@@ -61,4 +108,8 @@ function expectValidXref(pdf: string): void {
 
 function activity(update: Partial<DailyAction>): DailyAction {
   return { uid: "id", userUid: "u", babyUid: "b", type: "other", startMillis: 0, ...update };
+}
+
+function growth(update: Partial<GrowthEntry>): GrowthEntry {
+  return { uid: "id", userUid: "u", babyUid: "b", dateMillis: 0, ...update };
 }

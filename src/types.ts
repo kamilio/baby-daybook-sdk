@@ -461,3 +461,21 @@ export interface ActivityPdfOptions {
   toMillis?: number;
   includeDeleted?: boolean;
 }
+
+export interface GrowthPdfOptions {
+  title?: string;
+  babyName?: string;
+  generatedAt?: Date | number;
+  fromMillis?: number;
+  toMillis?: number;
+  includeDeleted?: boolean;
+  weightUnit?: "kg" | "lb";
+  lengthUnit?: "cm" | "in";
+  includeWeightChart?: boolean;
+  includeHeightChart?: boolean;
+  includeHeadSizeChart?: boolean;
+}
+
+export interface TimelinePdfOptions extends ActivityPdfOptions {
+  hourLabelInterval?: 1 | 2 | 3 | 4 | 6 | 12;
+}

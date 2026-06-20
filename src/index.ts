@@ -20,7 +20,7 @@ export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeA
 export { CallableFunctionsClient, FamilyClient } from "./functions.js";
 export type { BabyDaybookCloudFunction } from "./functions.js";
 export { paths } from "./paths.js";
-export { activitiesToPdf } from "./pdf.js";
+export { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";
 export {
   getExpiredReminderMillis,

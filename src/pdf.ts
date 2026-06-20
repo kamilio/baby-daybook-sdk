@@ -1,4 +1,4 @@
-import type { ActivityPdfOptions, DailyAction } from "./types.js";
+import type { ActivityPdfOptions, DailyAction, GrowthEntry, GrowthPdfOptions, TimelinePdfOptions } from "./types.js";
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
@@ -30,6 +30,56 @@ export function activitiesToPdf(
   return encodePdf(pages.length === 0 ? [[""]] : pages);
 }
 
+export function growthToPdf(
+  entries: readonly GrowthEntry[],
+  options: GrowthPdfOptions = {},
+): Uint8Array {
+  const generatedAt = options.generatedAt === undefined ? new Date() : new Date(options.generatedAt);
+  const weightUnit = options.weightUnit ?? "kg";
+  const lengthUnit = options.lengthUnit ?? "cm";
+  const rows = entries
+    .filter((entry) => options.includeDeleted || !entry.deleted)
+    .filter((entry) => options.fromMillis === undefined || entry.dateMillis >= options.fromMillis)
+    .filter((entry) => options.toMillis === undefined || entry.dateMillis <= options.toMillis)
+    .sort((left, right) => left.dateMillis - right.dateMillis);
+  const lines = [
+    options.title ?? "Baby Daybook growth report",
+    options.babyName ? `Baby: ${options.babyName}` : undefined,
+    `Generated: ${formatTimestamp(generatedAt.getTime())}`,
+    `Measurements: ${rows.length}`,
+    "",
+    `Date             Weight (${weightUnit}) Height (${lengthUnit}) Head (${lengthUnit}) Notes`,
+    "--------------------------------------------------------------------------",
+    ...rows.map((entry) => growthLine(entry, weightUnit, lengthUnit)),
+    "",
+    ...growthTrendLines(rows, options, weightUnit, lengthUnit),
+  ].filter((line): line is string => line !== undefined);
+  return encodePdf(chunk(lines, LINES_PER_PAGE));
+}
+
+export function timelineToPdf(
+  activities: readonly DailyAction[],
+  options: TimelinePdfOptions = {},
+): Uint8Array {
+  const generatedAt = options.generatedAt === undefined ? new Date() : new Date(options.generatedAt);
+  const rows = activities
+    .filter((activity) => options.includeDeleted || !activity.deleted)
+    .filter((activity) => options.fromMillis === undefined || activity.startMillis >= options.fromMillis)
+    .filter((activity) => options.toMillis === undefined || activity.startMillis <= options.toMillis)
+    .sort((left, right) => left.startMillis - right.startMillis);
+  const interval = options.hourLabelInterval ?? 3;
+  const lines = [
+    options.title ?? "Baby Daybook timeline report",
+    options.babyName ? `Baby: ${options.babyName}` : undefined,
+    `Generated: ${formatTimestamp(generatedAt.getTime())}`,
+    `Activities: ${rows.length}`,
+    `Hour labels: every ${interval} hour${interval === 1 ? "" : "s"}`,
+    "",
+    ...timelineLines(rows, interval),
+  ].filter((line): line is string => line !== undefined);
+  return encodePdf(chunk(lines, LINES_PER_PAGE));
+}
+
 function activityLine(activity: DailyAction): string {
   const durationMillis = activity.duration ?? Math.max(0, (activity.endMillis ?? activity.startMillis) - activity.startMillis);
   const duration = durationMillis > 0 ? formatDuration(durationMillis) : "";
@@ -43,6 +93,67 @@ function activityLine(activity: DailyAction): string {
     fit(amount, 12),
     fit(activity.notes ?? "", 24),
   ].join(" ");
+}
+
+function growthLine(entry: GrowthEntry, weightUnit: "kg" | "lb", lengthUnit: "cm" | "in"): string {
+  return [
+    fit(formatDate(entry.dateMillis), 16),
+    fit(formatMeasurement(convertWeight(entry.weight, weightUnit)), 11),
+    fit(formatMeasurement(convertLength(entry.height, lengthUnit)), 11),
+    fit(formatMeasurement(convertLength(entry.headSize, lengthUnit)), 10),
+    fit(entry.notes ?? "", 25),
+  ].join(" ");
+}
+
+function growthTrendLines(entries: readonly GrowthEntry[], options: GrowthPdfOptions, weightUnit: "kg" | "lb", lengthUnit: "cm" | "in"): string[] {
+  const lines: string[] = [];
+  if (options.includeWeightChart !== false) lines.push(trendLine("Weight chart", entries, (entry) => convertWeight(entry.weight, weightUnit), weightUnit));
+  if (options.includeHeightChart !== false) lines.push(trendLine("Height chart", entries, (entry) => convertLength(entry.height, lengthUnit), lengthUnit));
+  if (options.includeHeadSizeChart !== false) lines.push(trendLine("Head-size chart", entries, (entry) => convertLength(entry.headSize, lengthUnit), lengthUnit));
+  return lines;
+}
+
+function trendLine(label: string, entries: readonly GrowthEntry[], select: (entry: GrowthEntry) => number | undefined, unit: string): string {
+  const values = entries.map((entry) => ({ dateMillis: entry.dateMillis, value: select(entry) })).filter((item): item is { dateMillis: number; value: number } => item.value !== undefined);
+  if (values.length === 0) return `${label}: no data`;
+  const minimum = Math.min(...values.map((item) => item.value));
+  const maximum = Math.max(...values.map((item) => item.value));
+  const latest = values[values.length - 1]!;
+  return `${label}: ${values.length} points, min ${formatMeasurement(minimum)} ${unit}, max ${formatMeasurement(maximum)} ${unit}, latest ${formatMeasurement(latest.value)} ${unit} on ${formatDate(latest.dateMillis)}`;
+}
+
+function timelineLines(activities: readonly DailyAction[], interval: number): string[] {
+  const lines: string[] = [];
+  let currentDay = "";
+  for (const activity of activities) {
+    const day = formatDate(activity.startMillis);
+    if (day !== currentDay) {
+      if (lines.length > 0) lines.push("");
+      currentDay = day;
+      lines.push(day, hourLabels(interval), "Time        Type                     End      Duration   Notes");
+      lines.push("--------------------------------------------------------------------------");
+    }
+    lines.push(timelineActivityLine(activity));
+  }
+  return lines.length === 0 ? ["No activities"] : lines;
+}
+
+function timelineActivityLine(activity: DailyAction): string {
+  const endMillis = activity.endMillis ?? (activity.duration === undefined ? undefined : activity.startMillis + activity.duration);
+  const durationMillis = activity.duration ?? (endMillis === undefined ? 0 : Math.max(0, endMillis - activity.startMillis));
+  return [
+    fit(formatTime(activity.startMillis), 11),
+    fit(activity.type, 24),
+    fit(endMillis === undefined ? "" : formatTime(endMillis), 8),
+    fit(durationMillis > 0 ? formatDuration(durationMillis) : "", 10),
+    fit(activity.notes ?? "", 20),
+  ].join(" ");
+}
+
+function hourLabels(interval: number): string {
+  const labels: string[] = [];
+  for (let hour = 0; hour < 24; hour += interval) labels.push(`${String(hour).padStart(2, "0")}:00`);
+  return `Hours: ${labels.join(" ")}`;
 }
 
 function encodePdf(pages: readonly (readonly string[])[]): Uint8Array {
@@ -104,11 +215,34 @@ function formatTimestamp(millis: number): string {
   return new Date(millis).toISOString().replace("T", " ").slice(0, 16);
 }
 
+function formatDate(millis: number): string {
+  return new Date(millis).toISOString().slice(0, 10);
+}
+
+function formatTime(millis: number): string {
+  return new Date(millis).toISOString().slice(11, 16);
+}
+
 function formatDuration(millis: number): string {
   const totalMinutes = Math.round(millis / 60_000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function convertWeight(value: number | undefined, unit: "kg" | "lb"): number | undefined {
+  if (value === undefined) return undefined;
+  return unit === "lb" ? value * 2.2046226218 : value;
+}
+
+function convertLength(value: number | undefined, unit: "cm" | "in"): number | undefined {
+  if (value === undefined) return undefined;
+  return unit === "in" ? value / 2.54 : value;
+}
+
+function formatMeasurement(value: number | undefined): string {
+  if (value === undefined) return "";
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function fit(value: string, width: number): string {

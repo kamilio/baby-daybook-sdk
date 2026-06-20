@@ -13,6 +13,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - CDC, WHO, and CDC Down syndrome growth percentile calculations using the app's bundled LMS reference data.
 - Baby Daybook's 42 bundled sleep schedules, corrected-age handling, age buckets, transition options, and nap-count selection.
 - Full JSON backups, restore, activity CSV/PDF exports, activity summaries, and polling-based change streams.
+- PDF exports matching the app's daily-list, growth, and timeline report modes.
 - Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
 - Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
@@ -123,6 +124,21 @@ The statistics screen's recommendation ranges are also available directly:
 const recommendation = await baby.getSleepRecommendation();
 const grouped = listGroupedSleepRecommendations();
 ```
+
+## PDF exports
+
+The Android app exposes daily-list, growth, and timeline PDF modes. The SDK provides deterministic equivalents suitable for saving, emailing, or further processing:
+
+```ts
+const dailyListPdf = await baby.exportActivitiesPdf();
+const growthPdf = await baby.exportGrowthPdf({
+  weightUnit: "lb",
+  lengthUnit: "in",
+});
+const timelinePdf = await baby.exportTimelinePdf({ hourLabelInterval: 3 });
+```
+
+Growth reports include measurement rows and independently selectable weight, height, and head-size trend sections. Timeline reports group activities by day and reproduce the app's hour-label concept.
 
 ## Family sharing
 

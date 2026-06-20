@@ -4,7 +4,7 @@ import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange 
 import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
-import { activitiesToPdf } from "./pdf.js";
+import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
 import { resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
@@ -35,6 +35,7 @@ import type {
   DailyNote,
   FileMetadata,
   GrowthEntry,
+  GrowthPdfOptions,
   ListOptions,
   Moment,
   Purchase,
@@ -45,6 +46,7 @@ import type {
   SleepRecommendation,
   SleepPredictionResult,
   Tooth,
+  TimelinePdfOptions,
   User,
   UserAcceptedInvite,
   UserCreatedBaby,
@@ -295,6 +297,22 @@ export class BabyClient {
   async exportActivitiesPdf(options: ActivityPdfOptions = {}): Promise<Uint8Array> {
     const baby = await this.get();
     return activitiesToPdf(await this.activities.list({ includeDeleted: options.includeDeleted }), {
+      ...options,
+      babyName: options.babyName ?? baby?.name,
+    });
+  }
+
+  async exportGrowthPdf(options: GrowthPdfOptions = {}): Promise<Uint8Array> {
+    const baby = await this.get();
+    return growthToPdf(await this.growth.list({ includeDeleted: options.includeDeleted }), {
+      ...options,
+      babyName: options.babyName ?? baby?.name,
+    });
+  }
+
+  async exportTimelinePdf(options: TimelinePdfOptions = {}): Promise<Uint8Array> {
+    const baby = await this.get();
+    return timelineToPdf(await this.activities.list({ includeDeleted: options.includeDeleted }), {
       ...options,
       babyName: options.babyName ?? baby?.name,
     });

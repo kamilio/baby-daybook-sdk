@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
-import type { Baby, DailyAction } from "../src/index.js";
+import type { Baby, DailyAction, GrowthEntry } from "../src/index.js";
 import { mockFetch } from "./helpers.js";
 
 describe("BabyDaybookClient", () => {
@@ -47,7 +47,7 @@ describe("BabyClient", () => {
   });
 
   it("manages attachments, summaries, CSV, and backups", async () => {
-    const { baby, client, activityRepo } = configuredBaby();
+    const { baby, client, activityRepo, growthRepo } = configuredBaby();
     const metadata = repo<{ itemUid: string; babyUid: string; fileName: string; deleted?: boolean }>([]);
     (baby as any).fileMetadata = vi.fn(() => metadata);
     (client as any).storage = {
@@ -57,6 +57,7 @@ describe("BabyClient", () => {
       delete: vi.fn(async () => undefined),
     };
     activityRepo.items = [activity({ uid: "a", type: "bottle", duration: 100, volume: 60 })];
+    growthRepo.items = [{ uid: "g", userUid: "user", babyUid: "baby", dateMillis: 100, weight: 5 }];
 
     await expect(baby.uploadAttachment("moments", "m", "photo.jpg", "image")).resolves.toMatchObject({ itemUid: "m" });
     await expect(baby.downloadAttachment("moments", "m", "photo.jpg")).resolves.toEqual(new Uint8Array([1, 2]));
@@ -64,6 +65,9 @@ describe("BabyClient", () => {
     await baby.deleteAttachment("moments", "m", "photo.jpg");
     await expect(baby.summarizeActivities()).resolves.toMatchObject({ count: 1, totalVolume: 60 });
     await expect(baby.exportActivitiesCsv()).resolves.toContain("bottle");
+    await expect(baby.exportActivitiesPdf()).resolves.toEqual(expect.any(Uint8Array));
+    await expect(baby.exportGrowthPdf()).resolves.toEqual(expect.any(Uint8Array));
+    await expect(baby.exportTimelinePdf()).resolves.toEqual(expect.any(Uint8Array));
 
     const backup = await baby.createBackup();
     expect(backup).toMatchObject({ format: "baby-daybook-sdk-backup", baby: { uid: "baby" } });
@@ -108,17 +112,18 @@ function configuredBaby() {
   (client as any).userCreatedBabies = repo([{ babyUid: "baby" }]);
   const baby = new BabyClient(client, "baby");
   const activityRepo = repo<DailyAction>([]);
+  const growthRepo = repo<GrowthEntry>([]);
   (baby as any).activityTypes = repo([]);
   (baby as any).activities = activityRepo;
   (baby as any).groups = repo([]);
-  (baby as any).growth = repo([]);
+  (baby as any).growth = growthRepo;
   (baby as any).moments = repo([]);
   (baby as any).dailyNotes = repo([]);
   (baby as any).teething = repo([]);
   (baby as any).reminders = repo([]);
   (baby as any).settings = repo([]);
   (baby as any).fileMetadata = vi.fn(() => repo([]));
-  return { baby, client, activityRepo };
+  return { baby, client, activityRepo, growthRepo };
 }
 
 function repo<T extends Record<string, any>>(initial: T[]) {
