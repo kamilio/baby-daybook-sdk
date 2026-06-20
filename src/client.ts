@@ -1,4 +1,13 @@
 import { activitiesToCsv, summarizeActivities } from "./analytics.js";
+import {
+  findOverlappingActivities,
+  getInProgressActivities,
+  getLastActivities,
+  getLastActivity,
+  getLastAmountForGroup,
+  type ActivityAmount,
+  type LastActivityOptions,
+} from "./activity-queries.js";
 import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } from "./auth.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient } from "./firestore.js";
@@ -311,6 +320,40 @@ export class BabyClient {
       updatedMillis: Date.now(),
       inProgress: input.inProgress ?? true,
     });
+  }
+
+  async getLastActivity(type: string, options: LastActivityOptions = {}): Promise<DailyAction | undefined> {
+    return getLastActivity(await this.activities.list(), type, options);
+  }
+
+  async getLastActivities(types?: readonly string[], atMillis = Date.now()): Promise<DailyAction[]> {
+    return getLastActivities(await this.activities.list(), types, atMillis);
+  }
+
+  async getInProgressActivities(types?: readonly string[]): Promise<DailyAction[]> {
+    return getInProgressActivities(await this.activities.list(), types);
+  }
+
+  async getInProgressActivity(type: string): Promise<DailyAction | undefined> {
+    return (await this.getInProgressActivities([type]))[0];
+  }
+
+  async findOverlappingActivities(
+    candidate: Pick<DailyAction, "uid" | "type" | "startMillis" | "endMillis" | "inProgress">,
+    atMillis = Date.now(),
+  ): Promise<DailyAction[]> {
+    return findOverlappingActivities(await this.activities.list(), candidate, atMillis);
+  }
+
+  async hasOverlappingActivity(
+    candidate: Pick<DailyAction, "uid" | "type" | "startMillis" | "endMillis" | "inProgress">,
+    atMillis = Date.now(),
+  ): Promise<boolean> {
+    return (await this.findOverlappingActivities(candidate, atMillis)).length > 0;
+  }
+
+  async getLastAmountForGroup(type: string, groupUid: string): Promise<ActivityAmount | undefined> {
+    return getLastAmountForGroup(await this.activities.list(), type, groupUid);
   }
 
   async stopActivity(uid: string, endMillis = Date.now()): Promise<DailyAction> {

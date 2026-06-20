@@ -36,6 +36,24 @@ describe("BabyDaybookClient", () => {
 });
 
 describe("BabyClient", () => {
+  it("exposes native last, active, overlap, and group-amount queries", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    activityRepo.items = [
+      activity({ uid: "old", type: "bottle", startMillis: 100, groupUid: "formula", amount: 90, amountUnit: "ml" }),
+      activity({ uid: "new", type: "bottle", startMillis: 200, groupUid: "formula", amount: 120, amountUnit: "ml", inProgress: true }),
+      activity({ uid: "sleep", type: "sleeping", startMillis: 150, inProgress: true }),
+    ];
+
+    await expect(baby.getLastActivity("bottle", { atMillis: 1_000 })).resolves.toMatchObject({ uid: "new" });
+    await expect(baby.getLastActivities(["bottle", "sleeping"], 1_000)).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ uid: "new" }),
+      expect.objectContaining({ uid: "sleep" }),
+    ]));
+    await expect(baby.getInProgressActivity("bottle")).resolves.toMatchObject({ uid: "new" });
+    await expect(baby.getLastAmountForGroup("bottle", "formula")).resolves.toEqual({ amount: 120, amountUnit: "ml" });
+    await expect(baby.hasOverlappingActivity(activity({ uid: "candidate", type: "bottle", startMillis: 150, endMillis: 250 }))).resolves.toBe(true);
+  });
+
   it("edits the baby and controls timed activities", async () => {
     const { baby, activityRepo } = configuredBaby();
     await expect(baby.get()).resolves.toMatchObject({ uid: "baby" });

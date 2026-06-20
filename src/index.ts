@@ -1,4 +1,13 @@
 export { activitiesToCsv, summarizeActivities } from "./analytics.js";
+export {
+  BABY_DAYBOOK_ACTIVITY_FUTURE_GRACE_MILLIS,
+  findOverlappingActivities,
+  getInProgressActivities,
+  getLastActivities,
+  getLastActivity,
+  getLastAmountForGroup,
+} from "./activity-queries.js";
+export type { ActivityAmount, LastActivityOptions } from "./activity-queries.js";
 export { AuthSession, BabyDaybookAuth } from "./auth.js";
 export type { AuthOptions, FirebaseAccount, FirebaseProviderInfo, OAuthCredential } from "./auth.js";
 export { BabyDaybookClient, BabyClient } from "./client.js";

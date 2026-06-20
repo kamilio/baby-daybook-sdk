@@ -86,6 +86,17 @@ await baby.switchBreastfeedingSide(feeding.uid, "right");
 await baby.stopActivity(feeding.uid);
 ```
 
+The native activity queries are available without a local SQLite dependency:
+
+```ts
+const lastBottle = await baby.getLastActivity("bottle");
+const activeTimers = await baby.getInProgressActivities();
+const previousAmount = await baby.getLastAmountForGroup("bottle", groupUid);
+const overlaps = await baby.findOverlappingActivities(candidateActivity);
+```
+
+Last-activity queries reproduce the app's one-minute future-entry grace window. Overlap detection uses the same inclusive start boundary and treats an existing in-progress activity as open-ended.
+
 All direct collection repositories provide `list`, `get`, `save`, `softDelete`, and `hardDelete`. Prefer `softDelete` because the mobile app uses tombstones to synchronize deletions.
 
 ## Search and growth
