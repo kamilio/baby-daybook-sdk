@@ -5,7 +5,7 @@ import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
 import { CollectionRepository } from "./repository.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
-import { selectSleepScheduleForBaby } from "./sleep-prediction.js";
+import { predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { FirebaseStorageClient } from "./storage.js";
 import type {
   ActivityGroup,
@@ -31,6 +31,7 @@ import type {
   Purchase,
   Reminder,
   SampleSleepSchedule,
+  SleepPredictionResult,
   Tooth,
   User,
   UserAcceptedInvite,
@@ -278,6 +279,17 @@ export class BabyClient {
     const baby = await this.get();
     if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
     return selectSleepScheduleForBaby(baby, at, napCount ?? baby.sleepPredictionNapCount);
+  }
+
+  async predictSleep(day: Date | number = Date.now(), napCount?: number): Promise<SleepPredictionResult> {
+    const baby = await this.get();
+    if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
+    return predictSleepSchedule({
+      baby,
+      day,
+      napCount,
+      activities: await this.activities.list(),
+    });
   }
 
   async createBackup(): Promise<BabyDaybookBackup> {

@@ -94,12 +94,15 @@ The SDK includes the schedule table and selection behavior recovered from the An
 ```ts
 const schedule = await baby.getSampleSleepSchedule();
 const dated = materializeSleepSchedule(schedule, new Date());
+const prediction = await baby.predictSleep(new Date());
 
 const transitionOptions = getExpandedSleepSchedulesForAge(12);
 const oneNapSchedule = selectSleepSchedule({ ageMonths: 12, napCount: 1 });
 ```
 
 `getSleepSchedulesForAge` follows the app's exact age buckets: monthly schedules through 23 months, then the 24-, 36-, and 48-month tables. `getExpandedSleepSchedulesForAge` includes nearby higher- and lower-nap transition schedules, and `selectSleepSchedule` chooses the exact or nearest nap count with the same lower-count tie break as the app.
+
+`predictSleepSchedule` and `baby.predictSleep` combine that reference schedule with recorded `sleeping` activities. Completed or in-progress naps shift the remaining naps and bedtime through the schedule's wake windows, while generated times use the app's five-minute increments.
 
 ## Family sharing
 

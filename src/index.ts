@@ -17,6 +17,7 @@ export {
   getSleepSchedulesForAge,
   listSampleSleepSchedules,
   materializeSleepSchedule,
+  predictSleepSchedule,
   selectSleepSchedule,
   selectSleepScheduleForBaby,
 } from "./sleep-prediction.js";

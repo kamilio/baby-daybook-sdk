@@ -3,9 +3,13 @@ import type {
   Baby,
   DatedSleepSchedule,
   DatedSleepTimeRange,
+  DailyAction,
+  PredictedSleep,
   SampleSleepSchedule,
   SleepClockTime,
   SleepScheduleSelectionInput,
+  SleepPredictionInput,
+  SleepPredictionResult,
   SleepTimeRange,
 } from "./types.js";
 
@@ -92,6 +96,64 @@ export function materializeSleepSchedule(schedule: SampleSleepSchedule, day: Dat
   };
 }
 
+export function predictSleepSchedule(input: SleepPredictionInput): SleepPredictionResult {
+  const ageMonths = babyAdjustedAgeMonths(input.baby, input.day);
+  const napCount = input.napCount ?? input.baby.sleepPredictionNapCount;
+  if (napCount === undefined) throw new RangeError("The baby must have a sleep prediction nap count");
+  const sampleSchedule = selectSleepSchedule({
+    ageMonths,
+    napCount,
+  });
+  const dated = materializeSleepSchedule(sampleSchedule, input.day);
+  const nowMillis = input.now === undefined ? Date.now() : toMillis(input.now);
+  const recordedNaps = getRecordedNaps(input.activities ?? [], dated, nowMillis);
+  const sleeps: PredictedSleep[] = [];
+  let previousEnd: number | undefined;
+
+  for (let index = 0; index < dated.naps.length; index += 1) {
+    const sampleNap = dated.naps[index]!;
+    const recorded = recordedNaps[index];
+    if (recorded) {
+      const endMillis = recorded.endMillis ?? roundToFiveMinutes(recorded.startMillis + duration(sampleNap));
+      sleeps.push({
+        kind: "nap",
+        number: index + 1,
+        status: recorded.endMillis === undefined || recorded.inProgress ? "inProgress" : "recorded",
+        startMillis: recorded.startMillis,
+        endMillis,
+      });
+      previousEnd = endMillis;
+      continue;
+    }
+
+    const samplePreviousEnd = index === 0 ? undefined : dated.naps[index - 1]!.endMillis;
+    const wakeWindow = samplePreviousEnd === undefined ? undefined : sampleNap.startMillis - samplePreviousEnd;
+    const startMillis = previousEnd === undefined || wakeWindow === undefined
+      ? sampleNap.startMillis
+      : roundToFiveMinutes(previousEnd + wakeWindow);
+    const endMillis = roundToFiveMinutes(startMillis + duration(sampleNap));
+    sleeps.push({ kind: "nap", number: index + 1, status: "predicted", startMillis, endMillis });
+    previousEnd = endMillis;
+  }
+
+  const finalSampleEnd = dated.naps.at(-1)?.endMillis;
+  const finalWakeWindow = finalSampleEnd === undefined
+    ? 0
+    : dated.nightSleep.startMillis - finalSampleEnd;
+  const predictedBedtime = previousEnd === undefined
+    ? dated.nightSleep.startMillis
+    : roundToFiveMinutes(previousEnd + finalWakeWindow);
+  const nightDuration = duration(dated.nightSleep);
+  sleeps.push({
+    kind: "nightSleep",
+    status: "predicted",
+    startMillis: predictedBedtime,
+    endMillis: roundToFiveMinutes(predictedBedtime + nightDuration),
+  });
+
+  return { ageMonths, sampleSchedule, sleeps };
+}
+
 function scheduleAgeForBabyAge(ageMonths: number): number {
   const age = normalizeBabyAge(ageMonths);
   if (age <= 23) return age;
@@ -116,6 +178,33 @@ function materializeRange(dayStart: Date, range: SleepTimeRange, crossesMidnight
 
 function atTime(dayStart: Date, time: SleepClockTime): Date {
   return new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate(), time.hour, time.minute);
+}
+
+function getRecordedNaps(
+  activities: readonly DailyAction[],
+  schedule: DatedSleepSchedule,
+  nowMillis: number,
+): DailyAction[] {
+  const dayStart = new Date(schedule.nightSleep.startMillis);
+  dayStart.setHours(0, 0, 0, 0);
+  return activities
+    .filter((activity) => activity.type === "sleeping" && !activity.deleted)
+    .filter((activity) => activity.startMillis >= dayStart.getTime() && activity.startMillis < schedule.nightSleep.startMillis)
+    .filter((activity) => activity.startMillis <= nowMillis)
+    .sort((left, right) => left.startMillis - right.startMillis);
+}
+
+function duration(range: DatedSleepTimeRange): number {
+  return range.endMillis - range.startMillis;
+}
+
+function roundToFiveMinutes(millis: number): number {
+  const increment = 5 * 60_000;
+  return Math.round(millis / increment) * increment;
+}
+
+function toMillis(value: Date | number): number {
+  return typeof value === "number" ? value : value.getTime();
 }
 
 function loadSchedules(): readonly SampleSleepSchedule[] {

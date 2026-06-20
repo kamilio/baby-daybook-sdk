@@ -5,6 +5,7 @@ import {
   getSleepSchedulesForAge,
   listSampleSleepSchedules,
   materializeSleepSchedule,
+  predictSleepSchedule,
   selectSleepSchedule,
   selectSleepScheduleForBaby,
 } from "../src/index.js";
@@ -75,5 +76,55 @@ describe("sleep prediction reference schedules", () => {
     expect(babyAdjustedAgeMonths(baby, date)).toBe(6);
     expect(selectSleepScheduleForBaby(baby, date)).toMatchObject({ ageMonths: 6, napCount: 3 });
     expect(babyAdjustedAgeMonths({ ...baby, isPremature: false }, date)).toBe(8);
+  });
+
+  it("shifts future naps and bedtime after recorded sleep", () => {
+    const day = new Date(2026, 6, 6);
+    const baby = {
+      uid: "b",
+      userUid: "u",
+      name: "Baby",
+      birthdayMillis: new Date(2026, 0, 6).getTime(),
+      sleepPredictionNapCount: 3,
+    };
+    const prediction = predictSleepSchedule({
+      baby,
+      day,
+      now: new Date(2026, 6, 6, 11),
+      activities: [{
+        uid: "sleep",
+        userUid: "u",
+        babyUid: "b",
+        type: "sleeping",
+        startMillis: new Date(2026, 6, 6, 9).getTime(),
+        endMillis: new Date(2026, 6, 6, 10, 30).getTime(),
+      }],
+    });
+    expect(prediction.sleeps.map((sleep) => [sleep.kind, sleep.status, new Date(sleep.startMillis).getHours(), new Date(sleep.startMillis).getMinutes()])).toEqual([
+      ["nap", "recorded", 9, 0],
+      ["nap", "predicted", 13, 0],
+      ["nap", "predicted", 16, 30],
+      ["nightSleep", "predicted", 20, 15],
+    ]);
+    expect(new Date(prediction.sleeps.at(-1)!.endMillis).getHours()).toBe(7);
+  });
+
+  it("uses sample duration for an in-progress nap", () => {
+    const day = new Date(2026, 6, 6);
+    const prediction = predictSleepSchedule({
+      baby: {
+        uid: "b",
+        userUid: "u",
+        name: "Baby",
+        birthdayMillis: new Date(2026, 0, 6).getTime(),
+        sleepPredictionNapCount: 3,
+      },
+      day,
+      now: new Date(2026, 6, 6, 9, 30),
+      activities: [{ uid: "sleep", userUid: "u", babyUid: "b", type: "sleeping", startMillis: new Date(2026, 6, 6, 9).getTime(), inProgress: true }],
+    });
+    expect(prediction.sleeps[0]).toMatchObject({ status: "inProgress" });
+    expect(new Date(prediction.sleeps[0]!.endMillis).getHours()).toBe(10);
+    expect(new Date(prediction.sleeps[0]!.endMillis).getMinutes()).toBe(15);
   });
 });

@@ -331,3 +331,26 @@ export interface DatedSleepSchedule {
   naps: readonly DatedSleepTimeRange[];
   nightSleep: DatedSleepTimeRange;
 }
+
+export type PredictedSleepKind = "nap" | "nightSleep";
+export type PredictedSleepStatus = "recorded" | "inProgress" | "predicted";
+
+export interface PredictedSleep extends DatedSleepTimeRange {
+  kind: PredictedSleepKind;
+  status: PredictedSleepStatus;
+  number?: number;
+}
+
+export interface SleepPredictionInput {
+  baby: Baby;
+  day: Date | number;
+  activities?: readonly DailyAction[];
+  napCount?: number;
+  now?: Date | number;
+}
+
+export interface SleepPredictionResult {
+  ageMonths: number;
+  sampleSchedule: SampleSleepSchedule;
+  sleeps: readonly PredictedSleep[];
+}
