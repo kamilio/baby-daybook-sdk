@@ -11,6 +11,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Soft deletion compatible with Baby Daybook synchronization.
 - Local activity and daily-note search matching the app's core filters.
 - CDC, WHO, and CDC Down syndrome growth percentile calculations using the app's bundled LMS reference data.
+- Baby Daybook's 42 bundled sleep schedules, corrected-age handling, age buckets, transition options, and nap-count selection.
 - Full JSON backups, restore, activity CSV export, activity summaries, and polling-based change streams.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
@@ -85,6 +86,20 @@ const result = calculateGrowthPercentile({
 ```
 
 Growth age uses the selected reference dataset's weeks, months, or years. Use `growthAgeAtDate` to convert timestamps and `calculateGrowthValueAtPercentile` to obtain a reference value for percentiles 1 through 99.
+
+## Sleep schedules
+
+The SDK includes the schedule table and selection behavior recovered from the Android app. Sleep prediction supports corrected ages from 2 through 59 months:
+
+```ts
+const schedule = await baby.getSampleSleepSchedule();
+const dated = materializeSleepSchedule(schedule, new Date());
+
+const transitionOptions = getExpandedSleepSchedulesForAge(12);
+const oneNapSchedule = selectSleepSchedule({ ageMonths: 12, napCount: 1 });
+```
+
+`getSleepSchedulesForAge` follows the app's exact age buckets: monthly schedules through 23 months, then the 24-, 36-, and 48-month tables. `getExpandedSleepSchedulesForAge` includes nearby higher- and lower-nap transition schedules, and `selectSleepSchedule` chooses the exact or nearest nap count with the same lower-count tie break as the app.
 
 ## Family sharing
 

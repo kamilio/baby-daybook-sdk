@@ -11,5 +11,14 @@ export type { BabyDaybookCloudFunction } from "./functions.js";
 export { paths } from "./paths.js";
 export { CollectionRepository } from "./repository.js";
 export { searchActivities, searchDailyNotes } from "./search.js";
+export {
+  babyAdjustedAgeMonths,
+  getExpandedSleepSchedulesForAge,
+  getSleepSchedulesForAge,
+  listSampleSleepSchedules,
+  materializeSleepSchedule,
+  selectSleepSchedule,
+  selectSleepScheduleForBaby,
+} from "./sleep-prediction.js";
 export { FirebaseStorageClient } from "./storage.js";
 export type * from "./types.js";

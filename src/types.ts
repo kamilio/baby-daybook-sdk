@@ -284,3 +284,50 @@ export interface ActivitySearchOptions {
   toMillis?: number;
   includeDeleted?: boolean;
 }
+
+export interface SleepClockTime {
+  hour: number;
+  minute: number;
+}
+
+export interface SleepTimeRange {
+  start: SleepClockTime;
+  end: SleepClockTime;
+}
+
+export interface SleepDurationConstraint {
+  minimumMinutes: number;
+  maximumMinutes: number;
+}
+
+export interface SleepScheduleConstraints {
+  wakeWindow: SleepDurationConstraint;
+  nap: SleepDurationConstraint;
+  totalNap: SleepDurationConstraint;
+  nightSleep: SleepDurationConstraint;
+  totalSleep: SleepDurationConstraint;
+}
+
+export interface SampleSleepSchedule {
+  ageMonths: number;
+  napCount: number;
+  naps: readonly SleepTimeRange[];
+  nightSleep: SleepTimeRange;
+  constraints: SleepScheduleConstraints;
+}
+
+export interface SleepScheduleSelectionInput {
+  ageMonths: number;
+  napCount: number;
+  expanded?: boolean;
+}
+
+export interface DatedSleepTimeRange {
+  startMillis: number;
+  endMillis: number;
+}
+
+export interface DatedSleepSchedule {
+  naps: readonly DatedSleepTimeRange[];
+  nightSleep: DatedSleepTimeRange;
+}

@@ -1,0 +1,2506 @@
+[
+  {
+    "ageMonths": 2,
+    "napCount": 4,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 15
+        },
+        "end": {
+          "hour": 10,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 13,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 15,
+          "minute": 0
+        },
+        "end": {
+          "hour": 16,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 18,
+          "minute": 0
+        },
+        "end": {
+          "hour": 18,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 20,
+        "minute": 15
+      },
+      "end": {
+        "hour": 8,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 45,
+        "maximumMinutes": 105
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 270,
+        "maximumMinutes": 330
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 2,
+    "napCount": 5,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 15
+        },
+        "end": {
+          "hour": 10,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 11,
+          "minute": 30
+        },
+        "end": {
+          "hour": 12,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 0
+        },
+        "end": {
+          "hour": 15,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 16,
+          "minute": 30
+        },
+        "end": {
+          "hour": 17,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 19,
+          "minute": 15
+        },
+        "end": {
+          "hour": 19,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 21,
+        "minute": 30
+      },
+      "end": {
+        "hour": 8,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 45,
+        "maximumMinutes": 105
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 270,
+        "maximumMinutes": 330
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 2,
+    "napCount": 6,
+    "naps": [
+      {
+        "start": {
+          "hour": 7,
+          "minute": 5
+        },
+        "end": {
+          "hour": 8,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 9,
+          "minute": 5
+        },
+        "end": {
+          "hour": 10,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 11,
+          "minute": 10
+        },
+        "end": {
+          "hour": 12,
+          "minute": 5
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 20
+        },
+        "end": {
+          "hour": 14,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 15,
+          "minute": 30
+        },
+        "end": {
+          "hour": 16,
+          "minute": 25
+        }
+      },
+      {
+        "start": {
+          "hour": 17,
+          "minute": 50
+        },
+        "end": {
+          "hour": 18,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 20,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 45,
+        "maximumMinutes": 105
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 270,
+        "maximumMinutes": 330
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 3,
+    "napCount": 4,
+    "naps": [
+      {
+        "start": {
+          "hour": 7,
+          "minute": 45
+        },
+        "end": {
+          "hour": 9,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 11,
+          "minute": 10
+        },
+        "end": {
+          "hour": 12,
+          "minute": 40
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 15
+        },
+        "end": {
+          "hour": 15,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 16,
+          "minute": 40
+        },
+        "end": {
+          "hour": 17,
+          "minute": 20
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 60,
+        "maximumMinutes": 120
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 300
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 3,
+    "napCount": 5,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 15
+        },
+        "end": {
+          "hour": 9,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 10,
+          "minute": 45
+        },
+        "end": {
+          "hour": 11,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 15
+        },
+        "end": {
+          "hour": 14,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 15,
+          "minute": 45
+        },
+        "end": {
+          "hour": 16,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 18,
+          "minute": 15
+        },
+        "end": {
+          "hour": 18,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 20,
+        "minute": 30
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 60,
+        "maximumMinutes": 120
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 300
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 4,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 15
+        },
+        "end": {
+          "hour": 9,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 11,
+          "minute": 45
+        },
+        "end": {
+          "hour": 13,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 15,
+          "minute": 30
+        },
+        "end": {
+          "hour": 16,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 18,
+        "minute": 30
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 90,
+        "maximumMinutes": 150
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 210,
+        "maximumMinutes": 270
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 4,
+    "napCount": 4,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 30
+        },
+        "end": {
+          "hour": 9,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 11,
+          "minute": 20
+        },
+        "end": {
+          "hour": 12,
+          "minute": 40
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 20
+        },
+        "end": {
+          "hour": 15,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 17,
+          "minute": 20
+        },
+        "end": {
+          "hour": 17,
+          "minute": 50
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 45
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 90,
+        "maximumMinutes": 150
+      },
+      "nap": {
+        "minimumMinutes": 20,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 210,
+        "maximumMinutes": 270
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 840,
+        "maximumMinutes": 1020
+      }
+    }
+  },
+  {
+    "ageMonths": 5,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 30
+        },
+        "end": {
+          "hour": 10,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 12,
+          "minute": 15
+        },
+        "end": {
+          "hour": 13,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 16,
+          "minute": 0
+        },
+        "end": {
+          "hour": 16,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 960
+      }
+    }
+  },
+  {
+    "ageMonths": 5,
+    "napCount": 4,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 30
+        },
+        "end": {
+          "hour": 9,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 11,
+          "minute": 0
+        },
+        "end": {
+          "hour": 12,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 0
+        },
+        "end": {
+          "hour": 15,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 17,
+          "minute": 0
+        },
+        "end": {
+          "hour": 17,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 45
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 90,
+        "maximumMinutes": 150
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 960
+      }
+    }
+  },
+  {
+    "ageMonths": 6,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 45
+        },
+        "end": {
+          "hour": 11,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 30
+        },
+        "end": {
+          "hour": 16,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 960
+      }
+    }
+  },
+  {
+    "ageMonths": 6,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 45
+        },
+        "end": {
+          "hour": 10,
+          "minute": 0
+        }
+      },
+      {
+        "start": {
+          "hour": 12,
+          "minute": 30
+        },
+        "end": {
+          "hour": 13,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 16,
+          "minute": 0
+        },
+        "end": {
+          "hour": 16,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 45
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 960
+      }
+    }
+  },
+  {
+    "ageMonths": 7,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 15
+        },
+        "end": {
+          "hour": 10,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 30
+        },
+        "end": {
+          "hour": 15,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 18,
+        "minute": 45
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 7,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 8,
+          "minute": 30
+        },
+        "end": {
+          "hour": 9,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 12,
+          "minute": 15
+        },
+        "end": {
+          "hour": 13,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 16,
+          "minute": 15
+        },
+        "end": {
+          "hour": 16,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 45
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 8,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 45
+        },
+        "end": {
+          "hour": 11,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 30
+        },
+        "end": {
+          "hour": 16,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 30
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 135,
+        "maximumMinutes": 210
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 8,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 15
+        },
+        "end": {
+          "hour": 10,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 15
+        }
+      },
+      {
+        "start": {
+          "hour": 16,
+          "minute": 45
+        },
+        "end": {
+          "hour": 17,
+          "minute": 15
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 20,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 135,
+        "maximumMinutes": 210
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 9,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 20
+        },
+        "end": {
+          "hour": 11,
+          "minute": 20
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 20
+        },
+        "end": {
+          "hour": 15,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 9,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 30
+        },
+        "end": {
+          "hour": 10,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 30
+        },
+        "end": {
+          "hour": 14,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 17,
+          "minute": 30
+        },
+        "end": {
+          "hour": 18,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 21,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 10,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 10,
+          "minute": 0
+        },
+        "end": {
+          "hour": 11,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 30
+        },
+        "end": {
+          "hour": 16,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 30
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 225
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 10,
+    "napCount": 3,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 30
+        },
+        "end": {
+          "hour": 10,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 30
+        },
+        "end": {
+          "hour": 14,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 17,
+          "minute": 15
+        },
+        "end": {
+          "hour": 17,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 20,
+        "minute": 45
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 225
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 150,
+        "maximumMinutes": 210
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 11,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 5
+        },
+        "end": {
+          "hour": 10,
+          "minute": 35
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 50
+        },
+        "end": {
+          "hour": 15,
+          "minute": 20
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 12,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 15
+        },
+        "end": {
+          "hour": 10,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 15
+        },
+        "end": {
+          "hour": 15,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 6,
+        "minute": 15
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 780,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 13,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 15,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 13,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 50
+        },
+        "end": {
+          "hour": 11,
+          "minute": 10
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 40
+        },
+        "end": {
+          "hour": 16,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 45
+      },
+      "end": {
+        "hour": 6,
+        "minute": 45
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 14,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 15,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 14,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 15
+        },
+        "end": {
+          "hour": 10,
+          "minute": 30
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 0
+        },
+        "end": {
+          "hour": 15,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 15,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 11,
+          "minute": 50
+        },
+        "end": {
+          "hour": 14,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 45
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 15,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 35
+        },
+        "end": {
+          "hour": 11,
+          "minute": 20
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 50
+        },
+        "end": {
+          "hour": 15,
+          "minute": 40
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 30
+      },
+      "end": {
+        "hour": 6,
+        "minute": 15
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 16,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 45
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 16,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 45
+        },
+        "end": {
+          "hour": 10,
+          "minute": 45
+        }
+      },
+      {
+        "start": {
+          "hour": 14,
+          "minute": 15
+        },
+        "end": {
+          "hour": 15,
+          "minute": 50
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 45
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 900
+      }
+    }
+  },
+  {
+    "ageMonths": 17,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 11,
+          "minute": 0
+        },
+        "end": {
+          "hour": 13,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 18,
+        "minute": 30
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 17,
+    "napCount": 2,
+    "naps": [
+      {
+        "start": {
+          "hour": 9,
+          "minute": 25
+        },
+        "end": {
+          "hour": 10,
+          "minute": 10
+        }
+      },
+      {
+        "start": {
+          "hour": 13,
+          "minute": 40
+        },
+        "end": {
+          "hour": 15,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 30
+      },
+      "end": {
+        "hour": 6,
+        "minute": 15
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 180,
+        "maximumMinutes": 240
+      },
+      "nap": {
+        "minimumMinutes": 30,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 18,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 10
+        },
+        "end": {
+          "hour": 14,
+          "minute": 40
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 19,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 15
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 20,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 30
+        },
+        "end": {
+          "hour": 14,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 6,
+        "minute": 45
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 21,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 15
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 22,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 45
+        },
+        "end": {
+          "hour": 14,
+          "minute": 45
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 23,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 15
+        },
+        "end": {
+          "hour": 14,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 15
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 120,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 720,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 24,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 30
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 240,
+        "maximumMinutes": 360
+      },
+      "nap": {
+        "minimumMinutes": 90,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 90,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 660,
+        "maximumMinutes": 840
+      }
+    }
+  },
+  {
+    "ageMonths": 36,
+    "napCount": 0,
+    "naps": [],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 0,
+        "maximumMinutes": 0
+      },
+      "nap": {
+        "minimumMinutes": 0,
+        "maximumMinutes": 0
+      },
+      "totalNap": {
+        "minimumMinutes": 0,
+        "maximumMinutes": 0
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 780
+      },
+      "totalSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 780
+      }
+    }
+  },
+  {
+    "ageMonths": 36,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 12,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 20,
+        "minute": 0
+      },
+      "end": {
+        "hour": 6,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 300,
+        "maximumMinutes": 420
+      },
+      "nap": {
+        "minimumMinutes": 60,
+        "maximumMinutes": 180
+      },
+      "totalNap": {
+        "minimumMinutes": 60,
+        "maximumMinutes": 180
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 780
+      }
+    }
+  },
+  {
+    "ageMonths": 48,
+    "napCount": 0,
+    "naps": [],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 0
+      },
+      "end": {
+        "hour": 7,
+        "minute": 0
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 0,
+        "maximumMinutes": 0
+      },
+      "nap": {
+        "minimumMinutes": 0,
+        "maximumMinutes": 0
+      },
+      "totalNap": {
+        "minimumMinutes": 0,
+        "maximumMinutes": 0
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 780
+      },
+      "totalSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 780
+      }
+    }
+  },
+  {
+    "ageMonths": 48,
+    "napCount": 1,
+    "naps": [
+      {
+        "start": {
+          "hour": 13,
+          "minute": 0
+        },
+        "end": {
+          "hour": 14,
+          "minute": 0
+        }
+      }
+    ],
+    "nightSleep": {
+      "start": {
+        "hour": 19,
+        "minute": 30
+      },
+      "end": {
+        "hour": 6,
+        "minute": 30
+      }
+    },
+    "constraints": {
+      "wakeWindow": {
+        "minimumMinutes": 300,
+        "maximumMinutes": 420
+      },
+      "nap": {
+        "minimumMinutes": 60,
+        "maximumMinutes": 120
+      },
+      "totalNap": {
+        "minimumMinutes": 60,
+        "maximumMinutes": 120
+      },
+      "nightSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 720
+      },
+      "totalSleep": {
+        "minimumMinutes": 600,
+        "maximumMinutes": 780
+      }
+    }
+  }
+]

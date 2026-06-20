@@ -5,6 +5,7 @@ import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
 import { CollectionRepository } from "./repository.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
+import { selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { FirebaseStorageClient } from "./storage.js";
 import type {
   ActivityGroup,
@@ -29,6 +30,7 @@ import type {
   Moment,
   Purchase,
   Reminder,
+  SampleSleepSchedule,
   Tooth,
   User,
   UserAcceptedInvite,
@@ -270,6 +272,12 @@ export class BabyClient {
 
   async searchDailyNotes(query: string, options: { includeDeleted?: boolean } = {}): Promise<DailyNote[]> {
     return searchDailyNotes(await this.dailyNotes.list({ includeDeleted: options.includeDeleted }), query, options);
+  }
+
+  async getSampleSleepSchedule(at: Date | number = Date.now(), napCount?: number): Promise<SampleSleepSchedule> {
+    const baby = await this.get();
+    if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
+    return selectSleepScheduleForBaby(baby, at, napCount ?? baby.sleepPredictionNapCount);
   }
 
   async createBackup(): Promise<BabyDaybookBackup> {
