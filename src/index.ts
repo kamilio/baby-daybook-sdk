@@ -32,6 +32,17 @@ export {
 } from "./reminders.js";
 export { searchActivities, searchDailyNotes } from "./search.js";
 export {
+  BABY_SETTING_TYPES,
+  DEFAULT_BABY_SETTINGS,
+  parseDaTypesConfig,
+  parseNotificationsEnabled,
+  parseQuickAddNotificationEnabled,
+  parseSleepPredictionNotificationMinutes,
+  parseStickyNotification,
+  serializeDaTypesConfig,
+  serializeSettingParams,
+} from "./settings.js";
+export {
   getSleepRecommendation,
   groupSleepRecommendations,
   listGroupedSleepRecommendations,

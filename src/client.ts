@@ -8,6 +8,16 @@ import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
 import { resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
+import {
+  BABY_SETTING_TYPES,
+  parseDaTypesConfig,
+  parseNotificationsEnabled,
+  parseQuickAddNotificationEnabled,
+  parseSleepPredictionNotificationMinutes,
+  parseStickyNotification,
+  serializeDaTypesConfig,
+  serializeSettingParams,
+} from "./settings.js";
 import { getSleepRecommendation } from "./sleep-recommendations.js";
 import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { buildActivityStatistics } from "./statistics.js";
@@ -45,6 +55,7 @@ import type {
   SampleSleepSchedule,
   SleepRecommendation,
   SleepPredictionResult,
+  StickyNotificationSetting,
   Tooth,
   TimelinePdfOptions,
   User,
@@ -185,7 +196,7 @@ export class BabyClient {
     this.dailyNotes = this.#repository("dailyNotes");
     this.teething = this.#repository("teething");
     this.reminders = new CollectionRepository(client.firestore, paths.reminders(client.session.userId, babyUid));
-    this.settings = new CollectionRepository(client.firestore, paths.settings(client.session.userId, babyUid), "settingType");
+    this.settings = new CollectionRepository(client.firestore, paths.settings(client.session.userId, babyUid));
     this.acceptedInvites = new CollectionRepository(client.firestore, paths.babyAcceptedInvites(babyUid), "userUid");
     this.pendingInvites = new CollectionRepository(client.firestore, paths.babyPendingInvites(babyUid), "userEmailMD5");
   }
@@ -203,11 +214,84 @@ export class BabyClient {
     return this.save({ daytimeRange: formatBabyDaytimeRange(range) });
   }
 
+  async areNotificationsEnabled(): Promise<boolean> {
+    return parseNotificationsEnabled(await this.#getSetting(BABY_SETTING_TYPES.notificationsEnabled));
+  }
+
+  setNotificationsEnabled(enabled: boolean): Promise<BabySetting> {
+    return this.#saveSingletonSetting(BABY_SETTING_TYPES.notificationsEnabled, { enabled });
+  }
+
+  async isQuickAddNotificationEnabled(): Promise<boolean> {
+    return parseQuickAddNotificationEnabled(await this.#getSetting(BABY_SETTING_TYPES.quickAddNotification));
+  }
+
+  setQuickAddNotificationEnabled(enabled: boolean): Promise<BabySetting> {
+    return this.#saveSingletonSetting(BABY_SETTING_TYPES.quickAddNotification, { enabled });
+  }
+
+  async listStickyNotifications(): Promise<StickyNotificationSetting[]> {
+    const settings = await this.settings.list();
+    return settings.flatMap((setting) => {
+      if (setting.settingType !== BABY_SETTING_TYPES.stickyNotification) return [];
+      const params = parseStickyNotification(setting);
+      return params ? [{ uid: setting.uid, ...params }] : [];
+    });
+  }
+
+  async isStickyNotificationEnabled(daType: string): Promise<boolean> {
+    return (await this.listStickyNotifications()).find((setting) => setting.daType === daType)?.enabled ?? false;
+  }
+
+  async setStickyNotificationEnabled(daType: string, enabled: boolean): Promise<BabySetting> {
+    const normalized = daType.trim();
+    if (!normalized) throw new RangeError("Activity type must not be empty");
+    const current = (await this.settings.list()).find((setting) =>
+      setting.settingType === BABY_SETTING_TYPES.stickyNotification
+      && parseStickyNotification(setting)?.daType === normalized);
+    return this.#saveSetting(current?.uid, BABY_SETTING_TYPES.stickyNotification, { daType: normalized, enabled });
+  }
+
+  async getSleepPredictionNotificationMinutes(): Promise<number> {
+    return parseSleepPredictionNotificationMinutes(await this.#getSetting(BABY_SETTING_TYPES.sleepPredictionNotifications));
+  }
+
+  setSleepPredictionNotificationMinutes(minutesBeforeSleep: number): Promise<BabySetting> {
+    if (!Number.isInteger(minutesBeforeSleep) || minutesBeforeSleep < 0) throw new RangeError("Sleep prediction notification minutes must be a non-negative integer");
+    return this.#saveSingletonSetting(BABY_SETTING_TYPES.sleepPredictionNotifications, { minutesBeforeSleep });
+  }
+
+  async getDaTypesConfig(): Promise<string[]> {
+    return parseDaTypesConfig(await this.#getSetting(BABY_SETTING_TYPES.daTypesConfig));
+  }
+
+  setDaTypesConfig(daTypes: readonly string[]): Promise<BabySetting> {
+    return this.#saveSingletonSetting(BABY_SETTING_TYPES.daTypesConfig, serializeDaTypesConfig(daTypes));
+  }
+
   async save(update: Partial<Baby>): Promise<Baby> {
     const current = await this.get();
     if (!current) throw new Error(`Baby ${this.babyUid} does not exist`);
     const baby = { ...current, ...update, uid: this.babyUid, updatedMillis: Date.now() };
     return (await this.client.firestore.set(paths.baby(this.babyUid), baby as unknown as Record<string, unknown>, { merge: true })).data as unknown as Baby;
+  }
+
+  async #getSetting(settingType: BabySetting["settingType"]): Promise<BabySetting | undefined> {
+    return (await this.settings.list()).find((setting) => setting.settingType === settingType);
+  }
+
+  async #saveSingletonSetting(settingType: BabySetting["settingType"], params: object): Promise<BabySetting> {
+    const current = await this.#getSetting(settingType);
+    return this.#saveSetting(current?.uid, settingType, params);
+  }
+
+  #saveSetting(uid: string | undefined, settingType: BabySetting["settingType"], params: object): Promise<BabySetting> {
+    return this.settings.save({
+      uid: uid ?? crypto.randomUUID(),
+      babyUid: this.babyUid,
+      settingType,
+      params: serializeSettingParams(params),
+    });
   }
 
   async softDelete(): Promise<Baby> {

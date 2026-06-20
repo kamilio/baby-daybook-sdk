@@ -26,7 +26,12 @@ export type ActivityReaction = "liked" | "neutral" | "disliked" | string;
 export type ReminderType = "basic" | "advanced" | "advanced_repeat_days" | "advanced_repeat_weekdays";
 export type ToothJaw = "upper" | "lower";
 export type ToothSide = "left" | "right";
-export type BabySettingType = "quickAddNotification" | "stickyNotification" | "notificationsEnabled" | "sleepPredictionNotifications" | "daTypesConfig";
+export type BabySettingType =
+  | "STICKY_SINGLE_ACTION_NOTIFICATION"
+  | "STICKY_NOTIFICATION"
+  | "NOTIFICATIONS_ENABLED"
+  | "SLEEP_PREDICTION_NOTIFICATIONS"
+  | "DA_TYPES_CONFIG";
 export type BuiltInActivityType =
   | "breastfeeding" | "bottle" | "diaper_change" | "sleeping" | "food"
   | "pump" | "drink" | "bath" | "potty" | "toothbrushing" | "medicine"
@@ -174,8 +179,35 @@ export interface ReminderScheduleListOptions extends ListOptions {
 }
 
 export interface BabySetting extends CloudRecord {
-  settingType: BabySettingType | string;
-  params?: unknown;
+  uid: string;
+  babyUid: string;
+  settingType: BabySettingType;
+  params?: string;
+}
+
+export interface NotificationsEnabledParams {
+  enabled: boolean;
+}
+
+export interface QuickAddNotificationParams {
+  enabled: boolean;
+}
+
+export interface StickyNotificationParams {
+  daType: string;
+  enabled: boolean;
+}
+
+export interface SleepPredictionNotificationsParams {
+  minutesBeforeSleep: number;
+}
+
+export interface DaTypesConfigParams {
+  daTypesConfig: string;
+}
+
+export interface StickyNotificationSetting extends StickyNotificationParams {
+  uid: string;
 }
 
 export interface FileMetadata extends CloudRecord {

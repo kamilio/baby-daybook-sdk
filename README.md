@@ -192,6 +192,23 @@ const statistics = await baby.getActivityStatistics({
 
 Backup metadata does not embed attachment bytes. Download files separately when an offline media archive is required.
 
+The SDK backup is a portable JSON snapshot of cloud data. Baby Daybook's Android backup command instead copies the app's private SQLite database to a `.db` file; the two formats are intentionally not interchangeable.
+
+## Baby settings
+
+```ts
+await baby.setNotificationsEnabled(true);
+await baby.setQuickAddNotificationEnabled(true);
+await baby.setStickyNotificationEnabled("bottle", true);
+await baby.setSleepPredictionNotificationMinutes(15);
+await baby.setDaTypesConfig(["breastfeeding", "bottle", "sleeping"]);
+
+console.log(await baby.areNotificationsEnabled());
+console.log(await baby.listStickyNotifications());
+```
+
+These helpers use the app's exact Firestore setting names and JSON-string parameter format. Defaults match the native app when a setting has not been stored.
+
 ## Change polling
 
 The mobile app uses Firestore listeners. The REST SDK offers an async polling stream that reports equivalent added, modified, and deleted records without requiring the Firebase browser bundle:
