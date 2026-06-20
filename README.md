@@ -63,6 +63,13 @@ To restore a saved login without retaining the password:
 const client = await BabyDaybookClient.fromRefreshToken(savedRefreshToken);
 ```
 
+Account lifecycle mirrors the mobile app. Display-name changes update both Firebase Authentication and the Baby Daybook user document, while sign-out invalidates the local SDK session and emits `undefined` through `onSessionChanged`:
+
+```ts
+await client.updateDisplayName("Parent name");
+await client.signOut();
+```
+
 ## Record activities
 
 ```ts

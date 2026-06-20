@@ -145,6 +145,18 @@ export class BabyDaybookClient {
   async deleteAccount(): Promise<unknown> {
     return this.functions.call("deleteUserAccount");
   }
+
+  async updateDisplayName(displayName: string): Promise<User> {
+    const normalized = displayName.trim();
+    if (!normalized) throw new RangeError("Display name must not be empty");
+    await this.auth.updateAccount(this.session, { displayName: normalized });
+    const current = await this.getUser();
+    return this.saveUser({ ...current, uid: this.session.userId, displayName: normalized });
+  }
+
+  signOut(): Promise<void> {
+    return this.auth.signOut(this.session);
+  }
 }
 
 export class BabyClient {

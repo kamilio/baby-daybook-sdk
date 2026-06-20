@@ -52,18 +52,36 @@ describe("BabyDaybookAuth", () => {
   });
 
   it("loads and updates accounts and sends account emails", async () => {
+    const onSessionChanged = vi.fn();
     const fetch = mockFetch(
       jsonResponse({ users: [{ localId: "user" }] }),
       jsonResponse({ localId: "user", displayName: "Name" }),
       jsonResponse({}),
       jsonResponse({}),
     );
-    const auth = new BabyDaybookAuth({ fetch });
+    const auth = new BabyDaybookAuth({ fetch, onSessionChanged });
     const session = auth.fromSession({ idToken: "id", userId: "user", expiresAt: Date.now() + 3600_000 });
     await expect(auth.getAccount(session)).resolves.toMatchObject({ localId: "user" });
     await expect(auth.updateAccount(session, { displayName: "Name" })).resolves.toMatchObject({ displayName: "Name" });
+    expect(session.snapshot.displayName).toBe("Name");
+    expect(onSessionChanged).toHaveBeenCalledWith(expect.objectContaining({ displayName: "Name" }));
     await auth.sendPasswordResetEmail("a@example.com");
     await auth.sendEmailVerification(session);
+  });
+
+  it("signs out idempotently and prevents later token use", async () => {
+    const onSessionChanged = vi.fn();
+    const auth = new BabyDaybookAuth({ onSessionChanged });
+    const session = auth.fromSession({ idToken: "id", refreshToken: "refresh", userId: "user", expiresAt: Date.now() + 3_600_000 });
+    await auth.signOut(session);
+    await auth.signOut(session);
+    expect(session.signedOut).toBe(true);
+    expect(session.snapshot).toMatchObject({ idToken: "", expiresAt: 0 });
+    expect(session.snapshot.refreshToken).toBeUndefined();
+    expect(onSessionChanged).toHaveBeenCalledOnce();
+    expect(onSessionChanged).toHaveBeenCalledWith(undefined);
+    await expect(session.getIdToken()).rejects.toMatchObject({ code: "SIGNED_OUT" });
+    await expect(session.updateProfile({ displayName: "Nope" })).rejects.toMatchObject({ code: "SIGNED_OUT" });
   });
 
   it("rejects an empty account lookup", async () => {

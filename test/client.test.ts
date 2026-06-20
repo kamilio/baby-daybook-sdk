@@ -16,6 +16,9 @@ describe("BabyDaybookClient", () => {
     (client as any).userCreatedBabies = repo([{ babyUid: "baby" }]);
     (client as any).userAcceptedInvites = repo([{ babyUid: "baby" }, { babyUid: "shared" }]);
     (client as any).functions = { call: vi.fn(async () => "deleted") };
+    const updateAccount = vi.fn(async () => ({ localId: "user", displayName: "New Parent" }));
+    const signOut = vi.fn(async () => undefined);
+    (client as any).auth = { updateAccount, signOut };
 
     await expect(client.getUser()).resolves.toMatchObject({ displayName: "Parent" });
     await expect(client.saveUser({ uid: "user", displayName: "Updated" })).resolves.toMatchObject({ displayName: "Updated" });
@@ -23,6 +26,11 @@ describe("BabyDaybookClient", () => {
     await expect(client.getBaby("baby")).resolves.toMatchObject({ uid: "baby" });
     await expect(client.createBaby({ uid: "new", name: "New" })).resolves.toMatchObject({ uid: "new", userUid: "user" });
     await expect(client.deleteAccount()).resolves.toBe("deleted");
+    await expect(client.updateDisplayName("  New Parent  ")).resolves.toMatchObject({ displayName: "New Parent" });
+    expect(updateAccount).toHaveBeenCalledWith(client.session, { displayName: "New Parent" });
+    await expect(client.updateDisplayName("  ")).rejects.toThrow(RangeError);
+    await client.signOut();
+    expect(signOut).toHaveBeenCalledWith(client.session);
     expect(client.baby("baby")).toBeInstanceOf(BabyClient);
   });
 });

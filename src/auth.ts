@@ -22,7 +22,29 @@ interface RefreshResponse {
 export interface AuthOptions {
   config?: Partial<BabyDaybookConfig>;
   fetch?: FetchLike;
-  onSessionChanged?: (session: AuthSessionSnapshot) => void | Promise<void>;
+  onSessionChanged?: (session: AuthSessionSnapshot | undefined) => void | Promise<void>;
+}
+
+export interface FirebaseProviderInfo {
+  providerId: string;
+  federatedId?: string;
+  email?: string;
+  displayName?: string;
+  photoUrl?: string;
+  rawId?: string;
+}
+
+export interface FirebaseAccount {
+  localId: string;
+  email?: string;
+  emailVerified?: boolean;
+  displayName?: string;
+  photoUrl?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
+  providerUserInfo?: FirebaseProviderInfo[];
+  validSince?: string;
+  disabled?: boolean;
 }
 
 export interface OAuthCredential {
@@ -39,6 +61,7 @@ export class AuthSession {
   readonly fetch: FetchLike;
   readonly onSessionChanged?: AuthOptions["onSessionChanged"];
   #refreshPromise?: Promise<string>;
+  #signedOut = false;
 
   constructor(data: AuthSessionData, options: AuthOptions = {}) {
     this.#data = { ...data };
@@ -51,11 +74,16 @@ export class AuthSession {
     return this.#data.userId;
   }
 
+  get signedOut(): boolean {
+    return this.#signedOut;
+  }
+
   get snapshot(): AuthSessionSnapshot {
     return { ...this.#data };
   }
 
   async getIdToken(forceRefresh = false): Promise<string> {
+    if (this.#signedOut) throw new BabyDaybookAuthError("The Firebase session has been signed out", { code: "SIGNED_OUT" });
     if (!forceRefresh && this.#data.expiresAt - Date.now() > 60_000) return this.#data.idToken;
     if (!this.#data.refreshToken) {
       if (this.#data.expiresAt > Date.now()) return this.#data.idToken;
@@ -65,6 +93,20 @@ export class AuthSession {
       this.#refreshPromise = undefined;
     });
     return this.#refreshPromise;
+  }
+
+  async signOut(): Promise<void> {
+    if (this.#signedOut) return;
+    this.#signedOut = true;
+    this.#refreshPromise = undefined;
+    this.#data = { ...this.#data, idToken: "", refreshToken: undefined, expiresAt: 0 };
+    await this.onSessionChanged?.(undefined);
+  }
+
+  async updateProfile(update: Pick<AuthSessionData, "email" | "displayName">): Promise<void> {
+    if (this.#signedOut) throw new BabyDaybookAuthError("The Firebase session has been signed out", { code: "SIGNED_OUT" });
+    this.#data = { ...this.#data, ...update };
+    await this.onSessionChanged?.(this.snapshot);
   }
 
   async #refresh(): Promise<string> {
@@ -140,8 +182,8 @@ export class BabyDaybookAuth {
     });
   }
 
-  async getAccount(session: AuthSession): Promise<Record<string, unknown>> {
-    const response = await this.#request<{ users?: Record<string, unknown>[] }>("accounts:lookup", {
+  async getAccount(session: AuthSession): Promise<FirebaseAccount> {
+    const response = await this.#request<{ users?: FirebaseAccount[] }>("accounts:lookup", {
       idToken: await session.getIdToken(),
     });
     const account = response.users?.[0];
@@ -149,8 +191,19 @@ export class BabyDaybookAuth {
     return account;
   }
 
-  async updateAccount(session: AuthSession, update: { displayName?: string; photoUrl?: string; password?: string; email?: string }): Promise<Record<string, unknown>> {
-    return this.#request("accounts:update", { idToken: await session.getIdToken(), ...update, returnSecureToken: false });
+  async updateAccount(session: AuthSession, update: { displayName?: string; photoUrl?: string; password?: string; email?: string }): Promise<FirebaseAccount> {
+    const account = await this.#request<FirebaseAccount>("accounts:update", { idToken: await session.getIdToken(), ...update, returnSecureToken: false });
+    if (update.displayName !== undefined || update.email !== undefined) {
+      await session.updateProfile({
+        displayName: update.displayName ?? session.snapshot.displayName,
+        email: update.email ?? session.snapshot.email,
+      });
+    }
+    return account;
+  }
+
+  signOut(session: AuthSession): Promise<void> {
+    return session.signOut();
   }
 
   async sendPasswordResetEmail(email: string): Promise<void> {
