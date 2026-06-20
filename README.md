@@ -46,6 +46,16 @@ const baby = client.baby(babies[0].uid);
 const activities = await baby.activities.list();
 ```
 
+Baby Daybook stores its daytime window as `HH:mm-HH:mm`. The SDK validates the app's 04:00–22:00 bounds and 11–14 hour duration before saving:
+
+```ts
+const daytimeRange = await baby.getDaytimeRange();
+await baby.setDaytimeRange({
+  start: { hour: 7, minute: 0 },
+  end: { hour: 20, minute: 0 },
+});
+```
+
 To restore a saved login without retaining the password:
 
 ```ts

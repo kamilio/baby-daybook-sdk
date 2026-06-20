@@ -51,7 +51,7 @@ export interface Baby extends CloudRecord {
   expectedBirthdayMillis?: number;
   daTypesConfig?: string;
   convertUnits?: boolean;
-  daytimeRange?: unknown;
+  daytimeRange?: string;
   sleepPredictionEnabled?: boolean;
   sleepPredictionNapCount?: number;
 }
@@ -313,6 +313,16 @@ export interface SleepClockTime {
 export interface SleepTimeRange {
   start: SleepClockTime;
   end: SleepClockTime;
+}
+
+export type BabyDaytimeRange = SleepTimeRange;
+
+export interface BabyDaytimeRangeValidation {
+  startInBounds: boolean;
+  endInBounds: boolean;
+  durationAtLeastMinimum: boolean;
+  durationAtMostMaximum: boolean;
+  valid: boolean;
 }
 
 export interface SleepDurationConstraint {

@@ -1,5 +1,6 @@
 import { activitiesToCsv, summarizeActivities } from "./analytics.js";
 import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } from "./auth.js";
+import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
@@ -25,6 +26,7 @@ import type {
   BabyAcceptedInvite,
   BabyCollectionName,
   BabyDaybookBackup,
+  BabyDaytimeRange,
   BabyPendingInvite,
   BabySetting,
   ChangeEvent,
@@ -176,6 +178,15 @@ export class BabyClient {
 
   get(): Promise<Baby | undefined> {
     return this.client.getBaby(this.babyUid);
+  }
+
+  async getDaytimeRange(): Promise<BabyDaytimeRange> {
+    return parseBabyDaytimeRange((await this.get())?.daytimeRange);
+  }
+
+  async setDaytimeRange(range: BabyDaytimeRange): Promise<Baby> {
+    if (!isBabyDaytimeRangeValid(range)) throw new RangeError("Baby daytime range must start at or after 04:00, end at or before 22:00, and last from 11 to 14 hours");
+    return this.save({ daytimeRange: formatBabyDaytimeRange(range) });
   }
 
   async save(update: Partial<Baby>): Promise<Baby> {
