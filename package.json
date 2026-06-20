@@ -1,0 +1,65 @@
+{
+  "name": "baby-daybook-sdk",
+  "version": "0.1.0",
+  "description": "Unofficial typed JavaScript SDK for Baby Daybook",
+  "author": {
+    "name": "Kamil Jopek",
+    "email": "kjopek@users.noreply.github.com"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist coverage",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test --max-warnings=0",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "baby-daybook",
+    "baby-tracker",
+    "firebase",
+    "firestore",
+    "sdk"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "@types/node": "^22.15.0",
+    "@vitest/coverage-v8": "^3.2.6",
+    "eslint": "^9.30.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "8.55.0",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "tsup": {
+      "esbuild": "0.28.1"
+    }
+  }
+}
