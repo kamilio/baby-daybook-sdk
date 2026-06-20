@@ -18,7 +18,11 @@ export { BabyDaybookApiError, BabyDaybookAuthError, BabyDaybookError } from "./e
 export { decodeFields, decodeValue, encodeFields, encodeValue, FirestoreClient } from "./firestore.js";
 export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeAtDate } from "./growth.js";
 export { CallableFunctionsClient, FamilyClient } from "./functions.js";
-export type { BabyDaybookCloudFunction } from "./functions.js";
+export type {
+  BabyDaybookCloudFunction,
+  BabyDaybookCloudFunctionData,
+  BabyDaybookCloudFunctionResults,
+} from "./functions.js";
 export { paths } from "./paths.js";
 export { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";

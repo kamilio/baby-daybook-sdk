@@ -153,8 +153,8 @@ export class BabyDaybookClient {
     return baby;
   }
 
-  async deleteAccount(): Promise<unknown> {
-    return this.functions.call("deleteUserAccount");
+  async deleteAccount(): Promise<void> {
+    await this.functions.call("deleteUserAccount");
   }
 
   async updateDisplayName(displayName: string): Promise<User> {

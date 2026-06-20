@@ -154,7 +154,12 @@ await client.family.sendInvite(babyUid, "caregiver@example.com");
 await client.family.acceptInvite(babyUid);
 await client.family.removeCaregiver(babyUid, caregiverUid);
 await client.family.changePrimaryCaregiver(babyUid, caregiverUid);
+
+const caregiver = await client.family.getUserWithPremiumStatus("caregiver@example.com");
+if (caregiver) console.log(caregiver.user.displayName, caregiver.isPremium);
 ```
+
+Caregiver mutations follow the native app's `void` contract. Email lookup returns `undefined` when the cloud function reports that no user exists and validates successful user responses before exposing them.
 
 ## Reminders
 

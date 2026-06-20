@@ -20,7 +20,7 @@ describe("service clients", () => {
       return jsonResponse({ result: { success: true } });
     });
     const functions = new CallableFunctionsClient(session(fetch));
-    await expect(new FamilyClient(functions).sendInvite("baby", "care@example.com")).resolves.toEqual({ success: true });
+    await expect(new FamilyClient(functions).sendInvite("baby", "care@example.com")).resolves.toBeUndefined();
   });
 
   it("surfaces callable and storage protocol failures", async () => {
@@ -32,7 +32,10 @@ describe("service clients", () => {
   });
 
   it("exposes every family cloud action", async () => {
-    const fetch = mockFetch(...Array.from({ length: 7 }, () => jsonResponse({ result: true })));
+    const fetch = mockFetch(
+      ...Array.from({ length: 6 }, () => jsonResponse({ result: true })),
+      jsonResponse({ result: { success: true, user: { uid: "care", email: "care@example.com" }, isPremium: true } }),
+    );
     const family = new FamilyClient(new CallableFunctionsClient(session(fetch)));
     await family.cancelInvite("baby", "care@example.com");
     await family.acceptInvite("baby");
@@ -40,7 +43,10 @@ describe("service clients", () => {
     await family.leaveBaby("baby");
     await family.removeCaregiver("baby", "care");
     await family.changePrimaryCaregiver("baby", "next");
-    await family.getUserWithPremiumStatus("care@example.com");
+    await expect(family.getUserWithPremiumStatus("care@example.com")).resolves.toEqual({
+      user: { uid: "care", email: "care@example.com" },
+      isPremium: true,
+    });
     const bodies = fetch.mock.calls.map((call) => JSON.parse(String(call[1]?.body)).data);
     expect(bodies).toEqual([
       { babyUid: "baby", caregiverEmail: "care@example.com" },
@@ -51,6 +57,17 @@ describe("service clients", () => {
       { babyUid: "baby", newUserUid: "next" },
       { email: "care@example.com" },
     ]);
+  });
+
+  it("matches native caregiver lookup absence and response validation", async () => {
+    const family = new FamilyClient(new CallableFunctionsClient(session(mockFetch(
+      jsonResponse({ result: { success: false } }),
+      jsonResponse({ result: { success: true, user: { email: "missing-uid@example.com" }, isPremium: false } }),
+      jsonResponse({}),
+    ))));
+    await expect(family.getUserWithPremiumStatus("missing@example.com")).resolves.toBeUndefined();
+    await expect(family.getUserWithPremiumStatus("broken@example.com")).rejects.toThrow("Malformed caregiver lookup response");
+    await expect(family.getUserWithPremiumStatus("empty@example.com")).rejects.toThrow("Malformed caregiver lookup response");
   });
 
   it("uploads, downloads, and deletes attachment files", async () => {

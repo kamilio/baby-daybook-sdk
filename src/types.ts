@@ -250,6 +250,11 @@ export interface UserPendingInvite extends CloudRecord {
   invitedMillis?: number;
 }
 
+export interface CaregiverInfo {
+  user: User;
+  isPremium: boolean;
+}
+
 export type AttachmentCategory = "dailyActions" | "growth" | "moments" | "teething";
 export type BabyCollectionName = "daTypes" | "dailyActions" | "groups" | "growth" | "moments" | "dailyNotes" | "teething";
 

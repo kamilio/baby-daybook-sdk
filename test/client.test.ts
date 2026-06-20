@@ -25,7 +25,7 @@ describe("BabyDaybookClient", () => {
     await expect(client.listBabies()).resolves.toHaveLength(2);
     await expect(client.getBaby("baby")).resolves.toMatchObject({ uid: "baby" });
     await expect(client.createBaby({ uid: "new", name: "New" })).resolves.toMatchObject({ uid: "new", userUid: "user" });
-    await expect(client.deleteAccount()).resolves.toBe("deleted");
+    await expect(client.deleteAccount()).resolves.toBeUndefined();
     await expect(client.updateDisplayName("  New Parent  ")).resolves.toMatchObject({ displayName: "New Parent" });
     expect(updateAccount).toHaveBeenCalledWith(client.session, { displayName: "New Parent" });
     await expect(client.updateDisplayName("  ")).rejects.toThrow(RangeError);
