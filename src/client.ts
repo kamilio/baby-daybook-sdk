@@ -9,6 +9,7 @@ import {
   type LastActivityOptions,
 } from "./activity-queries.js";
 import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } from "./auth.js";
+import { BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
@@ -278,6 +279,37 @@ export class BabyClient {
     return this.#saveSingletonSetting(BABY_SETTING_TYPES.daTypesConfig, serializeDaTypesConfig(daTypes));
   }
 
+  async deleteActivityType(uid: string): Promise<void> {
+    if (!uid) throw new RangeError("Activity type must not be empty");
+    if ((BUILT_IN_ACTIVITY_TYPES as readonly string[]).includes(uid)) {
+      throw new Error("Default activity type cannot be deleted.");
+    }
+
+    const baby = await this.get();
+    if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
+    if (baby.userUid !== this.client.session.userId) {
+      throw new Error("Only primary caregiver can delete activity type.");
+    }
+
+    const [reminders, groups, activities, activityType] = await Promise.all([
+      this.reminders.list(),
+      this.groups.list(),
+      this.activities.list(),
+      this.activityTypes.get(uid),
+    ]);
+    const daTypesConfig = (baby.daTypesConfig ?? "").split(",");
+    const configIndex = daTypesConfig.indexOf(uid);
+    if (configIndex >= 0) daTypesConfig.splice(configIndex, 1);
+    const serializedConfig = daTypesConfig.join(",");
+
+    await this.setDaTypesConfig(daTypesConfig);
+    await this.save({ daTypesConfig: serializedConfig });
+    await this.#softDeleteAll(this.reminders, reminders.filter((reminder) => reminder.daType === uid));
+    await this.#softDeleteAll(this.groups, groups.filter((group) => group.daType === uid));
+    await this.#softDeleteAll(this.activities, activities.filter((activity) => activity.type === uid));
+    if (activityType && !activityType.deleted) await this.activityTypes.softDelete(uid);
+  }
+
   async save(update: Partial<Baby>): Promise<Baby> {
     const current = await this.get();
     if (!current) throw new Error(`Baby ${this.babyUid} does not exist`);
@@ -301,6 +333,10 @@ export class BabyClient {
       settingType,
       params: serializeSettingParams(params),
     });
+  }
+
+  async #softDeleteAll<T extends CloudRecord & { uid: string }>(repository: CollectionRepository<T>, items: readonly T[]): Promise<void> {
+    await Promise.all(items.filter((item) => !item.deleted).map((item) => repository.softDelete(item.uid)));
   }
 
   async softDelete(): Promise<Baby> {

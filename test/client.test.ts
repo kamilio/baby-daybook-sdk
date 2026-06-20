@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
-import type { Baby, DailyAction, GrowthEntry } from "../src/index.js";
+import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, GrowthEntry, Reminder } from "../src/index.js";
 import { mockFetch } from "./helpers.js";
 
 describe("BabyDaybookClient", () => {
@@ -70,6 +70,76 @@ describe("BabyClient", () => {
     await expect(baby.switchBreastfeedingSide("activity", "right", 130)).resolves.toMatchObject({ side: "right", leftDuration: 25 });
     activityRepo.items = [started];
     await expect(baby.stopActivity("activity", 500)).resolves.toMatchObject({ endMillis: 500, duration: 400, inProgress: false });
+  });
+
+  it("deletes custom activity types with the native cascade order", async () => {
+    const { baby, client, activityRepo } = configuredBaby();
+    const activityTypes = repo<ActivityType>([
+      { uid: "custom", userUid: "user", babyUid: "baby", title: "Custom" },
+    ]);
+    const groups = repo<ActivityGroup>([
+      { uid: "custom-group", userUid: "user", babyUid: "baby", title: "Custom group", daType: "custom" },
+      { uid: "bottle-group", userUid: "user", babyUid: "baby", title: "Bottle group", daType: "bottle" },
+    ]);
+    const reminders = repo<Reminder>([
+      { uid: "custom-reminder", userUid: "user", babyUid: "baby", type: "basic", dateMillis: 100, daType: "custom" },
+      { uid: "bottle-reminder", userUid: "user", babyUid: "baby", type: "basic", dateMillis: 100, daType: "bottle" },
+    ]);
+    const settings = repo<BabySetting>([
+      { uid: "config", babyUid: "baby", settingType: "DA_TYPES_CONFIG", params: JSON.stringify({ daTypesConfig: "stale" }) },
+    ]);
+    activityRepo.items = [
+      activity({ uid: "custom-activity", type: "custom" }),
+      activity({ uid: "bottle-activity", type: "bottle" }),
+    ];
+    (client as any).getBaby = vi.fn(async () => ({
+      uid: "baby",
+      userUid: "user",
+      name: "Baby",
+      daTypesConfig: "bottle,custom,sleeping",
+    }));
+    (baby as any).activityTypes = activityTypes;
+    (baby as any).groups = groups;
+    (baby as any).reminders = reminders;
+    (baby as any).settings = settings;
+
+    await expect(baby.deleteActivityType("custom")).resolves.toBeUndefined();
+
+    expect(JSON.parse(settings.items[0]!.params ?? "{}")).toEqual({ daTypesConfig: "bottle,sleeping" });
+    expect((client.firestore.set as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+      "babyData/babyUid_baby",
+      expect.objectContaining({ daTypesConfig: "bottle,sleeping" }),
+      { merge: true },
+    );
+    expect(reminders.items.find((item) => item.uid === "custom-reminder")).toMatchObject({ deleted: true });
+    expect(reminders.items.find((item) => item.uid === "bottle-reminder")).not.toMatchObject({ deleted: true });
+    expect(groups.items.find((item) => item.uid === "custom-group")).toMatchObject({ deleted: true });
+    expect(groups.items.find((item) => item.uid === "bottle-group")).not.toMatchObject({ deleted: true });
+    expect(activityRepo.items.find((item) => item.uid === "custom-activity")).toMatchObject({ deleted: true });
+    expect(activityRepo.items.find((item) => item.uid === "bottle-activity")).not.toMatchObject({ deleted: true });
+    expect(activityTypes.items[0]).toMatchObject({ uid: "custom", deleted: true });
+
+    const saveSettingOrder = settings.save.mock.invocationCallOrder[0]!;
+    const saveBabyOrder = (client.firestore.set as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
+    const deleteReminderOrder = reminders.softDelete.mock.invocationCallOrder[0]!;
+    const deleteGroupOrder = groups.softDelete.mock.invocationCallOrder[0]!;
+    const deleteActivityOrder = activityRepo.softDelete.mock.invocationCallOrder[0]!;
+    const deleteTypeOrder = activityTypes.softDelete.mock.invocationCallOrder[0]!;
+    expect(saveSettingOrder).toBeLessThan(saveBabyOrder);
+    expect(saveBabyOrder).toBeLessThan(deleteReminderOrder);
+    expect(deleteReminderOrder).toBeLessThan(deleteGroupOrder);
+    expect(deleteGroupOrder).toBeLessThan(deleteActivityOrder);
+    expect(deleteActivityOrder).toBeLessThan(deleteTypeOrder);
+  });
+
+  it("protects built-in activity types and primary-caregiver ownership", async () => {
+    const { baby, client } = configuredBaby();
+
+    await expect(baby.deleteActivityType("bottle")).rejects.toThrow("Default activity type cannot be deleted.");
+    expect(client.getBaby).not.toHaveBeenCalled();
+
+    (client as any).getBaby = vi.fn(async () => ({ uid: "baby", userUid: "owner", name: "Baby" }));
+    await expect(baby.deleteActivityType("custom")).rejects.toThrow("Only primary caregiver can delete activity type.");
   });
 
   it("manages attachments, summaries, CSV, and backups", async () => {

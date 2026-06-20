@@ -97,6 +97,14 @@ const overlaps = await baby.findOverlappingActivities(candidateActivity);
 
 Last-activity queries reproduce the app's one-minute future-entry grace window. Overlap detection uses the same inclusive start boundary and treats an existing in-progress activity as open-ended.
 
+Primary caregivers can delete custom activity types with the same cascade used by the Android app:
+
+```ts
+await baby.deleteActivityType(customActivityTypeUid);
+```
+
+This updates both activity-type configuration records, then tombstones matching reminders, groups, activities, and the custom type in native order. Built-in activity types cannot be deleted.
+
 All direct collection repositories provide `list`, `get`, `save`, `softDelete`, and `hardDelete`. Prefer `softDelete` because the mobile app uses tombstones to synchronize deletions.
 
 ## Search and growth
