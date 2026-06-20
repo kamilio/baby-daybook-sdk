@@ -402,3 +402,12 @@ export interface ActivityStatisticsReport extends ActivityMetricStatistics {
   sleep: SleepStatistics;
   days: DailyActivityStatistics[];
 }
+
+export interface ActivityPdfOptions {
+  title?: string;
+  babyName?: string;
+  generatedAt?: Date | number;
+  fromMillis?: number;
+  toMillis?: number;
+  includeDeleted?: boolean;
+}

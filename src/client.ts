@@ -3,6 +3,7 @@ import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } 
 import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
+import { activitiesToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
 import { predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
@@ -10,6 +11,7 @@ import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
 import type {
   ActivityGroup,
+  ActivityPdfOptions,
   ActivitySearchOptions,
   ActivityStatisticsOptions,
   ActivityStatisticsReport,
@@ -272,6 +274,14 @@ export class BabyClient {
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {
     return activitiesToCsv(await this.activities.list(options));
+  }
+
+  async exportActivitiesPdf(options: ActivityPdfOptions = {}): Promise<Uint8Array> {
+    const baby = await this.get();
+    return activitiesToPdf(await this.activities.list({ includeDeleted: options.includeDeleted }), {
+      ...options,
+      babyName: options.babyName ?? baby?.name,
+    });
   }
 
   async searchActivities(options: ActivitySearchOptions = {}): Promise<DailyAction[]> {

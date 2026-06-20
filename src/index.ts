@@ -9,6 +9,7 @@ export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeA
 export { CallableFunctionsClient, FamilyClient } from "./functions.js";
 export type { BabyDaybookCloudFunction } from "./functions.js";
 export { paths } from "./paths.js";
+export { activitiesToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";
 export { searchActivities, searchDailyNotes } from "./search.js";
 export { buildActivityStatistics } from "./statistics.js";
