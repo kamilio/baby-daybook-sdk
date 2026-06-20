@@ -4,9 +4,11 @@ import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
 import { CollectionRepository } from "./repository.js";
+import { searchActivities, searchDailyNotes } from "./search.js";
 import { FirebaseStorageClient } from "./storage.js";
 import type {
   ActivityGroup,
+  ActivitySearchOptions,
   ActivitySummary,
   ActivityType,
   AttachmentCategory,
@@ -260,6 +262,14 @@ export class BabyClient {
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {
     return activitiesToCsv(await this.activities.list(options));
+  }
+
+  async searchActivities(options: ActivitySearchOptions = {}): Promise<DailyAction[]> {
+    return searchActivities(await this.activities.list({ includeDeleted: options.includeDeleted }), options);
+  }
+
+  async searchDailyNotes(query: string, options: { includeDeleted?: boolean } = {}): Promise<DailyNote[]> {
+    return searchDailyNotes(await this.dailyNotes.list({ includeDeleted: options.includeDeleted }), query, options);
   }
 
   async createBackup(): Promise<BabyDaybookBackup> {

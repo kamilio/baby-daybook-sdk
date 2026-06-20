@@ -250,3 +250,37 @@ export interface ChangeEvent {
   id: string;
   value: CloudRecord;
 }
+
+export type GrowthReferenceSource =
+  | "cdc_0_36_months"
+  | "cdc_2_20_years"
+  | "cdcDS_0_36_months"
+  | "cdcDS_2_20_years"
+  | "who_0_13_weeks"
+  | "who_0_60_months";
+export type GrowthMeasurement = "weight" | "height" | "headSize";
+export type GrowthRangeUnit = "weeks" | "months" | "years";
+
+export interface GrowthPercentileInput {
+  source: GrowthReferenceSource;
+  gender: "male" | "female";
+  measurement: GrowthMeasurement;
+  age: number;
+  value: number;
+}
+
+export interface GrowthPercentileResult {
+  percentile: number;
+  zScore: number;
+  rangeUnit: GrowthRangeUnit;
+  referenceValues: Record<5 | 10 | 25 | 50 | 75 | 90 | 95, number>;
+}
+
+export interface ActivitySearchOptions {
+  query?: string;
+  types?: readonly string[];
+  groupUids?: readonly string[];
+  fromMillis?: number;
+  toMillis?: number;
+  includeDeleted?: boolean;
+}

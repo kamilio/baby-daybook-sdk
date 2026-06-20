@@ -9,6 +9,8 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Activity types, timed activities, feeding sides, groups, growth, moments, daily notes, teething, reminders, and per-baby settings.
 - Attachment metadata plus Firebase Storage upload, download, and deletion.
 - Soft deletion compatible with Baby Daybook synchronization.
+- Local activity and daily-note search matching the app's core filters.
+- CDC, WHO, and CDC Down syndrome growth percentile calculations using the app's bundled LMS reference data.
 - Full JSON backups, restore, activity CSV export, activity summaries, and polling-based change streams.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
@@ -63,6 +65,26 @@ await baby.stopActivity(feeding.uid);
 ```
 
 All direct collection repositories provide `list`, `get`, `save`, `softDelete`, and `hardDelete`. Prefer `softDelete` because the mobile app uses tombstones to synchronize deletions.
+
+## Search and growth
+
+```ts
+const nightFeeds = await baby.searchActivities({
+  query: "night",
+  types: ["bottle", "breastfeeding"],
+});
+const matchingNotes = await baby.searchDailyNotes("doctor");
+
+const result = calculateGrowthPercentile({
+  source: "who_0_60_months",
+  gender: "female",
+  measurement: "weight",
+  age: 12,
+  value: 9.1,
+});
+```
+
+Growth age uses the selected reference dataset's weeks, months, or years. Use `growthAgeAtDate` to convert timestamps and `calculateGrowthValueAtPercentile` to obtain a reference value for percentiles 1 through 99.
 
 ## Family sharing
 
