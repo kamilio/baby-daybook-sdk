@@ -14,6 +14,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Baby Daybook's 42 bundled sleep schedules, corrected-age handling, age buckets, transition options, and nap-count selection.
 - Full JSON backups, restore, activity CSV/PDF exports, activity summaries, and polling-based change streams.
 - Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
+- App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
@@ -112,6 +113,21 @@ await client.family.sendInvite(babyUid, "caregiver@example.com");
 await client.family.acceptInvite(babyUid);
 await client.family.removeCaregiver(babyUid, caregiverUid);
 await client.family.changePrimaryCaregiver(babyUid, caregiverUid);
+```
+
+## Reminders
+
+Reminder documents use the app's serialized modes: `basic`, `advanced`, `advanced_repeat_days`, and `advanced_repeat_weekdays`. Resolve their current state locally or fetch schedules with the latest matching activity already associated:
+
+```ts
+const schedules = await baby.getReminderSchedules({
+  nowMillis: Date.now(),
+  lastFeedingFromStart: true,
+});
+
+for (const schedule of schedules) {
+  console.log(schedule.expiredMillis, schedule.nextMillis, schedule.nextIsInDnd);
+}
 ```
 
 ## Attachments and backups

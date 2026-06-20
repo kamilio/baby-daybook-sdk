@@ -11,6 +11,14 @@ export type { BabyDaybookCloudFunction } from "./functions.js";
 export { paths } from "./paths.js";
 export { activitiesToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";
+export {
+  getExpiredReminderMillis,
+  getNextReminderMillis,
+  isReminderMillisInDnd,
+  parseReminderWeekdays,
+  resolveReminderSchedule,
+  sortReminderSchedules,
+} from "./reminders.js";
 export { searchActivities, searchDailyNotes } from "./search.js";
 export { buildActivityStatistics } from "./statistics.js";
 export {

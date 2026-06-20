@@ -23,7 +23,7 @@ export type SignInProvider = "google" | "facebook" | "apple" | "password";
 export type Gender = "male" | "female" | "other" | string;
 export type ActivitySide = "left" | "right" | string;
 export type ActivityReaction = "liked" | "neutral" | "disliked" | string;
-export type ReminderType = "dailyAction" | "sleepPrediction";
+export type ReminderType = "basic" | "advanced" | "advanced_repeat_days" | "advanced_repeat_weekdays";
 export type ToothJaw = "upper" | "lower";
 export type ToothSide = "left" | "right";
 export type BabySettingType = "quickAddNotification" | "stickyNotification" | "notificationsEnabled" | "sleepPredictionNotifications" | "daTypesConfig";
@@ -147,10 +147,30 @@ export interface Reminder extends BabyDataRecord {
   dateMillis: number;
   intervalMillis?: number;
   repeatDays?: number;
-  repeatWeekdays?: number[];
-  dndFrom?: number;
-  dndTo?: number;
+  repeatWeekdays?: string;
+  dndFrom?: string;
+  dndTo?: string;
   dismissedMillis?: number;
+}
+
+export interface ReminderScheduleContext {
+  nowMillis?: number;
+  lastActivity?: DailyAction;
+  activityType?: ActivityType;
+  lastFeedingFromStart?: boolean;
+}
+
+export interface ReminderSchedule {
+  reminder: Reminder;
+  nextMillis?: number;
+  expiredMillis?: number;
+  nextIsInDnd: boolean;
+  expiredIsInDnd: boolean;
+}
+
+export interface ReminderScheduleListOptions extends ListOptions {
+  nowMillis?: number;
+  lastFeedingFromStart?: boolean;
 }
 
 export interface BabySetting extends CloudRecord {

@@ -5,6 +5,7 @@ import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
 import { activitiesToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
+import { resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
 import { predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { buildActivityStatistics } from "./statistics.js";
@@ -35,6 +36,8 @@ import type {
   Moment,
   Purchase,
   Reminder,
+  ReminderSchedule,
+  ReminderScheduleListOptions,
   SampleSleepSchedule,
   SleepPredictionResult,
   Tooth,
@@ -290,6 +293,30 @@ export class BabyClient {
 
   async searchDailyNotes(query: string, options: { includeDeleted?: boolean } = {}): Promise<DailyNote[]> {
     return searchDailyNotes(await this.dailyNotes.list({ includeDeleted: options.includeDeleted }), query, options);
+  }
+
+  async getReminderSchedules(options: ReminderScheduleListOptions = {}): Promise<ReminderSchedule[]> {
+    const [reminders, activities, activityTypes] = await Promise.all([
+      this.reminders.list({ includeDeleted: options.includeDeleted }),
+      this.activities.list(),
+      this.activityTypes.list(),
+    ]);
+    const typeMap = new Map(activityTypes.map((item) => [item.uid, item]));
+    const schedules = reminders.map((reminder) => {
+      const matchingActivities = activities.filter((activity) =>
+        !activity.deleted
+        && activity.type === reminder.daType
+        && (!reminder.groupUid || activity.groupUid === reminder.groupUid));
+      const lastActivity = matchingActivities.reduce<DailyAction | undefined>((latest, activity) =>
+        !latest || activity.startMillis > latest.startMillis ? activity : latest, undefined);
+      return resolveReminderSchedule(reminder, {
+        nowMillis: options.nowMillis,
+        lastActivity,
+        activityType: reminder.daType ? typeMap.get(reminder.daType) : undefined,
+        lastFeedingFromStart: options.lastFeedingFromStart,
+      });
+    });
+    return sortReminderSchedules(schedules);
   }
 
   async getSampleSleepSchedule(at: Date | number = Date.now(), napCount?: number): Promise<SampleSleepSchedule> {
