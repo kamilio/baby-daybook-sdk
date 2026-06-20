@@ -11,6 +11,7 @@ export type { BabyDaybookCloudFunction } from "./functions.js";
 export { paths } from "./paths.js";
 export { CollectionRepository } from "./repository.js";
 export { searchActivities, searchDailyNotes } from "./search.js";
+export { buildActivityStatistics } from "./statistics.js";
 export {
   babyAdjustedAgeMonths,
   getExpandedSleepSchedulesForAge,

@@ -13,6 +13,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - CDC, WHO, and CDC Down syndrome growth percentile calculations using the app's bundled LMS reference data.
 - Baby Daybook's 42 bundled sleep schedules, corrected-age handling, age buckets, transition options, and nap-count selection.
 - Full JSON backups, restore, activity CSV export, activity summaries, and polling-based change streams.
+- Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
@@ -123,6 +124,9 @@ const backup = await baby.createBackup();
 await baby.restoreBackup(backup);
 const csv = await baby.exportActivitiesCsv();
 const summary = await baby.summarizeActivities();
+const statistics = await baby.getActivityStatistics({
+  fromMillis: Date.now() - 7 * 86_400_000,
+});
 ```
 
 Backup metadata does not embed attachment bytes. Download files separately when an offline media archive is required.

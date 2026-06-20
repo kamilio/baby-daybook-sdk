@@ -6,10 +6,13 @@ import { paths } from "./paths.js";
 import { CollectionRepository } from "./repository.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
 import { predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
+import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
 import type {
   ActivityGroup,
   ActivitySearchOptions,
+  ActivityStatisticsOptions,
+  ActivityStatisticsReport,
   ActivitySummary,
   ActivityType,
   AttachmentCategory,
@@ -261,6 +264,10 @@ export class BabyClient {
 
   async summarizeActivities(options: ListOptions = {}): Promise<ActivitySummary> {
     return summarizeActivities(await this.activities.list(options));
+  }
+
+  async getActivityStatistics(options: ActivityStatisticsOptions = {}): Promise<ActivityStatisticsReport> {
+    return buildActivityStatistics(await this.activities.list(), options);
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {

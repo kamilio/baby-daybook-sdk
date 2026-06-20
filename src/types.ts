@@ -354,3 +354,51 @@ export interface SleepPredictionResult {
   sampleSchedule: SampleSleepSchedule;
   sleeps: readonly PredictedSleep[];
 }
+
+export interface ActivityStatisticsOptions {
+  fromMillis?: number;
+  toMillis?: number;
+  daytimeStartMinutes?: number;
+  daytimeEndMinutes?: number;
+}
+
+export interface NumericStatistics {
+  count: number;
+  sum: number;
+  average?: number;
+  minimum?: number;
+  maximum?: number;
+}
+
+export interface ActivityMetricStatistics {
+  count: number;
+  durationMillis: number;
+  amount: number;
+  volume: number;
+}
+
+export interface DailyActivityStatistics extends ActivityMetricStatistics {
+  date: string;
+  daytimeSleepMillis: number;
+  nightSleepMillis: number;
+  awakeMillis: number;
+}
+
+export interface SleepStatistics {
+  count: number;
+  durationMillis: number;
+  daytimeDurationMillis: number;
+  nightDurationMillis: number;
+  napCount: number;
+}
+
+export interface ActivityStatisticsReport extends ActivityMetricStatistics {
+  byType: Record<string, ActivityMetricStatistics>;
+  byGroup: Record<string, ActivityMetricStatistics>;
+  byAmountUnit: Record<string, NumericStatistics>;
+  byReaction: Record<string, number>;
+  byHour: number[];
+  temperatures: NumericStatistics;
+  sleep: SleepStatistics;
+  days: DailyActivityStatistics[];
+}
