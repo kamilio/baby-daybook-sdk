@@ -15,6 +15,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Full JSON backups, restore, activity CSV/PDF exports, activity summaries, and polling-based change streams.
 - Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
+- Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
@@ -105,6 +106,13 @@ const oneNapSchedule = selectSleepSchedule({ ageMonths: 12, napCount: 1 });
 `getSleepSchedulesForAge` follows the app's exact age buckets: monthly schedules through 23 months, then the 24-, 36-, and 48-month tables. `getExpandedSleepSchedulesForAge` includes nearby higher- and lower-nap transition schedules, and `selectSleepSchedule` chooses the exact or nearest nap count with the same lower-count tie break as the app.
 
 `predictSleepSchedule` and `baby.predictSleep` combine that reference schedule with recorded `sleeping` activities. Completed or in-progress naps shift the remaining naps and bedtime through the schedule's wake windows, while generated times use the app's five-minute increments.
+
+The statistics screen's recommendation ranges are also available directly:
+
+```ts
+const recommendation = await baby.getSleepRecommendation();
+const grouped = listGroupedSleepRecommendations();
+```
 
 ## Family sharing
 

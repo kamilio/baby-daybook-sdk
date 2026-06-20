@@ -328,6 +328,26 @@ export interface SleepScheduleConstraints {
   totalSleep: SleepDurationConstraint;
 }
 
+export interface SleepNumberConstraint {
+  minimum: number;
+  maximum: number;
+}
+
+export interface SleepRecommendation {
+  ageMonths: number;
+  totalSleep: SleepDurationConstraint;
+  nightSleep: SleepDurationConstraint;
+  napCount: SleepNumberConstraint;
+  nap: SleepDurationConstraint;
+  totalNap: SleepDurationConstraint;
+  wakeWindow: SleepDurationConstraint;
+}
+
+export interface GroupedSleepRecommendation {
+  agesMonths: readonly number[];
+  recommendation: Omit<SleepRecommendation, "ageMonths">;
+}
+
 export interface SampleSleepSchedule {
   ageMonths: number;
   napCount: number;

@@ -7,7 +7,8 @@ import { activitiesToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
 import { resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
-import { predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
+import { getSleepRecommendation } from "./sleep-recommendations.js";
+import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
 import type {
@@ -39,6 +40,7 @@ import type {
   ReminderSchedule,
   ReminderScheduleListOptions,
   SampleSleepSchedule,
+  SleepRecommendation,
   SleepPredictionResult,
   Tooth,
   User,
@@ -323,6 +325,12 @@ export class BabyClient {
     const baby = await this.get();
     if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
     return selectSleepScheduleForBaby(baby, at, napCount ?? baby.sleepPredictionNapCount);
+  }
+
+  async getSleepRecommendation(at: Date | number = Date.now()): Promise<SleepRecommendation> {
+    const baby = await this.get();
+    if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
+    return getSleepRecommendation(babyAdjustedAgeMonths(baby, at));
   }
 
   async predictSleep(day: Date | number = Date.now(), napCount?: number): Promise<SleepPredictionResult> {

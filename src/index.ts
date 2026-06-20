@@ -20,6 +20,12 @@ export {
   sortReminderSchedules,
 } from "./reminders.js";
 export { searchActivities, searchDailyNotes } from "./search.js";
+export {
+  getSleepRecommendation,
+  groupSleepRecommendations,
+  listGroupedSleepRecommendations,
+  listSleepRecommendations,
+} from "./sleep-recommendations.js";
 export { buildActivityStatistics } from "./statistics.js";
 export {
   babyAdjustedAgeMonths,
