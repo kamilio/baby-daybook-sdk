@@ -60,4 +60,26 @@ export {
   selectSleepScheduleForBaby,
 } from "./sleep-prediction.js";
 export { FirebaseStorageClient } from "./storage.js";
+export {
+  BABY_DAYBOOK_UNIT_FACTORS,
+  convertValueToImperial,
+  convertValueToMetric,
+  formatGrowthLength,
+  formatGrowthWeight,
+  formatTemperature,
+  formatVolume,
+  getConvertedGrowthLength,
+  getConvertedGrowthWeight,
+  getConvertedTemperature,
+  getConvertedVolume,
+  poundsToPoundsAndOunces,
+} from "./units.js";
+export type {
+  GrowthLengthUnit,
+  GrowthWeightUnit,
+  PoundsAndOunces,
+  TemperatureUnit,
+  UnitType,
+  VolumeUnit,
+} from "./units.js";
 export type * from "./types.js";

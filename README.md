@@ -209,6 +209,26 @@ console.log(await baby.listStickyNotifications());
 
 These helpers use the app's exact Firestore setting names and JSON-string parameter format. Defaults match the native app when a setting has not been stored.
 
+## Measurement units
+
+Baby Daybook stores synchronized measurements in metric units and applies device-local display preferences. The SDK reproduces the native conversion constants and number precision:
+
+```ts
+import {
+  formatGrowthLength,
+  formatGrowthWeight,
+  formatTemperature,
+  formatVolume,
+} from "baby-daybook-sdk";
+
+formatTemperature(37, "fahrenheit"); // "98.6 °F"
+formatVolume(120, "fluidOunces"); // "4.06 fl oz"
+formatGrowthWeight(3.5, "poundsAndOunces"); // "7 lb 11.5 oz"
+formatGrowthLength(50, "inches"); // "19.7 in"
+```
+
+Pure `convertValueToImperial` and `convertValueToMetric` helpers are also exported for volume, temperature, weight, height, and head-size values.
+
 ## Change polling
 
 The mobile app uses Firestore listeners. The REST SDK offers an async polling stream that reports equivalent added, modified, and deleted records without requiring the Firebase browser bundle:
