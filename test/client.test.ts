@@ -58,6 +58,8 @@ describe("BabyClient", () => {
     };
     activityRepo.items = [activity({ uid: "a", type: "bottle", duration: 100, volume: 60 })];
     growthRepo.items = [{ uid: "g", userUid: "user", babyUid: "baby", dateMillis: 100, weight: 5 }];
+    (baby as any).dailyNotes = repo([{ uid: "19700101", userUid: "user", babyUid: "baby", note: "First note" }]);
+    (baby as any).activityTypes = repo([{ uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle feeding" }]);
 
     await expect(baby.uploadAttachment("moments", "m", "photo.jpg", "image")).resolves.toMatchObject({ itemUid: "m" });
     await expect(baby.downloadAttachment("moments", "m", "photo.jpg")).resolves.toEqual(new Uint8Array([1, 2]));
@@ -65,7 +67,9 @@ describe("BabyClient", () => {
     await baby.deleteAttachment("moments", "m", "photo.jpg");
     await expect(baby.summarizeActivities()).resolves.toMatchObject({ count: 1, totalVolume: 60 });
     await expect(baby.exportActivitiesCsv()).resolves.toContain("bottle");
-    await expect(baby.exportActivitiesPdf()).resolves.toEqual(expect.any(Uint8Array));
+    const activityPdf = new TextDecoder().decode(await baby.exportActivitiesPdf({ timeZone: "UTC" }));
+    expect(activityPdf).toContain("Day note: First note");
+    expect(activityPdf).toContain("Bottle feeding");
     await expect(baby.exportGrowthPdf()).resolves.toEqual(expect.any(Uint8Array));
     await expect(baby.exportTimelinePdf()).resolves.toEqual(expect.any(Uint8Array));
 

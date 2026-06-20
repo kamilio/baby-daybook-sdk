@@ -1,4 +1,4 @@
-import type { ActivityPdfOptions, DailyAction, GrowthEntry, GrowthPdfOptions, TimelinePdfOptions } from "./types.js";
+import type { ActivityPdfOptions, ActivityType, DailyAction, DailyNote, GrowthEntry, GrowthPdfOptions, TimelinePdfOptions } from "./types.js";
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
@@ -16,15 +16,23 @@ export function activitiesToPdf(
     .filter((activity) => options.fromMillis === undefined || activity.startMillis >= options.fromMillis)
     .filter((activity) => options.toMillis === undefined || activity.startMillis <= options.toMillis)
     .sort((left, right) => left.startMillis - right.startMillis);
+  const timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const activityTypes = new Map((options.activityTypes ?? []).map((type) => [type.uid, type]));
+  const fromDayKey = options.fromMillis === undefined ? undefined : formatDayKey(options.fromMillis, timeZone);
+  const toDayKey = options.toMillis === undefined ? undefined : formatDayKey(options.toMillis, timeZone);
+  const dailyNotes = new Map((options.dailyNotes ?? [])
+    .filter((note) => options.includeDeleted || !note.deleted)
+    .filter((note) => /^\d{8}$/.test(note.uid))
+    .filter((note) => fromDayKey === undefined || note.uid >= fromDayKey)
+    .filter((note) => toDayKey === undefined || note.uid <= toDayKey)
+    .map((note) => [note.uid, note]));
   const lines = [
     options.title ?? "Baby Daybook activity report",
     options.babyName ? `Baby: ${options.babyName}` : undefined,
     `Generated: ${formatTimestamp(generatedAt.getTime())}`,
     `Activities: ${rows.length}`,
     "",
-    "Date and time       Type                 Duration   Amount       Notes",
-    "--------------------------------------------------------------------------",
-    ...rows.map(activityLine),
+    ...dailyListLines(rows, dailyNotes, activityTypes, options, timeZone),
   ].filter((line): line is string => line !== undefined);
   const pages = chunk(lines, LINES_PER_PAGE);
   return encodePdf(pages.length === 0 ? [[""]] : pages);
@@ -68,6 +76,7 @@ export function timelineToPdf(
     .filter((activity) => options.toMillis === undefined || activity.startMillis <= options.toMillis)
     .sort((left, right) => left.startMillis - right.startMillis);
   const interval = options.hourLabelInterval ?? 3;
+  const timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const lines = [
     options.title ?? "Baby Daybook timeline report",
     options.babyName ? `Baby: ${options.babyName}` : undefined,
@@ -75,24 +84,87 @@ export function timelineToPdf(
     `Activities: ${rows.length}`,
     `Hour labels: every ${interval} hour${interval === 1 ? "" : "s"}`,
     "",
-    ...timelineLines(rows, interval),
+    ...timelineLines(rows, interval, timeZone),
   ].filter((line): line is string => line !== undefined);
   return encodePdf(chunk(lines, LINES_PER_PAGE));
 }
 
-function activityLine(activity: DailyAction): string {
+function activityLine(activity: DailyAction, type?: ActivityType, timeZone = "UTC"): string {
   const durationMillis = activity.duration ?? Math.max(0, (activity.endMillis ?? activity.startMillis) - activity.startMillis);
   const duration = durationMillis > 0 ? formatDuration(durationMillis) : "";
   const amount = activity.amount === undefined
     ? activity.volume === undefined ? "" : String(activity.volume)
     : `${activity.amount}${activity.amountUnit ? ` ${activity.amountUnit}` : ""}`;
   return [
-    fit(formatTimestamp(activity.startMillis), 19),
-    fit(activity.type, 20),
+    fit(formatTimestampInZone(activity.startMillis, timeZone), 19),
+    fit(type?.title ?? activity.type, 20),
     fit(duration, 10),
     fit(amount, 12),
     fit(activity.notes ?? "", 24),
   ].join(" ");
+}
+
+function dailyListLines(
+  activities: readonly DailyAction[],
+  notes: ReadonlyMap<string, DailyNote>,
+  activityTypes: ReadonlyMap<string, ActivityType>,
+  options: ActivityPdfOptions,
+  timeZone: string,
+): string[] {
+  const days = groupActivitiesByDay(activities, timeZone);
+  const noteOnlyDays = [...notes.keys()].filter((key) => !days.has(key)).sort();
+  for (const key of noteOnlyDays) days.set(key, []);
+  if (days.size === 0) return ["No activities or daily notes"];
+
+  const lines: string[] = [];
+  for (const [dayKey, dayActivities] of [...days].sort(([left], [right]) => left.localeCompare(right))) {
+    if (lines.length > 0) lines.push("");
+    lines.push(dayLabel(dayKey, options.babyBirthdayMillis, timeZone));
+    if (options.includeDayTimeline !== false && dayActivities.length > 0) {
+      lines.push("Timeline", hourLabels(options.hourLabelInterval ?? 3));
+      lines.push(...dayActivities.map((activity) => `  ${formatTimeInZone(activity.startMillis, timeZone)} ${activityTypes.get(activity.type)?.title ?? activity.type}`));
+    }
+    const note = notes.get(dayKey);
+    if (options.includeDayNotes !== false && note?.note.trim()) lines.push(`Day note: ${note.note.trim()}`);
+    if (options.includeDaySummaries !== false && dayActivities.length > 0) lines.push(...daySummaryLines(dayActivities, activityTypes));
+    if (options.includeActivities !== false && dayActivities.length > 0) {
+      lines.push("Date and time       Type                 Duration   Amount       Notes");
+      lines.push("--------------------------------------------------------------------------");
+      lines.push(...dayActivities.map((activity) => activityLine(activity, activityTypes.get(activity.type), timeZone)));
+    }
+  }
+  return lines;
+}
+
+function groupActivitiesByDay(activities: readonly DailyAction[], timeZone: string): Map<string, DailyAction[]> {
+  const grouped = new Map<string, DailyAction[]>();
+  for (const activity of activities) {
+    const key = formatDayKey(activity.startMillis, timeZone);
+    grouped.set(key, [...(grouped.get(key) ?? []), activity]);
+  }
+  return grouped;
+}
+
+function daySummaryLines(activities: readonly DailyAction[], activityTypes: ReadonlyMap<string, ActivityType>): string[] {
+  const grouped = new Map<string, { count: number; durationMillis: number }>();
+  for (const activity of activities) {
+    const title = activityTypes.get(activity.type)?.title ?? activity.type;
+    const current = grouped.get(title) ?? { count: 0, durationMillis: 0 };
+    const durationMillis = activity.duration ?? Math.max(0, (activity.endMillis ?? activity.startMillis) - activity.startMillis);
+    grouped.set(title, { count: current.count + 1, durationMillis: current.durationMillis + durationMillis });
+  }
+  const values = [...grouped].sort(([left], [right]) => left.localeCompare(right));
+  return [
+    `Day summary: ${activities.length} activit${activities.length === 1 ? "y" : "ies"}`,
+    ...values.map(([title, summary]) => `  ${title}: ${summary.count}${summary.durationMillis > 0 ? `, ${formatDuration(summary.durationMillis)}` : ""}`),
+  ];
+}
+
+function dayLabel(dayKey: string, birthdayMillis: number | undefined, timeZone: string): string {
+  if (birthdayMillis === undefined) return dayKeyToIsoDate(dayKey);
+  const birthdayKey = formatDayKey(birthdayMillis, timeZone);
+  const ageDays = Math.max(0, Math.round((dayKeyToUtcMillis(dayKey) - dayKeyToUtcMillis(birthdayKey)) / 86_400_000));
+  return `${dayKeyToIsoDate(dayKey)} - age ${ageDays} day${ageDays === 1 ? "" : "s"}`;
 }
 
 function growthLine(entry: GrowthEntry, weightUnit: "kg" | "lb", lengthUnit: "cm" | "in"): string {
@@ -122,29 +194,29 @@ function trendLine(label: string, entries: readonly GrowthEntry[], select: (entr
   return `${label}: ${values.length} points, min ${formatMeasurement(minimum)} ${unit}, max ${formatMeasurement(maximum)} ${unit}, latest ${formatMeasurement(latest.value)} ${unit} on ${formatDate(latest.dateMillis)}`;
 }
 
-function timelineLines(activities: readonly DailyAction[], interval: number): string[] {
+function timelineLines(activities: readonly DailyAction[], interval: number, timeZone: string): string[] {
   const lines: string[] = [];
   let currentDay = "";
   for (const activity of activities) {
-    const day = formatDate(activity.startMillis);
+    const day = dayKeyToIsoDate(formatDayKey(activity.startMillis, timeZone));
     if (day !== currentDay) {
       if (lines.length > 0) lines.push("");
       currentDay = day;
       lines.push(day, hourLabels(interval), "Time        Type                     End      Duration   Notes");
       lines.push("--------------------------------------------------------------------------");
     }
-    lines.push(timelineActivityLine(activity));
+    lines.push(timelineActivityLine(activity, timeZone));
   }
   return lines.length === 0 ? ["No activities"] : lines;
 }
 
-function timelineActivityLine(activity: DailyAction): string {
+function timelineActivityLine(activity: DailyAction, timeZone: string): string {
   const endMillis = activity.endMillis ?? (activity.duration === undefined ? undefined : activity.startMillis + activity.duration);
   const durationMillis = activity.duration ?? (endMillis === undefined ? 0 : Math.max(0, endMillis - activity.startMillis));
   return [
-    fit(formatTime(activity.startMillis), 11),
+    fit(formatTimeInZone(activity.startMillis, timeZone), 11),
     fit(activity.type, 24),
-    fit(endMillis === undefined ? "" : formatTime(endMillis), 8),
+    fit(endMillis === undefined ? "" : formatTimeInZone(endMillis, timeZone), 8),
     fit(durationMillis > 0 ? formatDuration(durationMillis) : "", 10),
     fit(activity.notes ?? "", 20),
   ].join(" ");
@@ -219,8 +291,26 @@ function formatDate(millis: number): string {
   return new Date(millis).toISOString().slice(0, 10);
 }
 
-function formatTime(millis: number): string {
-  return new Date(millis).toISOString().slice(11, 16);
+function formatTimeInZone(millis: number, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(millis);
+}
+
+function formatTimestampInZone(millis: number, timeZone: string): string {
+  return `${dayKeyToIsoDate(formatDayKey(millis, timeZone))} ${formatTimeInZone(millis, timeZone)}`;
+}
+
+function formatDayKey(millis: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(millis);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}${values.month}${values.day}`;
+}
+
+function dayKeyToIsoDate(key: string): string {
+  return `${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6, 8)}`;
+}
+
+function dayKeyToUtcMillis(key: string): number {
+  return Date.UTC(Number(key.slice(0, 4)), Number(key.slice(4, 6)) - 1, Number(key.slice(6, 8)));
 }
 
 function formatDuration(millis: number): string {

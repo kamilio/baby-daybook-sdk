@@ -138,7 +138,7 @@ const growthPdf = await baby.exportGrowthPdf({
 const timelinePdf = await baby.exportTimelinePdf({ hourLabelInterval: 3 });
 ```
 
-Growth reports include measurement rows and independently selectable weight, height, and head-size trend sections. Timeline reports group activities by day and reproduce the app's hour-label concept.
+Daily-list reports follow the app's section order: day label, timeline, daily note, summary, and individual activity rows. Daily notes are matched using Baby Daybook's `yyyyMMdd` document IDs in the selected timezone. Growth reports include measurement rows and independently selectable weight, height, and head-size trend sections. Timeline reports group activities by day and reproduce the app's hour-label concept.
 
 ## Family sharing
 

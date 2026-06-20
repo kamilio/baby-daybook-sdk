@@ -456,10 +456,19 @@ export interface ActivityStatisticsReport extends ActivityMetricStatistics {
 export interface ActivityPdfOptions {
   title?: string;
   babyName?: string;
+  babyBirthdayMillis?: number;
   generatedAt?: Date | number;
   fromMillis?: number;
   toMillis?: number;
   includeDeleted?: boolean;
+  includeDayTimeline?: boolean;
+  includeDayNotes?: boolean;
+  includeDaySummaries?: boolean;
+  includeActivities?: boolean;
+  hourLabelInterval?: 1 | 2 | 3 | 4 | 6 | 12;
+  timeZone?: string;
+  dailyNotes?: readonly DailyNote[];
+  activityTypes?: readonly ActivityType[];
 }
 
 export interface GrowthPdfOptions {
@@ -476,6 +485,4 @@ export interface GrowthPdfOptions {
   includeHeadSizeChart?: boolean;
 }
 
-export interface TimelinePdfOptions extends ActivityPdfOptions {
-  hourLabelInterval?: 1 | 2 | 3 | 4 | 6 | 12;
-}
+export type TimelinePdfOptions = ActivityPdfOptions;

@@ -295,10 +295,18 @@ export class BabyClient {
   }
 
   async exportActivitiesPdf(options: ActivityPdfOptions = {}): Promise<Uint8Array> {
-    const baby = await this.get();
-    return activitiesToPdf(await this.activities.list({ includeDeleted: options.includeDeleted }), {
+    const [baby, activities, dailyNotes, activityTypes] = await Promise.all([
+      this.get(),
+      this.activities.list({ includeDeleted: options.includeDeleted }),
+      this.dailyNotes.list({ includeDeleted: options.includeDeleted }),
+      this.activityTypes.list({ includeDeleted: options.includeDeleted }),
+    ]);
+    return activitiesToPdf(activities, {
       ...options,
       babyName: options.babyName ?? baby?.name,
+      babyBirthdayMillis: options.babyBirthdayMillis ?? baby?.birthdayMillis,
+      dailyNotes: options.dailyNotes ?? dailyNotes,
+      activityTypes: options.activityTypes ?? activityTypes,
     });
   }
 
