@@ -170,11 +170,14 @@ export interface StatisticsParameterSeries {
   parameter: StatisticsActivityParameter;
   totalCount: number;
   totalDurationMillis: number;
+  totalVolume: number;
   countBins: StatisticsChartBin[];
   durationBins: StatisticsDurationBin[];
+  volumeBins: StatisticsVolumeBin[];
   timeOfDayBins: StatisticsTimeOfDayBin[];
   comparisonCountBins?: StatisticsChartBin[];
   comparisonDurationBins?: StatisticsDurationBin[];
+  comparisonVolumeBins?: StatisticsVolumeBin[];
 }
 
 export interface StatisticsParameterBreakdownOptions {
@@ -231,7 +234,7 @@ interface StatisticsTimeOfDayInput {
   deleted?: boolean;
 }
 
-interface StatisticsParameterInput extends StatisticsDurationInput {
+interface StatisticsParameterInput extends StatisticsDurationInput, StatisticsVolumeInput {
   side?: string;
   leftDuration?: number;
   rightDuration?: number;
@@ -723,12 +726,15 @@ export function buildStatisticsParameterBreakdown(
       .map((activity) => withParameterDuration(activity, parameter));
     const countBins = buildStatisticsActivityCountBins(parameterActivities, range, typeUid);
     const durationBins = buildStatisticsDurationBins(parameterActivities, range, typeUid);
+    const volumeBins = buildStatisticsVolumeBins(parameterActivities, range, typeUid);
     return {
       parameter,
       totalCount: countBins.reduce((total, bin) => total + bin.activityCount, 0),
       totalDurationMillis: durationBins.reduce((total, bin) => total + bin.durationMillis, 0),
+      totalVolume: volumeBins.reduce((total, bin) => total + bin.volume, 0),
       countBins,
       durationBins,
+      volumeBins,
       timeOfDayBins: buildStatisticsTimeOfDayDistribution(parameterActivities, range, {
         typeUid,
         comparisonRange: options.comparisonRange,
@@ -737,6 +743,7 @@ export function buildStatisticsParameterBreakdown(
         ? {
           comparisonCountBins: buildStatisticsActivityCountBins(parameterActivities, options.comparisonRange, typeUid),
           comparisonDurationBins: buildStatisticsDurationBins(parameterActivities, options.comparisonRange, typeUid),
+          comparisonVolumeBins: buildStatisticsVolumeBins(parameterActivities, options.comparisonRange, typeUid),
         }
         : {}),
     };

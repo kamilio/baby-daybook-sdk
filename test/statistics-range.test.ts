@@ -456,18 +456,19 @@ describe("native statistics date ranges", () => {
     const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
     const range = dateRange([2026, 2, 7], [2026, 2, 7]);
     const data = buildStatisticsParameterBreakdown([
-      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "breastfeeding", side: "left", duration: 5 },
-      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "breastfeeding", side: "left", leftDuration: 10, duration: 99 },
-      { startMillis: new Date(2026, 2, 7, 9).getTime(), type: "breastfeeding", side: "both", leftDuration: 20, rightDuration: 30, duration: 50 },
-      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "breastfeeding", side: "right", duration: 40 },
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "breastfeeding", side: "left", duration: 5, volume: 50 },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "breastfeeding", side: "left", leftDuration: 10, duration: 99, volume: 100 },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), type: "breastfeeding", side: "both", leftDuration: 20, rightDuration: 30, duration: 50, volume: 200 },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "breastfeeding", side: "right", duration: 40, volume: 300 },
     ], range, "breastfeeding", { comparisonRange });
 
-    expect(data.map(({ parameter, totalCount, totalDurationMillis }) => ({ parameter, totalCount, totalDurationMillis }))).toEqual([
-      { parameter: "left", totalCount: 2, totalDurationMillis: 30 },
-      { parameter: "right", totalCount: 2, totalDurationMillis: 70 },
+    expect(data.map(({ parameter, totalCount, totalDurationMillis, totalVolume }) => ({ parameter, totalCount, totalDurationMillis, totalVolume }))).toEqual([
+      { parameter: "left", totalCount: 2, totalDurationMillis: 30, totalVolume: 300 },
+      { parameter: "right", totalCount: 2, totalDurationMillis: 70, totalVolume: 500 },
     ]);
     expect(data[0]!.comparisonCountBins?.[0]?.activityCount).toBe(1);
     expect(data[0]!.comparisonDurationBins?.[0]?.durationMillis).toBe(5);
+    expect(data[0]!.comparisonVolumeBins?.[0]?.volume).toBe(50);
     expect(data[0]!.timeOfDayBins[8]).toEqual({ hour: 8, count: 1, comparisonCount: 1, changePercent: 0 });
     expect(data[1]!.timeOfDayBins[9]?.count).toBe(1);
     expect(data[1]!.timeOfDayBins[10]?.count).toBe(1);

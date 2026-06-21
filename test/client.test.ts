@@ -213,8 +213,8 @@ describe("BabyClient", () => {
       fromMillis: day.getTime(),
       toMillis: new Date(2026, 2, 8).getTime() - 1,
     })).resolves.toEqual([
-      expect.objectContaining({ parameter: "left", totalCount: 2, totalDurationMillis: 30 }),
-      expect.objectContaining({ parameter: "right", totalCount: 1, totalDurationMillis: 30 }),
+      expect.objectContaining({ parameter: "left", totalCount: 2, totalDurationMillis: 30, totalVolume: 0 }),
+      expect.objectContaining({ parameter: "right", totalCount: 1, totalDurationMillis: 30, totalVolume: 0 }),
     ]);
   });
 
