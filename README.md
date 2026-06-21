@@ -266,6 +266,10 @@ const matchingNotes = await baby.searchDailyNotes("doctor", {
 });
 const noteCount = await baby.countSearchDailyNotes("doctor");
 
+const growthEntries = await baby.listGrowth();
+const comparisonBabies = await client.listGrowthComparisonBabies(baby.babyUid);
+const comparisonGrowth = await client.getGrowthComparisonMap(comparisonBabies.map(({ uid }) => uid));
+
 const result = calculateGrowthPercentile({
   source: "who_0_60_months",
   gender: "female",
@@ -276,6 +280,8 @@ const result = calculateGrowthPercentile({
 ```
 
 Growth age uses the selected reference dataset's weeks, months, or years. Use `growthAgeAtDate` to convert timestamps and `calculateGrowthValueAtPercentile` to obtain a reference value for percentiles 1 through 99.
+
+`baby.listGrowth()` matches the native list's `date_millis DESC` order. The chart comparison picker exposes only other babies with the active baby's gender, and `getGrowthComparisonMap()` fetches each selected baby's ordered series while preserving selection order.
 
 Search reproduces the native SQLite screen behavior: activity keywords match notes only, reaction values are OR filters, selected `pee`, `poo`, and `hairWash` parameters are all required, and `groupsByType` applies the app's per-activity-type group map. Activities sort by `startMillis DESC, type, uid`; day notes sort by their `YYYYMMDD` ID descending. Count helpers intentionally ignore `offset` and `limit`, matching the app's separate count and paged-list queries.
 

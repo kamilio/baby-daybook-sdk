@@ -42,7 +42,7 @@ export {
 export { BabyDaybookApiError, BabyDaybookAuthError, BabyDaybookError } from "./errors.js";
 export { decodeFields, decodeValue, encodeFields, encodeValue, FirestoreClient } from "./firestore.js";
 export type { FirestoreSetWrite } from "./firestore.js";
-export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeAtDate } from "./growth.js";
+export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeAtDate, sortGrowthEntries } from "./growth.js";
 export { CallableFunctionsClient, FamilyClient } from "./functions.js";
 export type {
   BabyDaybookCloudFunction,

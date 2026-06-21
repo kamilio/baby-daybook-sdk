@@ -7,10 +7,21 @@ import {
   growthAgeAtDate,
   searchActivities,
   searchDailyNotes,
+  sortGrowthEntries,
 } from "../src/index.js";
 import type { DailyAction, DailyNote } from "../src/index.js";
 
 describe("growth percentiles", () => {
+  it("sorts growth records like the native growth list", () => {
+    const entries = [
+      { uid: "old", userUid: "u", babyUid: "b", dateMillis: 100 },
+      { uid: "deleted", userUid: "u", babyUid: "b", dateMillis: 300, deleted: true },
+      { uid: "new", userUid: "u", babyUid: "b", dateMillis: 200 },
+    ];
+    expect(sortGrowthEntries(entries).map((entry) => entry.uid)).toEqual(["new", "old"]);
+    expect(sortGrowthEntries(entries, { includeDeleted: true }).map((entry) => entry.uid)).toEqual(["deleted", "new", "old"]);
+  });
+
   it("matches the CDC median and inverse LMS calculation", () => {
     const median = calculateGrowthPercentile({
       source: "cdc_0_36_months",

@@ -2,11 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
+  GrowthEntry,
   GrowthMeasurement,
   GrowthPercentileInput,
   GrowthPercentileResult,
   GrowthRangeUnit,
   GrowthReferenceSource,
+  ListOptions,
 } from "./types.js";
 
 interface LmsData {
@@ -18,6 +20,12 @@ interface LmsData {
 }
 
 const REFERENCE_PERCENTILES = [5, 10, 25, 50, 75, 90, 95] as const;
+
+export function sortGrowthEntries(entries: readonly GrowthEntry[], options: ListOptions = {}): GrowthEntry[] {
+  return entries
+    .filter((entry) => options.includeDeleted || !entry.deleted)
+    .sort((left, right) => right.dateMillis - left.dateMillis);
+}
 const Z_BY_PERCENTILE = [
   -2.326, -2.054, -1.881, -1.751, -1.645, -1.555, -1.476, -1.405, -1.341, -1.282,
   -1.227, -1.175, -1.126, -1.08, -1.036, -0.994, -0.954, -0.915, -0.878, -0.842,

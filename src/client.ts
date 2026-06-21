@@ -17,6 +17,7 @@ import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defau
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient, type FirestoreSetWrite } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
+import { sortGrowthEntries } from "./growth.js";
 import { groupMomentsByMonth } from "./moments.js";
 import { createNativeRandomUid } from "./native-id.js";
 import { paths } from "./paths.js";
@@ -181,6 +182,18 @@ export class BabyDaybookClient {
   async getBaby(babyUid: string): Promise<Baby | undefined> {
     const document = await this.firestore.get<Baby>(paths.baby(babyUid));
     return document ? { ...document.data, uid: document.data.uid ?? babyUid } : undefined;
+  }
+
+  async listGrowthComparisonBabies(activeBabyUid: string, options: ListOptions = {}): Promise<Baby[]> {
+    const activeBaby = await this.getBaby(activeBabyUid);
+    if (!activeBaby || (!options.includeDeleted && activeBaby.deleted)) throw new Error(`Baby ${activeBabyUid} does not exist`);
+    return (await this.listBabies(options)).filter((baby) => baby.uid !== activeBabyUid && baby.gender === activeBaby.gender);
+  }
+
+  async getGrowthComparisonMap(babyUids: readonly string[], options: ListOptions = {}): Promise<Map<string, GrowthEntry[]>> {
+    const uniqueBabyUids = [...new Set(babyUids)];
+    const entries = await Promise.all(uniqueBabyUids.map(async (babyUid) => [babyUid, await this.baby(babyUid).listGrowth(options)] as const));
+    return new Map(entries);
   }
 
   baby(babyUid: string): BabyClient {
@@ -472,6 +485,10 @@ export class BabyClient {
       notes: input.notes ?? "",
       deleted: false,
     }, atMillis);
+  }
+
+  async listGrowth(options: ListOptions = {}): Promise<GrowthEntry[]> {
+    return sortGrowthEntries(await this.growth.list({ includeDeleted: options.includeDeleted }), options);
   }
 
   saveGrowth(growth: GrowthEntry, atMillis = Date.now()): Promise<GrowthEntry> {

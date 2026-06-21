@@ -406,6 +406,35 @@ describe("BabyClient", () => {
     expect(teethingRepo.save).toHaveBeenCalledTimes(2);
   });
 
+  it("lists growth and builds native same-gender comparison data", async () => {
+    const { baby, client, growthRepo } = configuredBaby();
+    growthRepo.items = [
+      { uid: "old", userUid: "user", babyUid: "baby", dateMillis: 100 },
+      { uid: "new", userUid: "user", babyUid: "baby", dateMillis: 200 },
+    ];
+    await expect(baby.listGrowth()).resolves.toEqual([
+      expect.objectContaining({ uid: "new" }),
+      expect.objectContaining({ uid: "old" }),
+    ]);
+
+    (client as any).getBaby = vi.fn(async (uid: string) => ({ uid, userUid: "user", name: uid, gender: "female" }));
+    (client as any).listBabies = vi.fn(async () => [
+      { uid: "active", userUid: "user", name: "Active", gender: "female" },
+      { uid: "sister", userUid: "user", name: "Sister", gender: "female" },
+      { uid: "brother", userUid: "user", name: "Brother", gender: "male" },
+    ]);
+    await expect(client.listGrowthComparisonBabies("active")).resolves.toEqual([
+      expect.objectContaining({ uid: "sister" }),
+    ]);
+
+    const listGrowth = vi.fn(async (options) => [{ uid: "g", userUid: "user", babyUid: "sister", dateMillis: options.includeDeleted ? 2 : 1 }]);
+    (client as any).baby = vi.fn(() => ({ listGrowth }));
+    const comparison = await client.getGrowthComparisonMap(["sister", "sister"], { includeDeleted: true });
+    expect([...comparison.keys()]).toEqual(["sister"]);
+    expect(comparison.get("sister")).toEqual([expect.objectContaining({ dateMillis: 2 })]);
+    expect(listGrowth).toHaveBeenCalledOnce();
+  });
+
   it("lists moments in native month and item order", async () => {
     const { baby, momentsRepo } = configuredBaby();
     momentsRepo.items = [
