@@ -153,7 +153,7 @@ await client.updateDisplayName("Parent name");
 await client.signOut();
 ```
 
-Creating a baby also initializes the same 20 built-in activity types and 39 default groups as the Android app. The SDK sends the baby, ownership record, activity types, and groups in one atomic Firestore commit, so a rejected request cannot leave a partial profile:
+Creating a baby also initializes the same 20 built-in activity types and 39 default groups as the Android app. It follows the native write order: create the baby first, then write the default activity types and groups. The ownership relation is server-managed and read-only to clients. If default initialization fails, the SDK rolls back the newly created baby root:
 
 ```ts
 const created = await client.createBaby({
@@ -167,9 +167,11 @@ await client.baby(created.uid).save({
   isPremature: true,
   expectedBirthdayMillis: Date.parse("2026-01-15T00:00:00Z"),
 });
+
+await client.baby(created.uid).delete();
 ```
 
-Baby profile saves match the native editor: the name must contain at least one character, all entered profile fields are preserved without hidden birthday or premature-birth normalization, and each save writes `svt: 0` with a fresh `updatedMillis` synchronization stamp.
+Baby profile saves match the native editor: the name must contain at least one character, all entered profile fields are preserved without hidden birthday or premature-birth normalization, and each save writes `svt: 0` with a fresh `updatedMillis` synchronization stamp. Baby deletion is a synchronization tombstone rather than a Firestore hard delete, matching the app and its security rules.
 
 Default group names use the app's English labels. A caller that has another localization catalog can resolve the native message keys while creating the baby:
 
@@ -409,11 +411,14 @@ New basic reminders use the app's three-hour interval and native 16-character ID
 ## Attachments and backups
 
 ```ts
-await baby.uploadAttachment("moments", momentUid, "photo.jpg", jpegBytes, "image/jpeg");
-await baby.uploadAttachmentThumbnail("moments", momentUid, "photo.jpg", thumbnailBytes, "image/jpeg");
-const jpeg = await baby.downloadAttachment("moments", momentUid, "photo.jpg");
-const preview = await baby.downloadAttachment("moments", momentUid, "photo.jpg", true);
-await baby.deleteAttachment("moments", momentUid, "photo.jpg");
+import { randomUUID } from "node:crypto";
+
+const fileName = `${randomUUID()}.jpg`;
+await baby.uploadAttachment("moments", momentUid, fileName, jpegBytes, "image/jpeg");
+await baby.uploadAttachmentThumbnail("moments", momentUid, fileName, thumbnailBytes, "image/jpeg");
+const jpeg = await baby.downloadAttachment("moments", momentUid, fileName);
+const preview = await baby.downloadAttachment("moments", momentUid, fileName, true);
+await baby.deleteAttachment("moments", momentUid, fileName);
 
 const backup = await baby.createBackup();
 await baby.restoreBackup(backup);
@@ -430,6 +435,8 @@ const statistics = await baby.getActivityStatistics({
   fromMillis: Date.now() - 7 * 86_400_000,
 });
 ```
+
+The native app stores attachments under generated UUID image filenames. Firebase Storage triggers create and tombstone the corresponding Firestore file metadata; those metadata collections are read-only to clients, and the SDK never attempts forbidden direct writes. Metadata propagation is asynchronous, so callers that immediately create a backup after uploading should poll `baby.fileMetadata(category).list()` until the new file appears.
 
 Version 2 backups embed every active original attachment as base64 by default, so restored image and video records do not point at missing Storage objects. Native `thumb_` preview files are not embedded because downloads already fall back to the original; applications can regenerate thumbnails after restore. Backup creation fails if an active metadata record points at a missing file rather than silently creating an incomplete archive. Use `includeAttachments: false` only for lightweight same-account snapshots where the original Firebase Storage objects will remain available.
 
@@ -593,6 +600,12 @@ npm run baby-daybook:build
 npm run baby-daybook:test
 npm run typecheck --workspace baby-daybook-sdk
 npm run lint --workspace baby-daybook-sdk
+```
+
+With a persisted session, the destructive live smoke test is explicitly gated behind `--write`. It creates a uniquely identified temporary baby, exercises representative profile, activity, group, growth, moment, note, teething, reminder, setting, attachment, statistics, export, backup, caregiver-read, and polling-sync paths, then removes the Storage object, hard-deletes writable child test records, tombstones the baby like the native app, and verifies the accessible-baby count returns to its initial value:
+
+```bash
+npm run baby-daybook:smoke-live -- --write
 ```
 
 Tests use mocked Firebase protocol responses and never access a real account. Live verification requires owner-provided credentials or a refresh token and should use a dedicated test baby.

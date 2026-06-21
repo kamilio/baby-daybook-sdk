@@ -1,3 +1,5 @@
+import type { DeletionFlag } from "./types.js";
+
 export type StatisticsTimeInterval =
   | "last7Days"
   | "last14Days"
@@ -277,14 +279,14 @@ interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsVolumeInput {
   startMillis: number;
   volume?: number;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsAmountInput {
@@ -292,7 +294,7 @@ interface StatisticsAmountInput {
   amount?: number;
   amountUnit?: string;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsDurationInput {
@@ -300,27 +302,27 @@ interface StatisticsDurationInput {
   endMillis?: number;
   duration?: number;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsTemperatureInput {
   startMillis: number;
   temperature?: number;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsReactionInput {
   startMillis: number;
   reaction?: string;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsTimeOfDayInput {
   startMillis: number;
   type: string;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 interface StatisticsParameterInput extends StatisticsDurationInput, StatisticsVolumeInput {
@@ -480,7 +482,7 @@ export function getStatisticsChangePercent(current: number, comparison: number):
 }
 
 export function buildStatisticsActivityCountBins(
-  activities: readonly Readonly<{ startMillis: number; type: string; deleted?: boolean }>[],
+  activities: readonly Readonly<{ startMillis: number; type: string; deleted?: DeletionFlag }>[],
   range: Readonly<StatisticsDateRange>,
   typeUid?: string,
 ): StatisticsChartBin[] {

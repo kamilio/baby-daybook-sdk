@@ -22,6 +22,7 @@ export interface AuthSessionData {
 export type AuthSessionSnapshot = AuthSessionData;
 
 export type SignInProvider = "google" | "facebook" | "apple" | "password";
+export type DeletionFlag = boolean | 0 | 1;
 export type Gender = "male" | "female" | "other" | string;
 export type ActivitySide = "left" | "right" | string;
 export type ActivityReaction = "liked" | "neutral" | "disliked" | string;
@@ -44,7 +45,7 @@ export type BuiltInActivityType =
 
 export interface CloudRecord {
   svt?: number;
-  deleted?: boolean;
+  deleted?: DeletionFlag;
 }
 
 export interface Baby extends CloudRecord {
@@ -297,6 +298,7 @@ export interface StickyNotificationSetting extends StickyNotificationParams {
 }
 
 export interface FileMetadata extends CloudRecord {
+  uid?: string;
   itemUid: string;
   babyUid: string;
   fileName: string;

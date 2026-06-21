@@ -29,15 +29,16 @@ describe("BabyDaybookClient", () => {
     await expect(client.listBabies()).resolves.toHaveLength(2);
     await expect(client.getBaby("baby")).resolves.toMatchObject({ uid: "baby" });
     await expect(client.createBaby({ uid: "new", name: "New" })).resolves.toMatchObject({ uid: "new", userUid: "user", svt: 0, deleted: false });
-    const creationWrites = firestore.setMany.mock.calls[0]![0];
-    expect(creationWrites).toHaveLength(61);
-    expect(creationWrites[0]).toMatchObject({ path: "babyData/babyUid_new", data: { uid: "new", userUid: "user", name: "New" } });
-    expect(creationWrites[1]).toMatchObject({ path: "userData/user/createdBabies/new", data: { babyUid: "new", deleted: false } });
-    expect(creationWrites.filter((write: { path: string }) => write.path.includes("/daTypes/"))).toHaveLength(20);
-    expect(creationWrites.find((write: { path: string }) => write.path.endsWith("/daTypes/food"))).toMatchObject({
+    const babyWrites = firestore.setMany.mock.calls[0]![0];
+    const initializationWrites = firestore.setMany.mock.calls[1]![0];
+    expect(babyWrites).toHaveLength(1);
+    expect(babyWrites[0]).toMatchObject({ path: "babyData/babyUid_new", data: { uid: "new", userUid: "user", name: "New" } });
+    expect(initializationWrites).toHaveLength(59);
+    expect(initializationWrites.filter((write: { path: string }) => write.path.includes("/daTypes/"))).toHaveLength(20);
+    expect(initializationWrites.find((write: { path: string }) => write.path.endsWith("/daTypes/food"))).toMatchObject({
       data: { uid: "food", title: "", color: "#F69601", icon: "bib", category: "feeding", hasAmount: true, hasReaction: true },
     });
-    const groupWrites = creationWrites.filter((write: { path: string }) => write.path.includes("/groups/"));
+    const groupWrites = initializationWrites.filter((write: { path: string }) => write.path.includes("/groups/"));
     expect(groupWrites).toHaveLength(39);
     expect(groupWrites[0]).toMatchObject({ data: { title: "Mother’s milk", daType: "bottle", description: "", userUid: "" } });
     expect(groupWrites[0]!.data.uid).toMatch(/^[0-9A-Za-z]{16}$/);
@@ -66,7 +67,7 @@ describe("BabyDaybookClient", () => {
       resolveDefaultGroupTitle: ({ messageKey, title }) => `${messageKey}:${title}`,
     });
 
-    const writes = setMany.mock.calls[0]![0];
+    const writes = setMany.mock.calls[1]![0];
     expect(writes.find((write: { data: Record<string, unknown> }) => write.data.daType === "bottle" && write.data.title !== ""))
       .toMatchObject({ data: { title: "mothers_milk:Mother’s milk" } });
   });
@@ -78,13 +79,27 @@ describe("BabyDaybookClient", () => {
       void writes;
       return Promise.reject(failure);
     });
-    const set = vi.fn();
-    (client as any).firestore = { setMany, set };
+    const deleteDocument = vi.fn();
+    (client as any).firestore = { setMany, delete: deleteDocument };
 
     await expect(client.createBaby({ uid: "failed", name: "Failed" })).rejects.toBe(failure);
     expect(setMany).toHaveBeenCalledTimes(1);
-    expect(setMany.mock.calls[0]![0]).toHaveLength(61);
-    expect(set).not.toHaveBeenCalled();
+    expect(setMany.mock.calls[0]![0]).toHaveLength(1);
+    expect(deleteDocument).not.toHaveBeenCalled();
+  });
+
+  it("rolls back the baby root if default initialization fails", async () => {
+    const client = baseClient();
+    const failure = new Error("defaults rejected");
+    const setMany = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(failure);
+    const deleteDocument = vi.fn(async () => undefined);
+    (client as any).firestore = { setMany, delete: deleteDocument };
+
+    await expect(client.createBaby({ uid: "failed-defaults", name: "Failed Defaults" })).rejects.toBe(failure);
+    expect(setMany).toHaveBeenCalledTimes(2);
+    expect(deleteDocument).toHaveBeenCalledWith("babyData/babyUid_failed-defaults");
   });
 });
 
@@ -575,7 +590,7 @@ describe("BabyClient", () => {
     (baby as any).dailyNotes = repo([{ uid: "19700101", userUid: "user", babyUid: "baby", note: "First note" }]);
     (baby as any).activityTypes = repo([{ uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle feeding" }]);
 
-    await expect(baby.uploadAttachment("moments", "m", "photo.jpg", "image")).resolves.toMatchObject({ itemUid: "m" });
+    await expect(baby.uploadAttachment("moments", "m", "photo.jpg", "image")).resolves.toMatchObject({ uid: "photo", itemUid: "m" });
     await expect(baby.downloadAttachment("moments", "m", "photo.jpg")).resolves.toEqual(new Uint8Array([1, 2]));
     await baby.uploadAttachmentThumbnail("moments", "m", "photo.jpg", "thumbnail", "image/jpeg");
     expect((client as any).storage.upload).toHaveBeenLastCalledWith("thumb-path", "thumbnail", "image/jpeg");
@@ -584,6 +599,7 @@ describe("BabyClient", () => {
     metadata.items = [{ itemUid: "m", babyUid: "baby", fileName: "photo.jpg" }];
     await baby.deleteAttachment("moments", "m", "photo.jpg");
     expect((client as any).storage.deleteAttachment).toHaveBeenCalledWith("moments", "baby", "m", "photo.jpg");
+    expect(metadata.items).toEqual([{ itemUid: "m", babyUid: "baby", fileName: "photo.jpg" }]);
     metadata.items = [{ itemUid: "m", babyUid: "baby", fileName: "photo.jpg" }];
     await expect(baby.summarizeActivities()).resolves.toMatchObject({ count: 1, totalVolume: 60 });
     await expect(baby.exportActivitiesCsv()).resolves.toContain("bottle");
@@ -767,6 +783,7 @@ describe("BabyClient", () => {
       expect.objectContaining({ updatedMillis: now, svt: 0 }),
       { merge: true },
     );
+    await expect(baby.delete(now + 1)).resolves.toMatchObject({ deleted: true, updatedMillis: now + 1, svt: 0 });
     await expect(baby.save({ name: "" }, now)).rejects.toThrow("Baby name must not be empty");
   });
 
@@ -932,7 +949,7 @@ describe("BabyClient", () => {
     expect(first.value).toEqual(expect.arrayContaining([
       expect.objectContaining({ collection: "baby", id: "baby", type: "added" }),
       expect.objectContaining({ collection: "dailyActions", id: "a", type: "added" }),
-      expect.objectContaining({ collection: "momentsFiles", id: "moment", type: "added" }),
+      expect.objectContaining({ collection: "momentsFiles", id: "photo", type: "added" }),
       expect.objectContaining({ collection: "acceptedInvites", id: "caregiver", type: "added" }),
       expect.objectContaining({ collection: "pendingInvites", id: "hash", type: "added" }),
       expect.objectContaining({ collection: "caregivers", id: "caregiver", type: "added" }),

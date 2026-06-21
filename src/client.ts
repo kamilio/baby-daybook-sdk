@@ -260,12 +260,11 @@ export class BabyDaybookClient {
     };
     const activityTypes = createDefaultActivityTypes(uid, now);
     const groups = createDefaultActivityGroups(uid, now, options.resolveDefaultGroupTitle);
-    const writes: FirestoreSetWrite[] = [
-      { path: paths.baby(uid), data: baby as unknown as Record<string, unknown> },
-      {
-        path: `${paths.userCreatedBabies(this.session.userId)}/${uid}`,
-        data: { babyUid: uid, createdMillis: now, deleted: false },
-      },
+    const babyWrite: FirestoreSetWrite = {
+      path: paths.baby(uid),
+      data: baby as unknown as Record<string, unknown>,
+    };
+    const initializationWrites: FirestoreSetWrite[] = [
       ...activityTypes.map((activityType) => ({
         path: `${paths.babyCollection(uid, "daTypes")}/${activityType.uid}`,
         data: activityType as unknown as Record<string, unknown>,
@@ -275,7 +274,15 @@ export class BabyDaybookClient {
         data: group as unknown as Record<string, unknown>,
       })),
     ];
-    await this.firestore.setMany(writes);
+    let babyCreated = false;
+    try {
+      await this.firestore.setMany([babyWrite]);
+      babyCreated = true;
+      await this.firestore.setMany(initializationWrites);
+    } catch (error) {
+      if (babyCreated) await this.firestore.delete(babyWrite.path).catch(() => undefined);
+      throw error;
+    }
     return baby;
   }
 
@@ -698,6 +705,10 @@ export class BabyClient {
     return (await this.client.firestore.set(paths.baby(this.babyUid), baby as unknown as Record<string, unknown>, { merge: true })).data as unknown as Baby;
   }
 
+  delete(atMillis = Date.now()): Promise<Baby> {
+    return this.save({ deleted: true }, atMillis);
+  }
+
   async #getSetting(settingType: BabySetting["settingType"]): Promise<BabySetting | undefined> {
     return (await this.settings.list()).find((setting) => setting.settingType === settingType);
   }
@@ -830,13 +841,13 @@ export class BabyClient {
   }
 
   fileMetadata(category: AttachmentCategory): CollectionRepository<FileMetadata> {
-    return new CollectionRepository(this.client.firestore, paths.fileMetadata(this.babyUid, category), "itemUid");
+    return new CollectionRepository(this.client.firestore, paths.fileMetadata(this.babyUid, category), "uid");
   }
 
   async uploadAttachment(category: AttachmentCategory, itemUid: string, fileName: string, body: BodyInit, contentType?: string): Promise<FileMetadata> {
     const path = this.client.storage.attachmentPath(category, this.babyUid, itemUid, fileName);
     await this.client.storage.upload(path, body, contentType);
-    return this.fileMetadata(category).save({ itemUid, babyUid: this.babyUid, fileName, deleted: false });
+    return { uid: attachmentFileUid(fileName), itemUid, babyUid: this.babyUid, fileName, deleted: false };
   }
 
   async uploadAttachmentThumbnail(category: AttachmentCategory, itemUid: string, fileName: string, body: BodyInit, contentType?: string): Promise<void> {
@@ -850,7 +861,6 @@ export class BabyClient {
 
   async deleteAttachment(category: AttachmentCategory, itemUid: string, fileName: string): Promise<void> {
     await this.client.storage.deleteAttachment(category, this.babyUid, itemUid, fileName);
-    await this.fileMetadata(category).softDelete(itemUid);
   }
 
   async summarizeActivities(options: ListOptions = {}): Promise<ActivitySummary> {
@@ -1209,7 +1219,6 @@ export class BabyClient {
       ...backup.teething.map((item) => this.teething.save(item)),
       ...backup.reminders.map((item) => this.reminders.save(item)),
       ...backup.settings.map((item) => this.settings.save(item)),
-      ...Object.entries(backup.files).flatMap(([category, files]) => files.map((item) => this.fileMetadata(category as AttachmentCategory).save(item))),
     ]);
   }
 
@@ -1338,6 +1347,10 @@ function toMillis(value: Date | number): number {
 
 const ATTACHMENT_CATEGORIES = ["dailyActions", "growth", "moments", "teething"] as const satisfies readonly AttachmentCategory[];
 
+function attachmentFileUid(fileName: string): string {
+  return fileName.split(".", 1)[0] ?? fileName;
+}
+
 function backupAttachmentKey(category: AttachmentCategory, itemUid: string, fileName: string): string {
   return `${category}:${itemUid}:${fileName}`;
 }
@@ -1367,7 +1380,7 @@ function recordId(collection: BabySyncCollectionName, record: CloudRecord): stri
   const item = record as any;
   if (collection === "acceptedInvites") return item.userUid;
   if (collection === "pendingInvites") return item.userEmailMD5;
-  if (collection.endsWith("Files")) return item.itemUid;
+  if (collection.endsWith("Files")) return item.uid ?? attachmentFileUid(item.fileName);
   if (collection === "caregiversPurchases") return `${item.userUid}:${item.productId}`;
   return item.uid ?? item.settingType ?? item.itemUid ?? item.babyUid ?? JSON.stringify(item);
 }
