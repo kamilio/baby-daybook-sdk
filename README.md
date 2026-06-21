@@ -144,7 +144,16 @@ const created = await client.createBaby({
   name: "Baby",
   birthdayMillis: Date.parse("2026-01-01T00:00:00Z"),
 });
+
+await client.baby(created.uid).save({
+  name: "Baby",
+  gender: "female",
+  isPremature: true,
+  expectedBirthdayMillis: Date.parse("2026-01-15T00:00:00Z"),
+});
 ```
+
+Baby profile saves match the native editor: the name must contain at least one character, all entered profile fields are preserved without hidden birthday or premature-birth normalization, and each save writes `svt: 0` with a fresh `updatedMillis` synchronization stamp.
 
 Default group names use the app's English labels. A caller that has another localization catalog can resolve the native message keys while creating the baby:
 

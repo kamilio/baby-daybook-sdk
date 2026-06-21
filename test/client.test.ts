@@ -27,7 +27,7 @@ describe("BabyDaybookClient", () => {
     await expect(client.saveUser({ uid: "user", displayName: "Updated" })).resolves.toMatchObject({ displayName: "Updated" });
     await expect(client.listBabies()).resolves.toHaveLength(2);
     await expect(client.getBaby("baby")).resolves.toMatchObject({ uid: "baby" });
-    await expect(client.createBaby({ uid: "new", name: "New" })).resolves.toMatchObject({ uid: "new", userUid: "user" });
+    await expect(client.createBaby({ uid: "new", name: "New" })).resolves.toMatchObject({ uid: "new", userUid: "user", svt: 0, deleted: false });
     const creationWrites = firestore.setMany.mock.calls[0]![0];
     expect(creationWrites).toHaveLength(61);
     expect(creationWrites[0]).toMatchObject({ path: "babyData/babyUid_new", data: { uid: "new", userUid: "user", name: "New" } });
@@ -51,6 +51,7 @@ describe("BabyDaybookClient", () => {
     await client.signOut();
     expect(signOut).toHaveBeenCalledWith(client.session);
     expect(client.baby("baby")).toBeInstanceOf(BabyClient);
+    await expect(client.createBaby({ name: "" })).rejects.toThrow("Baby name must not be empty");
   });
 
   it("localizes default groups before committing baby creation", async () => {
@@ -404,6 +405,37 @@ describe("BabyClient", () => {
     expect(growthRepo.save).toHaveBeenCalledTimes(2);
     expect(momentsRepo.save).toHaveBeenCalledTimes(2);
     expect(teethingRepo.save).toHaveBeenCalledTimes(2);
+  });
+
+  it("validates and stamps baby profile saves without rewriting editor fields", async () => {
+    const { baby, client } = configuredBaby();
+    const now = 1_750_000_000_000;
+    await expect(baby.save({
+      name: "Baby",
+      gender: "female",
+      birthdayMillis: 100,
+      isPremature: true,
+      expectedBirthdayMillis: 200,
+      photoBase64: "photo",
+      uiColorCode: 7,
+    }, now)).resolves.toMatchObject({
+      uid: "baby",
+      name: "Baby",
+      gender: "female",
+      birthdayMillis: 100,
+      isPremature: true,
+      expectedBirthdayMillis: 200,
+      photoBase64: "photo",
+      uiColorCode: 7,
+      updatedMillis: now,
+      svt: 0,
+    });
+    expect((client as any).firestore.set).toHaveBeenCalledWith(
+      "babyData/babyUid_baby",
+      expect.objectContaining({ updatedMillis: now, svt: 0 }),
+      { merge: true },
+    );
+    await expect(baby.save({ name: "" }, now)).rejects.toThrow("Baby name must not be empty");
   });
 
   it("lists growth and builds native same-gender comparison data", async () => {

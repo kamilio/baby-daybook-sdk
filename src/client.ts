@@ -201,9 +201,17 @@ export class BabyDaybookClient {
   }
 
   async createBaby(input: Omit<Baby, "uid" | "userUid"> & { uid?: string }, options: CreateBabyOptions = {}): Promise<Baby> {
+    if (!input.name.length) throw new RangeError("Baby name must not be empty");
     const uid = input.uid ?? crypto.randomUUID();
     const now = Date.now();
-    const baby: Baby = { ...input, uid, userUid: this.session.userId, updatedMillis: input.updatedMillis ?? now };
+    const baby: Baby = {
+      ...input,
+      uid,
+      userUid: this.session.userId,
+      updatedMillis: input.updatedMillis ?? now,
+      svt: 0,
+      deleted: input.deleted ?? false,
+    };
     const activityTypes = createDefaultActivityTypes(uid, now);
     const groups = createDefaultActivityGroups(uid, now, options.resolveDefaultGroupTitle);
     const writes: FirestoreSetWrite[] = [
@@ -555,10 +563,11 @@ export class BabyClient {
     return this.teething.save({ ...tooth, deleted: true, updatedMillis: atMillis, svt: 0 });
   }
 
-  async save(update: Partial<Baby>): Promise<Baby> {
+  async save(update: Partial<Baby>, atMillis = Date.now()): Promise<Baby> {
     const current = await this.get();
     if (!current) throw new Error(`Baby ${this.babyUid} does not exist`);
-    const baby = { ...current, ...update, uid: this.babyUid, updatedMillis: Date.now() };
+    const baby = { ...current, ...update, uid: this.babyUid, updatedMillis: atMillis, svt: 0 };
+    if (!baby.name.length) throw new RangeError("Baby name must not be empty");
     return (await this.client.firestore.set(paths.baby(this.babyUid), baby as unknown as Record<string, unknown>, { merge: true })).data as unknown as Baby;
   }
 
