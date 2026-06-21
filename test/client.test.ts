@@ -124,6 +124,36 @@ describe("BabyClient", () => {
     await expect(baby.countActivitiesForRange(options)).resolves.toBe(2);
   });
 
+  it("composes native quick-launch items in configured order", async () => {
+    const { baby, activityRepo, reminderRepo } = configuredBaby();
+    (baby as any).activityTypes = repo<ActivityType>([
+      { uid: "sleeping", userUid: "user", babyUid: "baby", title: "Sleep" },
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle" },
+      { uid: "hidden", userUid: "user", babyUid: "baby", title: "Hidden" },
+    ]);
+    (baby as any).settings = repo<BabySetting>([
+      { uid: "config", babyUid: "baby", settingType: "DA_TYPES_CONFIG", params: JSON.stringify({ daTypesConfig: "bottle,sleeping,missing" }) },
+    ]);
+    activityRepo.items = [
+      activity({ uid: "old-bottle", type: "bottle", startMillis: 100 }),
+      activity({ uid: "new-bottle", type: "bottle", startMillis: 200 }),
+      activity({ uid: "sleep", type: "sleeping", startMillis: 150 }),
+    ];
+    reminderRepo.items = [
+      { uid: "sleep-reminder", userUid: "", babyUid: "baby", type: "advanced", daType: "sleeping", dateMillis: 300 },
+    ];
+
+    const items = await baby.getQuickLaunchItems({ nowMillis: 250, lastFeedingFromStart: true });
+    expect(items).toEqual([
+      expect.objectContaining({ activityType: expect.objectContaining({ uid: "bottle" }), lastActivity: expect.objectContaining({ uid: "new-bottle" }) }),
+      expect.objectContaining({
+        activityType: expect.objectContaining({ uid: "sleeping" }),
+        lastActivity: expect.objectContaining({ uid: "sleep" }),
+        reminderSchedule: expect.objectContaining({ reminder: expect.objectContaining({ uid: "sleep-reminder" }) }),
+      }),
+    ]);
+  });
+
   it("edits the baby and controls timed activities", async () => {
     const { baby, activityRepo } = configuredBaby();
     await expect(baby.get()).resolves.toMatchObject({ uid: "baby" });

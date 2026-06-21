@@ -479,6 +479,17 @@ const count = await baby.countActivitiesForRange({ fromMillis: dayStart, toMilli
 
 Results follow the native `startMillis DESC, type, uid` order. Duration types come from each activity type's `hasDuration` flag, including custom types.
 
+The Home quick-launch strip is available as a composed read model:
+
+```ts
+const quickLaunch = await baby.getQuickLaunchItems({
+  nowMillis: Date.now(),
+  lastFeedingFromStart: true,
+});
+```
+
+Each item contains its configured activity type, latest activity when present, and first relevant reminder schedule when present. Stored activity-type configuration order is preserved; unknown or deleted type IDs are skipped.
+
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts

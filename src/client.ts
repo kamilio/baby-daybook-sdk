@@ -103,6 +103,7 @@ import type {
   MomentMonth,
   MomentMonthListOptions,
   Purchase,
+  QuickLaunchItem,
   Reminder,
   ReminderSchedule,
   ReminderScheduleListOptions,
@@ -930,6 +931,35 @@ export class BabyClient {
 
   async getRelevantReminderSchedules(options: ReminderScheduleListOptions = {}): Promise<ReminderSchedule[]> {
     return getRelevantReminderSchedules(await this.getReminderSchedules(options), options.nowMillis);
+  }
+
+  async getQuickLaunchItems(options: ReminderScheduleListOptions = {}): Promise<QuickLaunchItem[]> {
+    const [activityTypes, activities, configuredTypeUids, reminderSchedules] = await Promise.all([
+      this.activityTypes.list(),
+      this.activities.list(),
+      this.getDaTypesConfig(),
+      this.getRelevantReminderSchedules(options),
+    ]);
+    const activeTypes = activityTypes.filter((activityType) => !activityType.deleted);
+    const typeMap = new Map(activeTypes.map((activityType) => [activityType.uid, activityType]));
+    const orderedTypes = configuredTypeUids.length
+      ? configuredTypeUids.flatMap((uid) => {
+        const activityType = typeMap.get(uid);
+        return activityType ? [activityType] : [];
+      })
+      : activeTypes;
+    const lastActivityMap = new Map(getLastActivities(activities, orderedTypes.map((activityType) => activityType.uid), options.nowMillis)
+      .map((activity) => [activity.type, activity]));
+    const reminderMap = new Map<string, ReminderSchedule>();
+    for (const schedule of reminderSchedules) {
+      const daType = schedule.reminder.daType;
+      if (daType && !reminderMap.has(daType)) reminderMap.set(daType, schedule);
+    }
+    return orderedTypes.map((activityType) => ({
+      activityType,
+      lastActivity: lastActivityMap.get(activityType.uid),
+      reminderSchedule: reminderMap.get(activityType.uid),
+    }));
   }
 
   async dismissReminder(uid: string, atMillis = Date.now()): Promise<Reminder> {

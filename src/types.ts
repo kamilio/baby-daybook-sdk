@@ -256,6 +256,12 @@ export interface ReminderScheduleListOptions extends ListOptions {
   lastFeedingFromStart?: boolean;
 }
 
+export interface QuickLaunchItem {
+  activityType: ActivityType;
+  lastActivity?: DailyAction;
+  reminderSchedule?: ReminderSchedule;
+}
+
 export interface BabySetting extends CloudRecord {
   uid: string;
   babyUid: string;
