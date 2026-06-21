@@ -73,6 +73,7 @@ import type {
   Baby,
   CreateBabyOptions,
   BabyAcceptedInvite,
+  BabyCaregiversScreenData,
   BabyCollectionName,
   BabyDaybookBackup,
   BabyDaybookBackupAttachment,
@@ -316,6 +317,41 @@ export class BabyClient {
   async setDaytimeRange(range: BabyDaytimeRange): Promise<Baby> {
     if (!isBabyDaytimeRangeValid(range)) throw new RangeError("Baby daytime range must start at or after 04:00, end at or before 22:00, and last from 11 to 14 hours");
     return this.save({ daytimeRange: formatBabyDaytimeRange(range) });
+  }
+
+  async getCaregiversScreenData(): Promise<BabyCaregiversScreenData> {
+    const [baby, currentUser, acceptedInvites, pendingInvites] = await Promise.all([
+      this.get(),
+      this.client.getUser(),
+      this.acceptedInvites.list(),
+      this.pendingInvites.list(),
+    ]);
+    if (!baby || baby.deleted) {
+      return {
+        currentUser,
+        caregivers: [],
+        pendingInvites: [],
+        isPrimaryCaregiver: false,
+        babyDeletedFromCloud: true,
+      };
+    }
+    const caregiverUids = [baby.userUid, ...acceptedInvites.filter((invite) => !invite.deleted).map((invite) => invite.userUid)];
+    const caregivers = (await Promise.all([...new Set(caregiverUids)].map(async (userUid) =>
+      (await this.client.firestore.get<User>(paths.user(userUid)))?.data)))
+      .filter((user): user is User => Boolean(user) && !user?.deleted)
+      .sort((left, right) => Number(right.uid === baby.userUid) - Number(left.uid === baby.userUid)
+        || caregiverSortName(left).localeCompare(caregiverSortName(right))
+        || left.uid.localeCompare(right.uid));
+    return {
+      currentUser,
+      caregivers,
+      pendingInvites: pendingInvites
+        .filter((invite) => !invite.deleted)
+        .sort((left, right) => (left.userEmail ?? "").localeCompare(right.userEmail ?? "")
+          || left.userEmailMD5.localeCompare(right.userEmailMD5)),
+      isPrimaryCaregiver: baby.userUid === this.client.session.userId,
+      babyDeletedFromCloud: false,
+    };
   }
 
   async areNotificationsEnabled(): Promise<boolean> {
@@ -1205,6 +1241,10 @@ function recordId(collection: BabySyncCollectionName, record: CloudRecord): stri
   if (collection.endsWith("Files")) return item.itemUid;
   if (collection === "caregiversPurchases") return `${item.userUid}:${item.productId}`;
   return item.uid ?? item.settingType ?? item.itemUid ?? item.babyUid ?? JSON.stringify(item);
+}
+
+function caregiverSortName(user: User): string {
+  return user.displayName ?? user.email ?? user.uid;
 }
 
 function toChange(key: string, value: CloudRecord, type: ChangeEvent["type"]): ChangeEvent {

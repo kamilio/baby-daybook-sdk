@@ -333,6 +333,14 @@ export interface CaregiverInfo {
   isPremium: boolean;
 }
 
+export interface BabyCaregiversScreenData {
+  currentUser?: User;
+  caregivers: User[];
+  pendingInvites: BabyPendingInvite[];
+  isPrimaryCaregiver: boolean;
+  babyDeletedFromCloud: boolean;
+}
+
 export type AttachmentCategory = "dailyActions" | "growth" | "moments" | "teething";
 export type BabyCollectionName = "daTypes" | "dailyActions" | "groups" | "growth" | "moments" | "dailyNotes" | "teething";
 export type BabySyncCollectionName =

@@ -343,9 +343,14 @@ await client.family.changePrimaryCaregiver(babyUid, caregiverUid);
 
 const caregiver = await client.family.getUserWithPremiumStatus("caregiver@example.com");
 if (caregiver) console.log(caregiver.user.displayName, caregiver.isPremium);
+
+const caregiverScreen = await client.baby(babyUid).getCaregiversScreenData();
+console.log(caregiverScreen.caregivers, caregiverScreen.pendingInvites);
 ```
 
 Caregiver mutations follow the native app's `void` contract. Email lookup returns `undefined` when the cloud function reports that no user exists and validates successful user responses before exposing them.
+
+`getCaregiversScreenData` joins the baby owner, accepted-invite user profiles, pending invites, current user, primary-caregiver state, and the native deleted-from-cloud state. The primary caregiver is always first; remaining caregivers and pending invitations use deterministic display-name/email ordering.
 
 ## Reminders
 

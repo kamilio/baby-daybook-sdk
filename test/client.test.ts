@@ -238,6 +238,49 @@ describe("BabyClient", () => {
     await expect(baby.deleteActivityType("custom")).rejects.toThrow("Only primary caregiver can delete activity type.");
   });
 
+  it("joins native caregiver screen data and detects deleted babies", async () => {
+    const { baby, client } = configuredBaby();
+    (baby as any).acceptedInvites = repo([
+      { babyUid: "baby", userUid: "care-b" },
+      { babyUid: "baby", userUid: "care-a" },
+      { babyUid: "baby", userUid: "deleted-care", deleted: true },
+    ]);
+    (baby as any).pendingInvites = repo([
+      { babyUid: "baby", userEmailMD5: "z", userEmail: "z@example.com" },
+      { babyUid: "baby", userEmailMD5: "a", userEmail: "a@example.com" },
+      { babyUid: "baby", userEmailMD5: "d", userEmail: "d@example.com", deleted: true },
+    ]);
+    (client as any).getUser = vi.fn(async () => ({ uid: "user", displayName: "Parent" }));
+    (client as any).firestore.get = vi.fn(async (path: string) => ({ data: path.endsWith("/user")
+      ? { uid: "user", displayName: "Parent" }
+      : path.endsWith("/care-a")
+        ? { uid: "care-a", displayName: "Alex" }
+        : { uid: "care-b", displayName: "Blair" } }));
+
+    await expect(baby.getCaregiversScreenData()).resolves.toEqual({
+      currentUser: { uid: "user", displayName: "Parent" },
+      caregivers: [
+        { uid: "user", displayName: "Parent" },
+        { uid: "care-a", displayName: "Alex" },
+        { uid: "care-b", displayName: "Blair" },
+      ],
+      pendingInvites: [
+        expect.objectContaining({ userEmail: "a@example.com" }),
+        expect.objectContaining({ userEmail: "z@example.com" }),
+      ],
+      isPrimaryCaregiver: true,
+      babyDeletedFromCloud: false,
+    });
+
+    (client as any).getBaby = vi.fn(async () => ({ uid: "baby", userUid: "user", name: "Baby", deleted: true }));
+    await expect(baby.getCaregiversScreenData()).resolves.toMatchObject({
+      caregivers: [],
+      pendingInvites: [],
+      isPrimaryCaregiver: false,
+      babyDeletedFromCloud: true,
+    });
+  });
+
   it("creates native-compatible activity types", async () => {
     const { baby } = configuredBaby();
     const activityTypes = repo<ActivityType>([]);
