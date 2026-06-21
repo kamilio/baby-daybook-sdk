@@ -59,6 +59,24 @@ export interface StatisticsVolumeSummaryOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsAmountBin {
+  periodStartMillis: number;
+  amount: number;
+  activityCount: number;
+}
+
+export interface StatisticsAmountSummary {
+  total: StatisticsComparedValue;
+  averagePerDay: StatisticsComparedValue;
+  averagePerActivity: StatisticsComparedValue;
+}
+
+export interface StatisticsAmountSummaryOptions {
+  amountUnit: string;
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -69,6 +87,14 @@ interface StatisticsActivityCountInput {
 interface StatisticsVolumeInput {
   startMillis: number;
   volume?: number;
+  type: string;
+  deleted?: boolean;
+}
+
+interface StatisticsAmountInput {
+  startMillis: number;
+  amount?: number;
+  amountUnit?: string;
   type: string;
   deleted?: boolean;
 }
@@ -303,6 +329,57 @@ export function buildStatisticsVolumeSummary(
   };
 }
 
+export function buildStatisticsAmountBins(
+  activities: readonly Readonly<StatisticsAmountInput>[],
+  range: Readonly<StatisticsDateRange>,
+  amountUnit: string,
+  typeUid?: string,
+): StatisticsAmountBin[] {
+  validateRange(range);
+  validateAmountUnit(amountUnit);
+  const period = getStatisticsChartPeriod(range);
+  const bins = createChartPeriodStarts(range, period).map((periodStartMillis) => ({
+    periodStartMillis,
+    amount: 0,
+    activityCount: 0,
+  }));
+  const binMap = new Map(bins.map((bin) => [bin.periodStartMillis, bin]));
+  for (const activity of activities) {
+    if (activity.deleted
+      || activity.amountUnit !== amountUnit
+      || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    const amount = activity.amount ?? 0;
+    assertFinite(amount, "Activity amount");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    const bin = binMap.get(periodStart(new Date(activity.startMillis), period).getTime());
+    if (bin) {
+      bin.amount += amount;
+      bin.activityCount += 1;
+    }
+  }
+  return bins;
+}
+
+export function buildStatisticsAmountSummary(
+  activities: readonly Readonly<StatisticsAmountInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsAmountSummaryOptions>,
+): StatisticsAmountSummary {
+  validateRange(range);
+  validateAmountUnit(options.amountUnit);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = calculateAmountSummary(activities, range, options.amountUnit, options.typeUid);
+  const comparison = options.comparisonRange
+    ? calculateAmountSummary(activities, options.comparisonRange, options.amountUnit, options.typeUid)
+    : undefined;
+  return {
+    total: comparedValue(current.total, comparison?.total),
+    averagePerDay: comparedValue(current.averagePerDay, comparison?.averagePerDay),
+    averagePerActivity: comparedValue(current.averagePerActivity, comparison?.averagePerActivity),
+  };
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -435,10 +512,41 @@ function calculateVolumeSummary(
   };
 }
 
+function calculateAmountSummary(
+  activities: readonly Readonly<StatisticsAmountInput>[],
+  range: Readonly<StatisticsDateRange>,
+  amountUnit: string,
+  typeUid?: string,
+): { total: number; averagePerDay: number; averagePerActivity: number } {
+  let total = 0;
+  let activityCount = 0;
+  for (const activity of activities) {
+    if (activity.deleted
+      || activity.amountUnit !== amountUnit
+      || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    const amount = activity.amount ?? 0;
+    assertFinite(amount, "Activity amount");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    total += amount;
+    activityCount += 1;
+  }
+  const dayCount = differenceInCalendarDays(new Date(range.toMillis), new Date(range.fromMillis)) + 1;
+  return {
+    total,
+    averagePerDay: total / dayCount,
+    averagePerActivity: activityCount === 0 ? 0 : total / activityCount,
+  };
+}
+
 function comparedValue(value: number, comparisonValue?: number): StatisticsComparedValue {
   return comparisonValue === undefined
     ? { value }
     : { value, comparisonValue, changePercent: getStatisticsChangePercent(value, comparisonValue) };
+}
+
+function validateAmountUnit(amountUnit: string): void {
+  if (!amountUnit.trim()) throw new RangeError("Amount unit must not be empty");
 }
 
 function periodStart(date: Date, period: StatisticsChartPeriod): Date {

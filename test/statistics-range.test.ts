@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildStatisticsActivityCountBins,
   buildStatisticsActivityCountSummary,
+  buildStatisticsAmountBins,
+  buildStatisticsAmountSummary,
   buildStatisticsVolumeBins,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
@@ -196,6 +198,42 @@ describe("native statistics date ranges", () => {
     expect(() => buildStatisticsVolumeSummary([
       { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle", volume: Number.NaN },
     ], range, { typeUid: "bottle" })).toThrow("Activity volume must be finite");
+  });
+
+  it("keeps native amount charts and cards separated by unit", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const activities = [
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "food", amount: 2, amountUnit: "oz" },
+      { startMillis: new Date(2026, 2, 7, 12).getTime(), type: "food", amount: 3, amountUnit: "oz" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "food", amount: 100, amountUnit: "g" },
+      { startMillis: new Date(2026, 2, 8, 10).getTime(), type: "medicine", amount: 5, amountUnit: "oz" },
+      { startMillis: new Date(2026, 2, 8, 12).getTime(), type: "food", amountUnit: "oz" },
+    ];
+
+    expect(buildStatisticsAmountBins(activities, range, "oz", "food").map(({ amount, activityCount }) => ({ amount, activityCount }))).toEqual([
+      { amount: 5, activityCount: 2 },
+      { amount: 0, activityCount: 1 },
+    ]);
+    expect(buildStatisticsAmountSummary(activities, range, { amountUnit: "oz", typeUid: "food" })).toEqual({
+      total: { value: 5 },
+      averagePerDay: { value: 2.5 },
+      averagePerActivity: { value: 5 / 3 },
+    });
+  });
+
+  it("compares amount-unit cards and validates the selected unit", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 6]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const summary = buildStatisticsAmountSummary([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "food", amount: 2, amountUnit: "serving" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "food", amount: 2, amountUnit: "serving" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "food", amount: 2, amountUnit: "serving" },
+    ], range, { amountUnit: "serving", typeUid: "food", comparisonRange });
+
+    expect(summary.total).toEqual({ value: 4, comparisonValue: 2, changePercent: 100 });
+    expect(summary.averagePerDay).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
+    expect(summary.averagePerActivity).toEqual({ value: 2, comparisonValue: 2, changePercent: 0 });
+    expect(() => buildStatisticsAmountBins([], range, "  ")).toThrow("Amount unit must not be empty");
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

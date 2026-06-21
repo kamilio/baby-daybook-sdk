@@ -116,6 +116,8 @@ export type {
 export {
   buildStatisticsActivityCountBins,
   buildStatisticsActivityCountSummary,
+  buildStatisticsAmountBins,
+  buildStatisticsAmountSummary,
   buildStatisticsVolumeBins,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
@@ -134,6 +136,9 @@ export {
 export type {
   StatisticsActivityCountSummary,
   StatisticsActivityCountSummaryOptions,
+  StatisticsAmountBin,
+  StatisticsAmountSummary,
+  StatisticsAmountSummaryOptions,
   StatisticsChartBin,
   StatisticsComparedValue,
   StatisticsChartPeriod,
