@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildStatisticsActivityCountBins,
+  buildStatisticsActivityCountSummary,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
@@ -118,6 +119,41 @@ describe("native statistics date ranges", () => {
       { startMillis: new Date(2026, 2, 11, 9).getTime(), type: "bottle" },
     ], range, "bottle");
     expect(bins.map((bin) => bin.activityCount)).toEqual([2, 0, 0, 0]);
+  });
+
+  it("builds native count cards with per-day and five-minute interval rules", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const summary = buildStatisticsActivityCountSummary([
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), endMillis: new Date(2026, 2, 7, 8, 30).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 8, 4).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 11).getTime(), type: "sleeping" },
+      { startMillis: new Date(2026, 2, 8, 12).getTime(), type: "bottle", deleted: true },
+    ], range, { typeUid: "bottle" });
+
+    expect(summary).toEqual({
+      total: { value: 4 },
+      averagePerDay: { value: 2 },
+      averageTimeBetweenMillis: { value: 116 * 60 * 1_000 },
+    });
+  });
+
+  it("can calculate time since the previous end and compare adjacent cards", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 6]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const summary = buildStatisticsActivityCountSummary([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 6, 8).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), endMillis: new Date(2026, 2, 7, 9).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 10).getTime(), type: "bottle" },
+    ], range, { typeUid: "bottle", comparisonRange, timeBetweenFromEnd: true });
+
+    expect(summary.total).toEqual({ value: 4, comparisonValue: 2, changePercent: 100 });
+    expect(summary.averagePerDay).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
+    expect(summary.averageTimeBetweenMillis).toEqual({ value: 90 * 60 * 1_000, comparisonValue: 0, changePercent: 0 });
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

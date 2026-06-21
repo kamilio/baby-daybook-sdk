@@ -115,6 +115,7 @@ export type {
 } from "./statistics-screen.js";
 export {
   buildStatisticsActivityCountBins,
+  buildStatisticsActivityCountSummary,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
@@ -129,7 +130,10 @@ export {
   getStatisticsPredefinedDateRange,
 } from "./statistics-range.js";
 export type {
+  StatisticsActivityCountSummary,
+  StatisticsActivityCountSummaryOptions,
   StatisticsChartBin,
+  StatisticsComparedValue,
   StatisticsChartPeriod,
   StatisticsDateRange,
   StatisticsDateRangeNavigation,

@@ -24,6 +24,33 @@ export interface StatisticsChartBin {
   activityCount: number;
 }
 
+export interface StatisticsComparedValue {
+  value: number;
+  comparisonValue?: number;
+  changePercent?: number;
+}
+
+export interface StatisticsActivityCountSummary {
+  total: StatisticsComparedValue;
+  averagePerDay: StatisticsComparedValue;
+  averageTimeBetweenMillis: StatisticsComparedValue;
+}
+
+export interface StatisticsActivityCountSummaryOptions {
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+  timeBetweenFromEnd?: boolean;
+}
+
+interface StatisticsActivityCountInput {
+  startMillis: number;
+  endMillis?: number;
+  type: string;
+  deleted?: boolean;
+}
+
+const MINIMUM_TIME_BETWEEN_MILLIS = 5 * 60 * 1_000;
+
 export function getStatisticsPredefinedDateRange(
   interval: StatisticsTimeInterval,
   babyBirthdayMillis?: number,
@@ -185,6 +212,27 @@ export function buildStatisticsActivityCountBins(
   return bins;
 }
 
+export function buildStatisticsActivityCountSummary(
+  activities: readonly Readonly<StatisticsActivityCountInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsActivityCountSummaryOptions> = {},
+): StatisticsActivityCountSummary {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = calculateActivityCountSummary(activities, range, options);
+  const comparison = options.comparisonRange
+    ? calculateActivityCountSummary(activities, options.comparisonRange, options)
+    : undefined;
+  return {
+    total: comparedValue(current.total, comparison?.total),
+    averagePerDay: comparedValue(current.averagePerDay, comparison?.averagePerDay),
+    averageTimeBetweenMillis: comparedValue(
+      current.averageTimeBetweenMillis,
+      comparison?.averageTimeBetweenMillis,
+    ),
+  };
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -244,6 +292,59 @@ function createChartPeriodStarts(range: Readonly<StatisticsDateRange>, period: S
     current = addPeriod(current, period);
   }
   return starts;
+}
+
+function calculateActivityCountSummary(
+  activities: readonly Readonly<StatisticsActivityCountInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsActivityCountSummaryOptions>,
+): { total: number; averagePerDay: number; averageTimeBetweenMillis: number } {
+  const matching = activities
+    .filter((activity) => {
+      if (activity.deleted || (options.typeUid !== undefined && activity.type !== options.typeUid)) return false;
+      assertFinite(activity.startMillis, "Activity start time");
+      if (activity.endMillis !== undefined) assertFinite(activity.endMillis, "Activity end time");
+      return activity.startMillis >= range.fromMillis
+        && activity.startMillis <= range.toMillis;
+    })
+    .sort((left, right) => left.startMillis - right.startMillis);
+  const total = matching.length;
+  const dayCount = differenceInCalendarDays(new Date(range.toMillis), new Date(range.fromMillis)) + 1;
+  const byDay = new Map<number, Readonly<StatisticsActivityCountInput>[]>();
+  for (const activity of matching) {
+    const day = startOfDay(new Date(activity.startMillis)).getTime();
+    const items = byDay.get(day);
+    if (items) items.push(activity);
+    else byDay.set(day, [activity]);
+  }
+  let timeBetweenTotal = 0;
+  let timeBetweenCount = 0;
+  for (const items of byDay.values()) {
+    for (let index = 1; index < items.length; index += 1) {
+      const previous = items[index - 1];
+      const current = items[index];
+      if (!previous || !current) continue;
+      const previousMillis = options.timeBetweenFromEnd && previous.endMillis !== undefined
+        ? previous.endMillis
+        : previous.startMillis;
+      const interval = current.startMillis - previousMillis;
+      if (interval >= MINIMUM_TIME_BETWEEN_MILLIS) {
+        timeBetweenTotal += interval;
+        timeBetweenCount += 1;
+      }
+    }
+  }
+  return {
+    total,
+    averagePerDay: total / dayCount,
+    averageTimeBetweenMillis: timeBetweenCount === 0 ? 0 : timeBetweenTotal / timeBetweenCount,
+  };
+}
+
+function comparedValue(value: number, comparisonValue?: number): StatisticsComparedValue {
+  return comparisonValue === undefined
+    ? { value }
+    : { value, comparisonValue, changePercent: getStatisticsChangePercent(value, comparisonValue) };
 }
 
 function periodStart(date: Date, period: StatisticsChartPeriod): Date {
