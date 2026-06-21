@@ -18,6 +18,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
 - Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
 - Native-compatible average sleep clock ranges, including crossing-midnight normalization.
+- Native sleep-duration constraint loosening and clamping used by prediction adjustments.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
@@ -64,6 +65,13 @@ The app's average sleep-range calculator is available for sleep prediction and c
 import { calculateAverageSleepRange } from "baby-daybook-sdk";
 
 const averageNight = calculateAverageSleepRange(daytimeRange, completedSleeps, "America/Chicago");
+```
+
+Prediction tooling also exposes the app's loose duration bounds, which expand each edge by 10%, round the adjustment to five minutes, and cap it at 30 minutes:
+
+```ts
+const looseNap = loosenSleepDurationConstraint(schedule.constraints.nap);
+const adjustedMinutes = clampSleepDurationToLooseConstraint(recordedMinutes, schedule.constraints.nap);
 ```
 
 To restore a saved login without retaining the password:

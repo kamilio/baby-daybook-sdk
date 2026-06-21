@@ -63,6 +63,7 @@ export {
   listGroupedSleepRecommendations,
   listSleepRecommendations,
 } from "./sleep-recommendations.js";
+export { clampSleepDurationToLooseConstraint, loosenSleepDurationConstraint } from "./sleep-constraints.js";
 export { calculateAverageSleepRange } from "./sleep-range.js";
 export type { SleepRangeSample } from "./sleep-range.js";
 export { buildActivityStatistics } from "./statistics.js";
