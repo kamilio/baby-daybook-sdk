@@ -1,6 +1,6 @@
-# Baby Daybook SDK
+# Baby Daybook SDK, CLI, and MCP Server
 
-Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data through the same Firebase services used by the Android app. It is not affiliated with Baby Daybook or DrillyApps.
+Unofficial, typed JavaScript SDK plus a Toolcraft CLI and MCP server for accessing a user's Baby Daybook data through the same Firebase services used by the Android app. It is not affiliated with Baby Daybook or DrillyApps.
 
 ## Supported functionality
 
@@ -28,6 +28,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Native sleep-duration constraint loosening and clamping used by prediction adjustments.
 - The native 20-position primary-tooth map, ten-row eruption/shed chart, deterministic tooth IDs, colors, and state precedence.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
+- A 72-command Toolcraft tree exposed identically through a typed SDK, the `baby-daybook` CLI, and an MCP stdio server.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
 
@@ -38,6 +39,92 @@ The default Firebase configuration includes the Android package name and release
 ```bash
 npm install baby-daybook-sdk
 ```
+
+To install the CLI globally from this repository's current source:
+
+```bash
+npm run baby-daybook:install:global
+baby-daybook --help
+```
+
+## CLI
+
+The CLI uses the persisted rotating refresh-token session at `~/.config/baby-daybook/auth.json` by default. Create it with `npm run baby-daybook:link-apple`, or authenticate through environment variables:
+
+```bash
+export BABY_DAYBOOK_EMAIL="parent@example.com"
+export BABY_DAYBOOK_PASSWORD="your-linked-password"
+
+baby-daybook session status
+baby-daybook babies list
+baby-daybook activities list BABY_UID
+baby-daybook activities start BABY_UID sleeping
+baby-daybook growth add BABY_UID --weight 8.2 --height 70
+baby-daybook notes set BABY_UID "Slept well"
+baby-daybook sleep predict BABY_UID
+baby-daybook statistics sleep BABY_UID --interval last7Days
+```
+
+Use `BABY_DAYBOOK_REFRESH_TOKEN` for an explicit refresh token or `BABY_DAYBOOK_AUTH_FILE` for another session path. Email and password must always be provided together. A successful token rotation is atomically persisted in the versioned session format with directory mode `0700` and file mode `0600`.
+
+Destructive commands require confirmation. For reviewed automation, pass `--yes`:
+
+```bash
+baby-daybook activities delete BABY_UID ACTIVITY_UID --yes
+baby-daybook caregivers remove BABY_UID CAREGIVER_UID --yes
+```
+
+Use `--output json` for scripts and agents. Run group or command help to inspect exact parameters:
+
+```bash
+baby-daybook activities --help
+baby-daybook activities start --help
+```
+
+## MCP server
+
+Start the same command tree as an MCP stdio server:
+
+```bash
+baby-daybook mcp
+```
+
+Example MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "baby-daybook": {
+      "command": "baby-daybook",
+      "args": ["mcp"],
+      "env": {
+        "BABY_DAYBOOK_AUTH_FILE": "/home/user/.config/baby-daybook/auth.json"
+      }
+    }
+  }
+}
+```
+
+The MCP server exposes names such as `babies__list`, `activities__start`, `sleep__predict`, and `backup__create`. It omits the redundant root prefix and publishes input and output schemas for every tool.
+
+## Toolcraft SDK
+
+The regular package root remains the dual ESM/CommonJS low-level typed Baby Daybook SDK. The ESM-only `baby-daybook-sdk/toolcraft` export provides the shared command tree and generated in-process SDK:
+
+```ts
+import { createBabyDaybookToolcraftSDK } from "baby-daybook-sdk/toolcraft";
+
+const tools = createBabyDaybookToolcraftSDK({
+  env: {
+    BABY_DAYBOOK_AUTH_FILE: `${process.env.HOME}/.config/baby-daybook/auth.json`,
+  },
+});
+
+const babies = await tools.babies.list({ includeDeleted: false });
+const prediction = await tools.sleep.predict({ babyUid: babies.data[0].uid });
+```
+
+All Toolcraft commands have `cli`, `mcp`, and `sdk` scope. The adapters share one handler implementation, so validation, confirmation, authentication, and returned data do not drift between surfaces.
 
 ## Sign in
 
