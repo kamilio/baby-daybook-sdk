@@ -8,7 +8,7 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     splitting: false,
-    target: "node18",
+    target: "node20",
   },
   {
     entry: { toolcraft: "src/toolcraft.ts" },
@@ -17,7 +17,16 @@ export default defineConfig([
     sourcemap: true,
     splitting: false,
     noExternal: [/^toolcraft(?:\/|$)/],
-    target: "node18",
+    target: "node20",
+  },
+  {
+    entry: { "toolcraft-http": "src/toolcraft-http.ts" },
+    format: ["esm"],
+    dts: true,
+    sourcemap: true,
+    splitting: false,
+    noExternal: [/^toolcraft(?:\/|$)/],
+    target: "node20",
   },
   {
     entry: { cli: "src/cli.ts" },
@@ -26,7 +35,7 @@ export default defineConfig([
     sourcemap: true,
     splitting: false,
     noExternal: [/^toolcraft(?:\/|$)/],
-    target: "node18",
+    target: "node20",
     outExtension: () => ({ js: ".js" }),
   },
 ]);

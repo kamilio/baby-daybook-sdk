@@ -1,6 +1,6 @@
-# Baby Daybook SDK, CLI, and MCP Server
+# Baby Daybook SDK, CLI, and MCP Servers
 
-Unofficial, typed JavaScript SDK plus a Toolcraft CLI and MCP server for accessing a user's Baby Daybook data through the same Firebase services used by the Android app. It is not affiliated with Baby Daybook or DrillyApps.
+Unofficial, typed JavaScript SDK plus a Toolcraft CLI and stdio/Streamable HTTP MCP servers for accessing a user's Baby Daybook data through the same Firebase services used by the Android app. It is not affiliated with Baby Daybook or DrillyApps.
 
 ## Supported functionality
 
@@ -106,6 +106,40 @@ Example MCP client configuration:
 ```
 
 The MCP server exposes names such as `babies__list`, `activities__start`, `sleep__predict`, and `backup__create`. It omits the redundant root prefix and publishes input and output schemas for every tool.
+
+## Streamable HTTP MCP server
+
+Run the identical 72-tool tree over Streamable HTTP:
+
+```bash
+baby-daybook http
+```
+
+The secure defaults bind to `127.0.0.1`, select a free operating-system port, and expose `/mcp`. The listening URL is printed to standard error. For a fixed local endpoint:
+
+```bash
+baby-daybook http --port 8080 --path /mcp --allowed-host localhost:8080
+```
+
+The CLI defaults to Toolcraft's stateless mode; pass `--stateful` to create persistent sessions with random UUIDs. Use `baby-daybook http --help` for JSON responses, host/origin allowlists, request limits, session limits, concurrency, proxy handling, and timeout controls. OAuth, observability, custom session stores, request-scoped services, and the complete upstream transport options are available through the ESM-only programmatic export:
+
+```ts
+import { runBabyDaybookHTTPMCP } from "baby-daybook-sdk/toolcraft-http";
+
+const handle = await runBabyDaybookHTTPMCP({
+  hostname: "127.0.0.1",
+  port: 8080,
+  path: "/mcp",
+  oauth,
+  requestServices: ({ auth }) => ({
+    babyDaybook: serviceForSubject(auth?.subject),
+  }),
+});
+
+console.log(handle.url);
+```
+
+The HTTP surface requires Node.js 20 or newer. Toolcraft owns the HTTP adapter and bundles `tiny-http-mcp-server`; consumers do not install or wire the transport separately.
 
 ## Toolcraft SDK
 
