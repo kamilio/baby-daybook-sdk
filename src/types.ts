@@ -123,6 +123,18 @@ export interface ActivityGroup extends BabyDataRecord {
   daType?: string;
 }
 
+export interface DefaultActivityGroupDefinition {
+  daType: BuiltInActivityType;
+  messageKey: string;
+  title: string;
+}
+
+export type DefaultActivityGroupTitleResolver = (definition: Readonly<DefaultActivityGroupDefinition>) => string;
+
+export interface CreateBabyOptions {
+  resolveDefaultGroupTitle?: DefaultActivityGroupTitleResolver;
+}
+
 export type CreateActivityGroupInput = Omit<ActivityGroup, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted" | "daType"> & {
   daType: string;
   uid?: string;

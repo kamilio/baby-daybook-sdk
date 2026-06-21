@@ -76,6 +76,33 @@ describe("FirestoreClient", () => {
     await firestore.set("x/a", { uid: "a" }, { merge: true, serverTimestamp: false });
     await firestore.delete("x/a");
   });
+
+  it("commits multiple server-timestamped writes atomically", async () => {
+    const fetch = mockFetch((url, init) => {
+      expect(url.endsWith("documents:commit")).toBe(true);
+      const body = JSON.parse(String(init?.body));
+      expect(body.writes).toHaveLength(2);
+      expect(body.writes[0]).toMatchObject({
+        update: {
+          name: "projects/baby-daybook-app/databases/(default)/documents/x/a",
+          fields: { uid: { stringValue: "a" } },
+        },
+        updateTransforms: [{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }],
+      });
+      expect(body.writes[1].updateMask).toEqual({ fieldPaths: ["uid"] });
+      return jsonResponse({ commitTime: "now" });
+    });
+    const firestore = client(fetch);
+
+    await expect(firestore.setMany([
+      { path: "x/a", data: { uid: "a", svt: 0 } },
+      { path: "x/b", data: { uid: "b" }, merge: true },
+    ])).resolves.toBeUndefined();
+    await expect(firestore.setMany([])).resolves.toBeUndefined();
+    await expect(firestore.setMany(Array.from({ length: 501 }, (_, index) => ({ path: `x/${index}`, data: {} }))))
+      .rejects.toThrow("at most 500 writes");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 function client(fetch: ReturnType<typeof mockFetch>): FirestoreClient {

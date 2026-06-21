@@ -15,6 +15,12 @@ export { BabyDaybookClient, BabyClient } from "./client.js";
 export { BABY_DATA_COLLECTIONS, BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BABY_DAYBOOK_CONFIG, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 export { formatBabyDaybookDayId } from "./day-id.js";
 export {
+  createDefaultActivityGroups,
+  createDefaultActivityTypes,
+  DEFAULT_ACTIVITY_GROUP_DEFINITIONS,
+  DEFAULT_ACTIVITY_TYPE_DEFINITIONS,
+} from "./defaults.js";
+export {
   BABY_DAYTIME_RANGE_BOUNDS,
   DEFAULT_BABY_DAYTIME_RANGE,
   babyDaytimeRangeDurationMinutes,
@@ -27,6 +33,7 @@ export {
 } from "./daytime-range.js";
 export { BabyDaybookApiError, BabyDaybookAuthError, BabyDaybookError } from "./errors.js";
 export { decodeFields, decodeValue, encodeFields, encodeValue, FirestoreClient } from "./firestore.js";
+export type { FirestoreSetWrite } from "./firestore.js";
 export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeAtDate } from "./growth.js";
 export { CallableFunctionsClient, FamilyClient } from "./functions.js";
 export type {

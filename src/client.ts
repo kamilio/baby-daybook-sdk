@@ -12,8 +12,9 @@ import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-gro
 import { AuthSession, BabyDaybookAuth, type AppleCredential, type AuthOptions, type FirebaseAccount, type OAuthCredential } from "./auth.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
+import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defaults.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
-import { FirestoreClient } from "./firestore.js";
+import { FirestoreClient, type FirestoreSetWrite } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
 import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
@@ -46,6 +47,7 @@ import type {
   AttachmentCategory,
   AuthSessionData,
   Baby,
+  CreateBabyOptions,
   BabyAcceptedInvite,
   BabyCollectionName,
   BabyDaybookBackup,
@@ -168,16 +170,28 @@ export class BabyDaybookClient {
     return new BabyClient(this, babyUid);
   }
 
-  async createBaby(input: Omit<Baby, "uid" | "userUid"> & { uid?: string }): Promise<Baby> {
+  async createBaby(input: Omit<Baby, "uid" | "userUid"> & { uid?: string }, options: CreateBabyOptions = {}): Promise<Baby> {
     const uid = input.uid ?? crypto.randomUUID();
     const now = Date.now();
     const baby: Baby = { ...input, uid, userUid: this.session.userId, updatedMillis: input.updatedMillis ?? now };
-    await this.firestore.set(paths.baby(uid), baby as unknown as Record<string, unknown>);
-    await this.firestore.set(`${paths.userCreatedBabies(this.session.userId)}/${uid}`, {
-      babyUid: uid,
-      createdMillis: now,
-      deleted: false,
-    });
+    const activityTypes = createDefaultActivityTypes(uid, now);
+    const groups = createDefaultActivityGroups(uid, now, options.resolveDefaultGroupTitle);
+    const writes: FirestoreSetWrite[] = [
+      { path: paths.baby(uid), data: baby as unknown as Record<string, unknown> },
+      {
+        path: `${paths.userCreatedBabies(this.session.userId)}/${uid}`,
+        data: { babyUid: uid, createdMillis: now, deleted: false },
+      },
+      ...activityTypes.map((activityType) => ({
+        path: `${paths.babyCollection(uid, "daTypes")}/${activityType.uid}`,
+        data: activityType as unknown as Record<string, unknown>,
+      })),
+      ...groups.map((group) => ({
+        path: `${paths.babyCollection(uid, "groups")}/${group.uid}`,
+        data: group as unknown as Record<string, unknown>,
+      })),
+    ];
+    await this.firestore.setMany(writes);
     return baby;
   }
 

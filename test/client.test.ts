@@ -11,6 +11,7 @@ describe("BabyDaybookClient", () => {
         ? { data: { uid: "user", displayName: "Parent" } }
         : { data: { uid: "baby", userUid: "user", name: "Baby" } }),
       set: vi.fn(async (_path: string, data: Record<string, unknown>) => ({ data })),
+      setMany: vi.fn(async (writes: Array<{ path: string; data: Record<string, unknown> }>) => void writes),
     };
     (client as any).firestore = firestore;
     (client as any).userCreatedBabies = repo([{ babyUid: "baby" }]);
@@ -27,6 +28,18 @@ describe("BabyDaybookClient", () => {
     await expect(client.listBabies()).resolves.toHaveLength(2);
     await expect(client.getBaby("baby")).resolves.toMatchObject({ uid: "baby" });
     await expect(client.createBaby({ uid: "new", name: "New" })).resolves.toMatchObject({ uid: "new", userUid: "user" });
+    const creationWrites = firestore.setMany.mock.calls[0]![0];
+    expect(creationWrites).toHaveLength(61);
+    expect(creationWrites[0]).toMatchObject({ path: "babyData/babyUid_new", data: { uid: "new", userUid: "user", name: "New" } });
+    expect(creationWrites[1]).toMatchObject({ path: "userData/user/createdBabies/new", data: { babyUid: "new", deleted: false } });
+    expect(creationWrites.filter((write: { path: string }) => write.path.includes("/daTypes/"))).toHaveLength(20);
+    expect(creationWrites.find((write: { path: string }) => write.path.endsWith("/daTypes/food"))).toMatchObject({
+      data: { uid: "food", title: "", color: "#F69601", icon: "bib", category: "feeding", hasAmount: true, hasReaction: true },
+    });
+    const groupWrites = creationWrites.filter((write: { path: string }) => write.path.includes("/groups/"));
+    expect(groupWrites).toHaveLength(39);
+    expect(groupWrites[0]).toMatchObject({ data: { title: "Mother’s milk", daType: "bottle", description: "", userUid: "" } });
+    expect(groupWrites[0]!.data.uid).toMatch(/^[0-9A-Za-z]{16}$/);
     await expect(client.deleteAccount()).resolves.toBeUndefined();
     await expect(client.updateDisplayName("  New Parent  ")).resolves.toMatchObject({ displayName: "New Parent" });
     expect(updateAccount).toHaveBeenCalledWith(client.session, { displayName: "New Parent" });
@@ -38,6 +51,36 @@ describe("BabyDaybookClient", () => {
     await client.signOut();
     expect(signOut).toHaveBeenCalledWith(client.session);
     expect(client.baby("baby")).toBeInstanceOf(BabyClient);
+  });
+
+  it("localizes default groups before committing baby creation", async () => {
+    const client = baseClient();
+    const setMany = vi.fn(async (writes: Array<{ path: string; data: Record<string, unknown> }>) => void writes);
+    (client as any).firestore = { setMany };
+
+    await client.createBaby({ uid: "localized", name: "Localized" }, {
+      resolveDefaultGroupTitle: ({ messageKey, title }) => `${messageKey}:${title}`,
+    });
+
+    const writes = setMany.mock.calls[0]![0];
+    expect(writes.find((write: { data: Record<string, unknown> }) => write.data.daType === "bottle" && write.data.title !== ""))
+      .toMatchObject({ data: { title: "mothers_milk:Mother’s milk" } });
+  });
+
+  it("does not fall back to partial writes when baby initialization fails", async () => {
+    const client = baseClient();
+    const failure = new Error("commit rejected");
+    const setMany = vi.fn(async (writes: Array<{ path: string; data: Record<string, unknown> }>) => {
+      void writes;
+      return Promise.reject(failure);
+    });
+    const set = vi.fn();
+    (client as any).firestore = { setMany, set };
+
+    await expect(client.createBaby({ uid: "failed", name: "Failed" })).rejects.toBe(failure);
+    expect(setMany).toHaveBeenCalledTimes(1);
+    expect(setMany.mock.calls[0]![0]).toHaveLength(61);
+    expect(set).not.toHaveBeenCalled();
   });
 });
 

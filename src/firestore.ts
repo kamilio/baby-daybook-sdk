@@ -11,6 +11,12 @@ interface FirestoreWireDocument {
   updateTime?: string;
 }
 
+export interface FirestoreSetWrite {
+  path: string;
+  data: Record<string, unknown>;
+  merge?: boolean;
+}
+
 export class FirestoreClient {
   readonly session: AuthSession;
   readonly config: BabyDaybookConfig;
@@ -77,6 +83,26 @@ export class FirestoreClient {
       body: JSON.stringify({ fields: encodeFields(data) }),
     });
     return decodeDocument<T>(response);
+  }
+
+  async setMany(writes: readonly FirestoreSetWrite[]): Promise<void> {
+    if (writes.length === 0) return;
+    if (writes.length > 500) throw new RangeError("Firestore commits support at most 500 writes");
+    await this.#request(`${this.baseUrl}:commit`, {
+      method: "POST",
+      headers: await this.#headers(),
+      body: JSON.stringify({
+        writes: writes.map(({ path, data, merge }) => {
+          const fields = { ...data };
+          delete fields.svt;
+          return {
+            update: { name: this.#documentName(path), fields: encodeFields(fields) },
+            ...(merge ? { updateMask: { fieldPaths: Object.keys(fields) } } : {}),
+            updateTransforms: [{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }],
+          };
+        }),
+      }),
+    });
   }
 
   async delete(path: string): Promise<void> {

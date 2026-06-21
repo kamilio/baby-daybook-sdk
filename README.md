@@ -117,6 +117,25 @@ await client.updateDisplayName("Parent name");
 await client.signOut();
 ```
 
+Creating a baby also initializes the same 20 built-in activity types and 39 default groups as the Android app. The SDK sends the baby, ownership record, activity types, and groups in one atomic Firestore commit, so a rejected request cannot leave a partial profile:
+
+```ts
+const created = await client.createBaby({
+  name: "Baby",
+  birthdayMillis: Date.parse("2026-01-01T00:00:00Z"),
+});
+```
+
+Default group names use the app's English labels. A caller that has another localization catalog can resolve the native message keys while creating the baby:
+
+```ts
+await client.createBaby({ name: "Baby" }, {
+  resolveDefaultGroupTitle({ messageKey, title }) {
+    return translations[messageKey] ?? title;
+  },
+});
+```
+
 ## Record activities
 
 ```ts
