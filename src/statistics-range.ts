@@ -136,6 +136,35 @@ export interface StatisticsTimeOfDayOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export type StatisticsActivityParameter =
+  | "pee"
+  | "poo"
+  | "peeAndPoo"
+  | "empty"
+  | "wet"
+  | "dirty"
+  | "wetAndDirty"
+  | "dry"
+  | "left"
+  | "right"
+  | "hairWash"
+  | "noHairWash";
+
+export interface StatisticsParameterSeries {
+  parameter: StatisticsActivityParameter;
+  totalCount: number;
+  totalDurationMillis: number;
+  countBins: StatisticsChartBin[];
+  durationBins: StatisticsDurationBin[];
+  timeOfDayBins: StatisticsTimeOfDayBin[];
+  comparisonCountBins?: StatisticsChartBin[];
+  comparisonDurationBins?: StatisticsDurationBin[];
+}
+
+export interface StatisticsParameterBreakdownOptions {
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -184,6 +213,15 @@ interface StatisticsTimeOfDayInput {
   startMillis: number;
   type: string;
   deleted?: boolean;
+}
+
+interface StatisticsParameterInput extends StatisticsDurationInput {
+  side?: string;
+  leftDuration?: number;
+  rightDuration?: number;
+  pee?: boolean;
+  poo?: boolean;
+  hairWash?: boolean;
 }
 
 const MINIMUM_TIME_BETWEEN_MILLIS = 5 * 60 * 1_000;
@@ -596,9 +634,88 @@ export function buildStatisticsTimeOfDayDistribution(
     : { hour, count });
 }
 
+export function getStatisticsActivityParameters(typeUid: string): StatisticsActivityParameter[] {
+  if (typeUid === "breastfeeding" || typeUid === "pump") return ["left", "right"];
+  if (typeUid === "potty") return ["pee", "poo", "peeAndPoo", "empty"];
+  if (typeUid === "diaper_change") return ["wet", "dirty", "wetAndDirty", "dry"];
+  if (typeUid === "bath") return ["hairWash", "noHairWash"];
+  return [];
+}
+
+export function matchesStatisticsActivityParameter(
+  activity: Readonly<StatisticsParameterInput>,
+  parameter: StatisticsActivityParameter,
+): boolean {
+  switch (parameter) {
+    case "pee":
+    case "wet":
+      return activity.pee === true;
+    case "poo":
+    case "dirty":
+      return activity.poo === true;
+    case "peeAndPoo":
+    case "wetAndDirty":
+      return activity.pee === true && activity.poo === true;
+    case "empty":
+    case "dry":
+      return activity.pee !== true && activity.poo !== true;
+    case "left":
+      return (activity.leftDuration ?? 0) > 0 || activity.side === "left" || activity.side === "both";
+    case "right":
+      return (activity.rightDuration ?? 0) > 0 || activity.side === "right" || activity.side === "both";
+    case "hairWash":
+      return activity.hairWash === true;
+    case "noHairWash":
+      return activity.hairWash !== true;
+  }
+}
+
+export function buildStatisticsParameterBreakdown(
+  activities: readonly Readonly<StatisticsParameterInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid: string,
+  options: Readonly<StatisticsParameterBreakdownOptions> = {},
+): StatisticsParameterSeries[] {
+  getStatisticsChartPeriodStarts(range);
+  if (options.comparisonRange) getStatisticsChartPeriodStarts(options.comparisonRange);
+  return getStatisticsActivityParameters(typeUid).map((parameter) => {
+    const parameterActivities = activities
+      .filter((activity) => activity.type === typeUid && matchesStatisticsActivityParameter(activity, parameter))
+      .map((activity) => withParameterDuration(activity, parameter));
+    const countBins = buildStatisticsActivityCountBins(parameterActivities, range, typeUid);
+    const durationBins = buildStatisticsDurationBins(parameterActivities, range, typeUid);
+    return {
+      parameter,
+      totalCount: countBins.reduce((total, bin) => total + bin.activityCount, 0),
+      totalDurationMillis: durationBins.reduce((total, bin) => total + bin.durationMillis, 0),
+      countBins,
+      durationBins,
+      timeOfDayBins: buildStatisticsTimeOfDayDistribution(parameterActivities, range, {
+        typeUid,
+        comparisonRange: options.comparisonRange,
+      }),
+      ...(options.comparisonRange
+        ? {
+          comparisonCountBins: buildStatisticsActivityCountBins(parameterActivities, options.comparisonRange, typeUid),
+          comparisonDurationBins: buildStatisticsDurationBins(parameterActivities, options.comparisonRange, typeUid),
+        }
+        : {}),
+    };
+  });
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
+}
+
+function withParameterDuration(
+  activity: Readonly<StatisticsParameterInput>,
+  parameter: StatisticsActivityParameter,
+): StatisticsParameterInput {
+  if (parameter !== "left" && parameter !== "right") return activity;
+  const sideDuration = parameter === "left" ? activity.leftDuration : activity.rightDuration;
+  return { ...activity, duration: sideDuration ?? getActivityDurationMillis(activity) };
 }
 
 function startOfDay(date: Date): Date {

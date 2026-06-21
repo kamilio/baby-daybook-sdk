@@ -121,6 +121,7 @@ export {
   buildStatisticsDurationBins,
   buildStatisticsDurationSummary,
   buildStatisticsReactionDistribution,
+  buildStatisticsParameterBreakdown,
   buildStatisticsTemperatureData,
   buildStatisticsTimeOfDayDistribution,
   buildStatisticsVolumeBins,
@@ -137,8 +138,11 @@ export {
   getNextStatisticsDateRange,
   getPreviousStatisticsDateRange,
   getStatisticsPredefinedDateRange,
+  getStatisticsActivityParameters,
+  matchesStatisticsActivityParameter,
 } from "./statistics-range.js";
 export type {
+  StatisticsActivityParameter,
   StatisticsActivityCountSummary,
   StatisticsActivityCountSummaryOptions,
   StatisticsAmountBin,
@@ -152,6 +156,8 @@ export type {
   StatisticsReaction,
   StatisticsReactionDistribution,
   StatisticsReactionDistributionOptions,
+  StatisticsParameterBreakdownOptions,
+  StatisticsParameterSeries,
   StatisticsTemperatureData,
   StatisticsTemperaturePeriod,
   StatisticsTemperaturePoint,

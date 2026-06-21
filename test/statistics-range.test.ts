@@ -6,6 +6,7 @@ import {
   buildStatisticsAmountSummary,
   buildStatisticsDurationBins,
   buildStatisticsDurationSummary,
+  buildStatisticsParameterBreakdown,
   buildStatisticsReactionDistribution,
   buildStatisticsTemperatureData,
   buildStatisticsTimeOfDayDistribution,
@@ -23,6 +24,8 @@ import {
   getStatisticsComparisonDateRange,
   getStatisticsPredefinedDateRange,
   getStatisticsQueryDateRange,
+  getStatisticsActivityParameters,
+  matchesStatisticsActivityParameter,
 } from "../src/index.js";
 
 describe("native statistics date ranges", () => {
@@ -360,6 +363,75 @@ describe("native statistics date ranges", () => {
 
     expect(bins[8]).toEqual({ hour: 8, count: 2, comparisonCount: 1, changePercent: 100 });
     expect(bins[9]).toEqual({ hour: 9, count: 0, comparisonCount: 0, changePercent: 0 });
+  });
+
+  it("exposes the native parameter sets and matching rules", () => {
+    expect(getStatisticsActivityParameters("breastfeeding")).toEqual(["left", "right"]);
+    expect(getStatisticsActivityParameters("pump")).toEqual(["left", "right"]);
+    expect(getStatisticsActivityParameters("potty")).toEqual(["pee", "poo", "peeAndPoo", "empty"]);
+    expect(getStatisticsActivityParameters("diaper_change")).toEqual(["wet", "dirty", "wetAndDirty", "dry"]);
+    expect(getStatisticsActivityParameters("bath")).toEqual(["hairWash", "noHairWash"]);
+    expect(getStatisticsActivityParameters("food")).toEqual([]);
+
+    expect(matchesStatisticsActivityParameter({ startMillis: 0, type: "potty", pee: true, poo: true }, "peeAndPoo")).toBe(true);
+    expect(matchesStatisticsActivityParameter({ startMillis: 0, type: "diaper_change" }, "dry")).toBe(true);
+    expect(matchesStatisticsActivityParameter({ startMillis: 0, type: "bath" }, "noHairWash")).toBe(true);
+    expect(matchesStatisticsActivityParameter({ startMillis: 0, type: "pump", side: "both" }, "left")).toBe(true);
+    expect(matchesStatisticsActivityParameter({ startMillis: 0, type: "pump", rightDuration: 1 }, "right")).toBe(true);
+  });
+
+  it("builds overlapping native potty and diaper parameter statistics", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const start = new Date(2026, 2, 7, 8).getTime();
+    const potty = buildStatisticsParameterBreakdown([
+      { startMillis: start, type: "potty", pee: true, duration: 10 },
+      { startMillis: start + 60_000, type: "potty", poo: true, duration: 20 },
+      { startMillis: start + 120_000, type: "potty", pee: true, poo: true, duration: 30 },
+      { startMillis: start + 180_000, type: "potty", duration: 40 },
+      { startMillis: start + 240_000, type: "potty", pee: true, duration: 50, deleted: true },
+      { startMillis: start + 300_000, type: "diaper_change", pee: true, poo: true, duration: 60 },
+    ], range, "potty");
+
+    expect(potty.map(({ parameter, totalCount, totalDurationMillis }) => ({ parameter, totalCount, totalDurationMillis }))).toEqual([
+      { parameter: "pee", totalCount: 2, totalDurationMillis: 40 },
+      { parameter: "poo", totalCount: 2, totalDurationMillis: 50 },
+      { parameter: "peeAndPoo", totalCount: 1, totalDurationMillis: 30 },
+      { parameter: "empty", totalCount: 1, totalDurationMillis: 40 },
+    ]);
+
+    const diaper = buildStatisticsParameterBreakdown([
+      { startMillis: start, type: "diaper_change", pee: true },
+      { startMillis: start + 60_000, type: "diaper_change", poo: true },
+      { startMillis: start + 120_000, type: "diaper_change", pee: true, poo: true },
+      { startMillis: start + 180_000, type: "diaper_change" },
+    ], range, "diaper_change");
+    expect(diaper.map(({ parameter, totalCount }) => ({ parameter, totalCount }))).toEqual([
+      { parameter: "wet", totalCount: 2 },
+      { parameter: "dirty", totalCount: 2 },
+      { parameter: "wetAndDirty", totalCount: 1 },
+      { parameter: "dry", totalCount: 1 },
+    ]);
+  });
+
+  it("uses native side durations and comparison series for feeding parameters", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const data = buildStatisticsParameterBreakdown([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "breastfeeding", side: "left", duration: 5 },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "breastfeeding", side: "left", leftDuration: 10, duration: 99 },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), type: "breastfeeding", side: "both", leftDuration: 20, rightDuration: 30, duration: 50 },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "breastfeeding", side: "right", duration: 40 },
+    ], range, "breastfeeding", { comparisonRange });
+
+    expect(data.map(({ parameter, totalCount, totalDurationMillis }) => ({ parameter, totalCount, totalDurationMillis }))).toEqual([
+      { parameter: "left", totalCount: 2, totalDurationMillis: 30 },
+      { parameter: "right", totalCount: 2, totalDurationMillis: 70 },
+    ]);
+    expect(data[0]!.comparisonCountBins?.[0]?.activityCount).toBe(1);
+    expect(data[0]!.comparisonDurationBins?.[0]?.durationMillis).toBe(5);
+    expect(data[0]!.timeOfDayBins[8]).toEqual({ hour: 8, count: 1, comparisonCount: 1, changePercent: 0 });
+    expect(data[1]!.timeOfDayBins[9]?.count).toBe(1);
+    expect(data[1]!.timeOfDayBins[10]?.count).toBe(1);
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

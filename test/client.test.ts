@@ -201,6 +201,23 @@ describe("BabyClient", () => {
     });
   });
 
+  it("composes native parameter statistics from the baby activity collection", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    const day = new Date(2026, 2, 7);
+    activityRepo.items = [
+      activity({ uid: "left", type: "breastfeeding", startMillis: new Date(2026, 2, 7, 8).getTime(), side: "left", leftDuration: 10 }),
+      activity({ uid: "both", type: "breastfeeding", startMillis: new Date(2026, 2, 7, 9).getTime(), side: "both", leftDuration: 20, rightDuration: 30 }),
+    ];
+
+    await expect(baby.getStatisticsParameterBreakdown("breastfeeding", {
+      fromMillis: day.getTime(),
+      toMillis: new Date(2026, 2, 8).getTime() - 1,
+    })).resolves.toEqual([
+      expect.objectContaining({ parameter: "left", totalCount: 2, totalDurationMillis: 30 }),
+      expect.objectContaining({ parameter: "right", totalCount: 1, totalDurationMillis: 30 }),
+    ]);
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

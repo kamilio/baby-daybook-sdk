@@ -62,9 +62,13 @@ import {
   type StatisticsScreenData,
 } from "./statistics-screen.js";
 import {
+  buildStatisticsParameterBreakdown,
   buildStatisticsDateRangeNavigation,
   getStatisticsPredefinedDateRange,
   type StatisticsDateRangeNavigation,
+  type StatisticsDateRange,
+  type StatisticsParameterBreakdownOptions,
+  type StatisticsParameterSeries,
   type StatisticsTimeInterval,
 } from "./statistics-range.js";
 import { FirebaseStorageClient } from "./storage.js";
@@ -866,6 +870,14 @@ export class BabyClient {
     if (baby.birthdayMillis === undefined) throw new Error(`Baby ${this.babyUid} does not have a birthday`);
     const range = getStatisticsPredefinedDateRange(interval, baby.birthdayMillis, nowMillis);
     return buildStatisticsDateRangeNavigation(range, baby.birthdayMillis, nowMillis);
+  }
+
+  async getStatisticsParameterBreakdown(
+    typeUid: string,
+    range: Readonly<StatisticsDateRange>,
+    options: Readonly<StatisticsParameterBreakdownOptions> = {},
+  ): Promise<StatisticsParameterSeries[]> {
+    return buildStatisticsParameterBreakdown(await this.activities.list(), range, typeUid, options);
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {
