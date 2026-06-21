@@ -121,6 +121,32 @@ describe("BabyClient", () => {
     await expect(baby.stopActivity("activity", 500)).resolves.toMatchObject({ endMillis: 500, duration: 400, inProgress: false });
   });
 
+  it("saves and tombstones edited activities with native sync stamps", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    const activity = {
+      uid: "edited",
+      userUid: "user",
+      babyUid: "other",
+      type: "bottle",
+      startMillis: 100,
+      amount: 120,
+    };
+
+    await expect(baby.saveActivity(activity, 200)).resolves.toMatchObject({
+      babyUid: "baby",
+      amount: 120,
+      updatedMillis: 200,
+      svt: 0,
+    });
+    await expect(baby.deleteActivity("edited", 300)).resolves.toMatchObject({
+      deleted: true,
+      updatedMillis: 300,
+      svt: 0,
+    });
+    await expect(baby.deleteActivity("missing", 300)).rejects.toThrow("Activity missing does not exist");
+    expect(activityRepo.save).toHaveBeenCalledTimes(2);
+  });
+
   it("deletes custom activity types with the native cascade order", async () => {
     const { baby, client, activityRepo } = configuredBaby();
     const activityTypes = repo<ActivityType>([

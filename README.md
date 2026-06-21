@@ -150,7 +150,12 @@ const feeding = await baby.startActivity({
 });
 await baby.switchBreastfeedingSide(feeding.uid, "right");
 await baby.stopActivity(feeding.uid);
+
+await baby.saveActivity({ ...feeding, notes: "Good latch" });
+await baby.deleteActivity(feeding.uid);
 ```
+
+`saveActivity` mirrors the Android editor by preserving type-specific fields while applying the native update and synchronization stamps. `deleteActivity` writes the same synchronized tombstone used by the app rather than hard-deleting history.
 
 The native activity queries are available without a local SQLite dependency:
 

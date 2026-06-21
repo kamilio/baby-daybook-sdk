@@ -569,6 +569,16 @@ export class BabyClient {
     });
   }
 
+  saveActivity(activity: DailyAction, atMillis = Date.now()): Promise<DailyAction> {
+    return this.activities.save({ ...activity, babyUid: this.babyUid, updatedMillis: atMillis, svt: 0 });
+  }
+
+  async deleteActivity(uid: string, atMillis = Date.now()): Promise<DailyAction> {
+    const activity = await this.activities.get(uid);
+    if (!activity) throw new Error(`Activity ${uid} does not exist`);
+    return this.activities.save({ ...activity, deleted: true, updatedMillis: atMillis, svt: 0 });
+  }
+
   async getLastActivity(type: string, options: LastActivityOptions = {}): Promise<DailyAction | undefined> {
     return getLastActivity(await this.activities.list(), type, options);
   }
