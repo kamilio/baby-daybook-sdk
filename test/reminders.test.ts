@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { BabyClient } from "../src/client.js";
 import {
+  BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS,
+  getEarliestReminderDisplayMillis,
   getExpiredReminderMillis,
   getNextReminderMillis,
+  getRelevantReminderSchedules,
   isReminderMillisInDnd,
   parseReminderWeekdays,
   resolveReminderSchedule,
@@ -111,6 +114,18 @@ describe("Baby Daybook reminder scheduling", () => {
     expect(sortReminderSchedules([upcoming, expired]).map((item) => item.reminder.uid)).toEqual(["expired", "upcoming"]);
   });
 
+  it("shows native relevant reminders inside a strict thirty-minute window", () => {
+    const now = localMillis(2026, 7, 6, 12);
+    const expired = resolveReminderSchedule(makeReminder({ uid: "expired", dateMillis: now - 1 }), { nowMillis: now });
+    const inside = resolveReminderSchedule(makeReminder({ uid: "inside", dateMillis: now + BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS - 1 }), { nowMillis: now });
+    const boundary = resolveReminderSchedule(makeReminder({ uid: "boundary", dateMillis: now + BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS }), { nowMillis: now });
+    const later = resolveReminderSchedule(makeReminder({ uid: "later", dateMillis: now + 45 * 60_000 }), { nowMillis: now });
+
+    expect(getRelevantReminderSchedules([later, boundary, inside, expired], now).map((item) => item.reminder.uid)).toEqual(["expired", "inside"]);
+    expect(getEarliestReminderDisplayMillis([inside, boundary, later], now)).toBe(now);
+    expect(getEarliestReminderDisplayMillis([inside], now + 1)).toBeUndefined();
+  });
+
   it("resolves baby schedules from the latest matching group activity", async () => {
     const now = localMillis(2026, 7, 6, 12);
     const basic = makeReminder({
@@ -136,6 +151,24 @@ describe("Baby Daybook reminder scheduling", () => {
 
     expect(schedules.map((item) => item.reminder.uid)).toEqual(["expired", "basic"]);
     expect(schedules[1]?.nextMillis).toBe(localMillis(2026, 7, 6, 13));
+  });
+
+  it("gets relevant schedules and dismisses reminders with native sync stamps", async () => {
+    const now = localMillis(2026, 7, 6, 12);
+    const reminder = makeReminder({ uid: "due", dateMillis: now - 1, svt: 4 });
+    const save = vi.fn(async (item: Reminder) => item);
+    const baby = Object.create(BabyClient.prototype) as BabyClient;
+    Object.assign(baby, {
+      reminders: { list: vi.fn(async () => [reminder]), get: vi.fn(async () => reminder), save },
+      activities: { list: vi.fn(async () => []) },
+      activityTypes: { list: vi.fn(async () => []) },
+    });
+
+    await expect(baby.getRelevantReminderSchedules({ nowMillis: now })).resolves.toEqual([
+      expect.objectContaining({ reminder: expect.objectContaining({ uid: "due" }), expiredMillis: now - 1 }),
+    ]);
+    await expect(baby.dismissReminder("due", now)).resolves.toMatchObject({ dismissedMillis: now, updatedMillis: now, svt: 0 });
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ uid: "due", dismissedMillis: now, updatedMillis: now, svt: 0 }));
   });
 });
 

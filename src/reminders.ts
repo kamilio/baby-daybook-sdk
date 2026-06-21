@@ -7,6 +7,7 @@ import type {
 } from "./types.js";
 
 const DAY_MILLIS = 86_400_000;
+export const BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS = 30 * 60_000;
 
 export function parseReminderWeekdays(value: string | undefined): number[] {
   if (!value) return [];
@@ -80,6 +81,36 @@ export function sortReminderSchedules(schedules: readonly ReminderSchedule[]): R
     const rightMillis = right.expiredMillis ?? right.nextMillis ?? Number.POSITIVE_INFINITY;
     return leftMillis - rightMillis || left.reminder.uid.localeCompare(right.reminder.uid);
   });
+}
+
+export function getRelevantReminderSchedules(
+  schedules: readonly ReminderSchedule[],
+  nowMillis = Date.now(),
+): ReminderSchedule[] {
+  return [...schedules]
+    .filter((schedule) => schedule.expiredMillis !== undefined
+      || (schedule.nextMillis !== undefined
+        && schedule.nextMillis - BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS < nowMillis))
+    .sort(compareRelevantReminderSchedules);
+}
+
+export function getEarliestReminderDisplayMillis(
+  schedules: readonly ReminderSchedule[],
+  nowMillis = Date.now(),
+): number | undefined {
+  let earliest: number | undefined;
+  for (const schedule of schedules) {
+    if (schedule.nextMillis === undefined) continue;
+    const displayMillis = schedule.nextMillis - BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS;
+    if (displayMillis < nowMillis) continue;
+    if (earliest === undefined || displayMillis < earliest) earliest = displayMillis;
+  }
+  return earliest;
+}
+
+function compareRelevantReminderSchedules(left: ReminderSchedule, right: ReminderSchedule): number {
+  return (left.nextMillis ?? 0) - (right.nextMillis ?? 0)
+    || (left.expiredMillis ?? 0) - (right.expiredMillis ?? 0);
 }
 
 function basicOccurrence(

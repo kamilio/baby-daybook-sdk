@@ -278,7 +278,12 @@ const schedules = await baby.getReminderSchedules({
 for (const schedule of schedules) {
   console.log(schedule.expiredMillis, schedule.nextMillis, schedule.nextIsInDnd);
 }
+
+const relevant = await baby.getRelevantReminderSchedules();
+await baby.dismissReminder(relevant[0].reminder.uid);
 ```
+
+The relevant-reminder helper matches the home screen: expired reminders are always included, upcoming reminders enter the list strictly less than 30 minutes before their occurrence, and `getEarliestReminderDisplayMillis` returns the next time a caller should refresh. Dismissal stamps `dismissedMillis` and `updatedMillis` while resetting `svt` to zero for synchronization.
 
 ## Attachments and backups
 

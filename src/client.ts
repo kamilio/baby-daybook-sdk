@@ -18,7 +18,7 @@ import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { paths } from "./paths.js";
 import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
-import { resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
+import { getRelevantReminderSchedules, resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
 import {
   BABY_SETTING_TYPES,
@@ -654,6 +654,16 @@ export class BabyClient {
       });
     });
     return sortReminderSchedules(schedules);
+  }
+
+  async getRelevantReminderSchedules(options: ReminderScheduleListOptions = {}): Promise<ReminderSchedule[]> {
+    return getRelevantReminderSchedules(await this.getReminderSchedules(options), options.nowMillis);
+  }
+
+  async dismissReminder(uid: string, atMillis = Date.now()): Promise<Reminder> {
+    const reminder = await this.reminders.get(uid);
+    if (!reminder) throw new Error(`Reminder ${uid} does not exist`);
+    return this.reminders.save({ ...reminder, dismissedMillis: atMillis, updatedMillis: atMillis, svt: 0 });
   }
 
   async getSampleSleepSchedule(at: Date | number = Date.now(), napCount?: number): Promise<SampleSleepSchedule> {
