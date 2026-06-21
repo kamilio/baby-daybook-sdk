@@ -6,6 +6,8 @@ export type StatisticsTimeInterval =
   | "lastMonth"
   | "sinceBirthday";
 
+export type StatisticsChartPeriod = "day" | "month" | "year";
+
 export interface StatisticsDateRange {
   fromMillis: number;
   toMillis: number;
@@ -113,6 +115,49 @@ export function buildStatisticsDateRangeNavigation(
     canLoadPrevious: canLoadPreviousStatisticsDateRange(range, babyBirthdayMillis),
     canLoadNext: canLoadNextStatisticsDateRange(range, nowMillis),
   };
+}
+
+export function getStatisticsChartPeriod(range: Readonly<StatisticsDateRange>): StatisticsChartPeriod {
+  validateRange(range);
+  const differenceInDays = differenceInCalendarDays(new Date(range.toMillis), new Date(range.fromMillis));
+  if (differenceInDays > 366) return "year";
+  if (differenceInDays > 31) return "month";
+  return "day";
+}
+
+export function canShowStatisticsComparison(range: Readonly<StatisticsDateRange>): boolean {
+  return getStatisticsChartPeriod(range) !== "year";
+}
+
+export function getStatisticsComparisonDateRange(range: Readonly<StatisticsDateRange>): StatisticsDateRange {
+  validateRange(range);
+  const from = new Date(range.fromMillis);
+  const to = new Date(range.toMillis);
+  const inclusiveDays = differenceInCalendarDays(to, from) + 1;
+  const comparisonTo = addCalendarDays(from, -1);
+  const comparisonFrom = addCalendarDays(from, -inclusiveDays);
+  return {
+    fromMillis: startOfDay(comparisonFrom).getTime(),
+    toMillis: endOfDay(comparisonTo).getTime(),
+  };
+}
+
+export function getStatisticsQueryDateRange(
+  range: Readonly<StatisticsDateRange>,
+  showComparison: boolean,
+): StatisticsDateRange {
+  validateRange(range);
+  if (!showComparison || !canShowStatisticsComparison(range)) return { ...range };
+  return { fromMillis: getStatisticsComparisonDateRange(range).fromMillis, toMillis: range.toMillis };
+}
+
+export function getStatisticsChangePercent(current: number, comparison: number): number {
+  assertFinite(current, "Current statistics value");
+  assertFinite(comparison, "Comparison statistics value");
+  if (current === 0 || comparison === 0) return 0;
+  return current > comparison
+    ? current / comparison * 100 - 100
+    : 100 - comparison / current * 100;
 }
 
 function startOfDay(date: Date): Date {

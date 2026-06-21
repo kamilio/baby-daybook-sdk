@@ -115,13 +115,19 @@ export type {
 } from "./statistics-screen.js";
 export {
   buildStatisticsDateRangeNavigation,
+  canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
   canLoadPreviousStatisticsDateRange,
+  getStatisticsChangePercent,
+  getStatisticsChartPeriod,
+  getStatisticsComparisonDateRange,
+  getStatisticsQueryDateRange,
   getNextStatisticsDateRange,
   getPreviousStatisticsDateRange,
   getStatisticsPredefinedDateRange,
 } from "./statistics-range.js";
 export type {
+  StatisticsChartPeriod,
   StatisticsDateRange,
   StatisticsDateRangeNavigation,
   StatisticsTimeInterval,

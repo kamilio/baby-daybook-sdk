@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   buildStatisticsDateRangeNavigation,
+  canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
   canLoadPreviousStatisticsDateRange,
   getNextStatisticsDateRange,
   getPreviousStatisticsDateRange,
+  getStatisticsChangePercent,
+  getStatisticsChartPeriod,
+  getStatisticsComparisonDateRange,
   getStatisticsPredefinedDateRange,
+  getStatisticsQueryDateRange,
 } from "../src/index.js";
 
 describe("native statistics date ranges", () => {
@@ -55,6 +60,33 @@ describe("native statistics date ranges", () => {
       canLoadPrevious: true,
       canLoadNext: false,
     });
+  });
+
+  it("selects native chart periods at the exact day thresholds", () => {
+    expect(getStatisticsChartPeriod(dateRange([2026, 0, 1], [2026, 1, 1]))).toBe("day");
+    expect(getStatisticsChartPeriod(dateRange([2026, 0, 1], [2026, 1, 2]))).toBe("month");
+    expect(getStatisticsChartPeriod(dateRange([2024, 0, 1], [2025, 0, 1]))).toBe("month");
+    expect(getStatisticsChartPeriod(dateRange([2024, 0, 1], [2025, 0, 2]))).toBe("year");
+  });
+
+  it("builds the adjacent comparison and expanded query ranges", () => {
+    const current = dateRange([2026, 2, 9], [2026, 2, 15]);
+    const comparison = getStatisticsComparisonDateRange(current);
+    expectDates(comparison, [2026, 2, 2], [2026, 2, 8]);
+    expectDates(getStatisticsQueryDateRange(current, true), [2026, 2, 2], [2026, 2, 15]);
+    expect(getStatisticsQueryDateRange(current, false)).toEqual(current);
+
+    const year = dateRange([2024, 0, 1], [2025, 0, 2]);
+    expect(canShowStatisticsComparison(year)).toBe(false);
+    expect(getStatisticsQueryDateRange(year, true)).toEqual(year);
+  });
+
+  it("matches the native asymmetric comparison percentage", () => {
+    expect(getStatisticsChangePercent(15, 10)).toBe(50);
+    expect(getStatisticsChangePercent(10, 15)).toBe(-50);
+    expect(getStatisticsChangePercent(10, 10)).toBe(0);
+    expect(getStatisticsChangePercent(0, 10)).toBe(0);
+    expect(() => getStatisticsChangePercent(Number.NaN, 10)).toThrow("must be finite");
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

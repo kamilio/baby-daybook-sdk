@@ -518,7 +518,12 @@ const navigation = await baby.getStatisticsDateRange("last7Days");
 
 const previousRange = getPreviousStatisticsDateRange(navigation.range);
 const nextRange = getNextStatisticsDateRange(navigation.range);
+
+const chartPeriod = getStatisticsChartPeriod(navigation.range);
+const queryRange = getStatisticsQueryDateRange(navigation.range, true);
 ```
+
+Chart periods and comparison queries use the native thresholds and adjacent equal-length range. Comparison is automatically unavailable for year charts.
 
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
