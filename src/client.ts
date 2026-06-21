@@ -62,11 +62,14 @@ import {
   type StatisticsScreenData,
 } from "./statistics-screen.js";
 import {
+  buildStatisticsGroupBreakdown,
   buildStatisticsParameterBreakdown,
   buildStatisticsDateRangeNavigation,
   getStatisticsPredefinedDateRange,
   type StatisticsDateRangeNavigation,
   type StatisticsDateRange,
+  type StatisticsGroupBreakdownOptions,
+  type StatisticsGroupSeries,
   type StatisticsParameterBreakdownOptions,
   type StatisticsParameterSeries,
   type StatisticsTimeInterval,
@@ -878,6 +881,21 @@ export class BabyClient {
     options: Readonly<StatisticsParameterBreakdownOptions> = {},
   ): Promise<StatisticsParameterSeries[]> {
     return buildStatisticsParameterBreakdown(await this.activities.list(), range, typeUid, options);
+  }
+
+  async getStatisticsGroupBreakdown(
+    typeUid: string,
+    range: Readonly<StatisticsDateRange>,
+    options: Readonly<StatisticsGroupBreakdownOptions> = {},
+  ): Promise<StatisticsGroupSeries[]> {
+    const [activities, groups] = await Promise.all([
+      this.activities.list(),
+      options.groupUids ? undefined : this.listGroups(typeUid),
+    ]);
+    return buildStatisticsGroupBreakdown(activities, range, typeUid, {
+      ...options,
+      groupUids: options.groupUids ?? groups?.map((group) => group.uid),
+    });
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {

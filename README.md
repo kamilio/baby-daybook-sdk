@@ -530,6 +530,8 @@ It returns configured activity types with all-time active record counts and the 
 
 `buildStatisticsVolumeByHour` reproduces the native hourly volume card. It returns all 24 local hours with total volume, activity count, and the app's displayed average volume per activity, plus an optional comparison series and percentage change.
 
+`buildStatisticsGroupBreakdown` and `baby.getStatisticsGroupBreakdown(...)` reproduce the native by-group cards across number of times, duration, volume, amount, reaction, and time of day. The baby-scoped method preserves the app's configured group order and includes groups with no data; each group carries period series, totals, amount-unit series, reaction distribution, hourly counts, and optional comparison series.
+
 Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
 
 ```ts

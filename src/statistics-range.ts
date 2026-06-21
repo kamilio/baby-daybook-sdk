@@ -184,6 +184,34 @@ export interface StatisticsParameterBreakdownOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsGroupAmountSeries {
+  amountUnit: string;
+  totalAmount: number;
+  bins: StatisticsAmountBin[];
+  comparisonBins?: StatisticsAmountBin[];
+}
+
+export interface StatisticsGroupSeries {
+  groupUid: string;
+  totalCount: number;
+  totalDurationMillis: number;
+  totalVolume: number;
+  countBins: StatisticsChartBin[];
+  durationBins: StatisticsDurationBin[];
+  volumeBins: StatisticsVolumeBin[];
+  amounts: StatisticsGroupAmountSeries[];
+  reactions: StatisticsReactionDistribution;
+  timeOfDayBins: StatisticsTimeOfDayBin[];
+  comparisonCountBins?: StatisticsChartBin[];
+  comparisonDurationBins?: StatisticsDurationBin[];
+  comparisonVolumeBins?: StatisticsVolumeBin[];
+}
+
+export interface StatisticsGroupBreakdownOptions {
+  groupUids?: readonly string[];
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -241,6 +269,10 @@ interface StatisticsParameterInput extends StatisticsDurationInput, StatisticsVo
   pee?: boolean;
   poo?: boolean;
   hairWash?: boolean;
+}
+
+interface StatisticsGroupInput extends StatisticsParameterInput, StatisticsAmountInput, StatisticsReactionInput {
+  groupUid?: string;
 }
 
 const MINIMUM_TIME_BETWEEN_MILLIS = 5 * 60 * 1_000;
@@ -750,6 +782,61 @@ export function buildStatisticsParameterBreakdown(
   });
 }
 
+export function buildStatisticsGroupBreakdown(
+  activities: readonly Readonly<StatisticsGroupInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid: string,
+  options: Readonly<StatisticsGroupBreakdownOptions> = {},
+): StatisticsGroupSeries[] {
+  getStatisticsChartPeriodStarts(range);
+  if (options.comparisonRange) getStatisticsChartPeriodStarts(options.comparisonRange);
+  const groupUids = options.groupUids
+    ? uniqueGroupUids(options.groupUids)
+    : discoverStatisticsGroupUids(activities, range, typeUid, options.comparisonRange);
+  return groupUids.map((groupUid) => {
+    const groupActivities = activities.filter((activity) => activity.type === typeUid && activity.groupUid === groupUid);
+    const countBins = buildStatisticsActivityCountBins(groupActivities, range, typeUid);
+    const durationBins = buildStatisticsDurationBins(groupActivities, range, typeUid);
+    const volumeBins = buildStatisticsVolumeBins(groupActivities, range, typeUid);
+    const amountUnits = discoverStatisticsAmountUnits(groupActivities, range, options.comparisonRange);
+    return {
+      groupUid,
+      totalCount: countBins.reduce((total, bin) => total + bin.activityCount, 0),
+      totalDurationMillis: durationBins.reduce((total, bin) => total + bin.durationMillis, 0),
+      totalVolume: volumeBins.reduce((total, bin) => total + bin.volume, 0),
+      countBins,
+      durationBins,
+      volumeBins,
+      amounts: amountUnits.map((amountUnit) => {
+        const bins = buildStatisticsAmountBins(groupActivities, range, amountUnit, typeUid);
+        return {
+          amountUnit,
+          totalAmount: bins.reduce((total, bin) => total + bin.amount, 0),
+          bins,
+          ...(options.comparisonRange
+            ? { comparisonBins: buildStatisticsAmountBins(groupActivities, options.comparisonRange, amountUnit, typeUid) }
+            : {}),
+        };
+      }),
+      reactions: buildStatisticsReactionDistribution(groupActivities, range, {
+        typeUid,
+        comparisonRange: options.comparisonRange,
+      }),
+      timeOfDayBins: buildStatisticsTimeOfDayDistribution(groupActivities, range, {
+        typeUid,
+        comparisonRange: options.comparisonRange,
+      }),
+      ...(options.comparisonRange
+        ? {
+          comparisonCountBins: buildStatisticsActivityCountBins(groupActivities, options.comparisonRange, typeUid),
+          comparisonDurationBins: buildStatisticsDurationBins(groupActivities, options.comparisonRange, typeUid),
+          comparisonVolumeBins: buildStatisticsVolumeBins(groupActivities, options.comparisonRange, typeUid),
+        }
+        : {}),
+    };
+  });
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -784,6 +871,54 @@ function calculateVolumeByHour(
     if (value.activityCount > 0) value.averageVolume = value.totalVolume / value.activityCount;
   }
   return values;
+}
+
+function uniqueGroupUids(groupUids: readonly string[]): string[] {
+  const values: string[] = [];
+  const seen = new Set<string>();
+  for (const groupUid of groupUids) {
+    if (!groupUid) throw new RangeError("Statistics group ID must not be empty");
+    if (!seen.has(groupUid)) {
+      seen.add(groupUid);
+      values.push(groupUid);
+    }
+  }
+  return values;
+}
+
+function discoverStatisticsGroupUids(
+  activities: readonly Readonly<StatisticsGroupInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid: string,
+  comparisonRange?: Readonly<StatisticsDateRange>,
+): string[] {
+  return [...new Set(activities.flatMap((activity) =>
+    !activity.deleted
+      && activity.type === typeUid
+      && activity.groupUid
+      && (isInStatisticsRange(activity.startMillis, range)
+        || (comparisonRange !== undefined && isInStatisticsRange(activity.startMillis, comparisonRange)))
+      ? [activity.groupUid]
+      : []))].sort();
+}
+
+function discoverStatisticsAmountUnits(
+  activities: readonly Readonly<StatisticsGroupInput>[],
+  range: Readonly<StatisticsDateRange>,
+  comparisonRange?: Readonly<StatisticsDateRange>,
+): string[] {
+  return [...new Set(activities.flatMap((activity) =>
+    !activity.deleted
+      && activity.amountUnit
+      && (isInStatisticsRange(activity.startMillis, range)
+        || (comparisonRange !== undefined && isInStatisticsRange(activity.startMillis, comparisonRange)))
+      ? [activity.amountUnit]
+      : []))].sort();
+}
+
+function isInStatisticsRange(millis: number, range: Readonly<StatisticsDateRange>): boolean {
+  assertFinite(millis, "Activity start time");
+  return millis >= range.fromMillis && millis <= range.toMillis;
 }
 
 function startOfDay(date: Date): Date {

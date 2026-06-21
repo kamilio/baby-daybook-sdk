@@ -218,6 +218,30 @@ describe("BabyClient", () => {
     ]);
   });
 
+  it("composes native group statistics in configured group order", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    (baby as any).groups = repo<ActivityGroup>([
+      { uid: "second", userUid: "user", babyUid: "baby", daType: "food", title: "B" },
+      { uid: "first", userUid: "user", babyUid: "baby", daType: "food", title: "A" },
+    ]);
+    activityRepo.items = [
+      activity({ uid: "meal", type: "food", groupUid: "second", startMillis: new Date(2026, 2, 7, 8).getTime(), amount: 2, amountUnit: "serving", reaction: "liked" }),
+    ];
+
+    await expect(baby.getStatisticsGroupBreakdown("food", {
+      fromMillis: new Date(2026, 2, 7).getTime(),
+      toMillis: new Date(2026, 2, 8).getTime() - 1,
+    })).resolves.toEqual([
+      expect.objectContaining({ groupUid: "first", totalCount: 0, amounts: [] }),
+      expect.objectContaining({
+        groupUid: "second",
+        totalCount: 1,
+        amounts: [expect.objectContaining({ amountUnit: "serving", totalAmount: 2 })],
+        reactions: expect.objectContaining({ counts: { liked: 1, neutral: 0, disliked: 0 } }),
+      }),
+    ]);
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

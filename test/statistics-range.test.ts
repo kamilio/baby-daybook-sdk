@@ -6,6 +6,7 @@ import {
   buildStatisticsAmountSummary,
   buildStatisticsDurationBins,
   buildStatisticsDurationSummary,
+  buildStatisticsGroupBreakdown,
   buildStatisticsParameterBreakdown,
   buildStatisticsReactionDistribution,
   buildStatisticsTemperatureData,
@@ -472,6 +473,52 @@ describe("native statistics date ranges", () => {
     expect(data[0]!.timeOfDayBins[8]).toEqual({ hour: 8, count: 1, comparisonCount: 1, changePercent: 0 });
     expect(data[1]!.timeOfDayBins[9]?.count).toBe(1);
     expect(data[1]!.timeOfDayBins[10]?.count).toBe(1);
+  });
+
+  it("builds every native by-group metric and preserves requested groups", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const groups = buildStatisticsGroupBreakdown([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "food", groupUid: "meal", duration: 10, volume: 20, amount: 1, amountUnit: "serving", reaction: "neutral" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "food", groupUid: "meal", duration: 30, volume: 40, amount: 2, amountUnit: "serving", reaction: "liked" },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), type: "food", groupUid: "meal", duration: 50, volume: 60, amount: 100, amountUnit: "g", reaction: "disliked" },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "food", groupUid: "other", amount: 99, amountUnit: "serving" },
+      { startMillis: new Date(2026, 2, 7, 11).getTime(), type: "medicine", groupUid: "meal", amount: 99, amountUnit: "serving" },
+    ], range, "food", { groupUids: ["empty", "meal", "meal"], comparisonRange });
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toMatchObject({ groupUid: "empty", totalCount: 0, totalDurationMillis: 0, totalVolume: 0, amounts: [] });
+    expect(groups[1]).toMatchObject({
+      groupUid: "meal",
+      totalCount: 2,
+      totalDurationMillis: 80,
+      totalVolume: 100,
+      reactions: {
+        counts: { liked: 1, neutral: 0, disliked: 1 },
+        total: 2,
+        liked: { value: 1, comparisonValue: 0, changePercent: 0 },
+      },
+    });
+    expect(groups[1]!.amounts.map(({ amountUnit, totalAmount }) => ({ amountUnit, totalAmount }))).toEqual([
+      { amountUnit: "g", totalAmount: 100 },
+      { amountUnit: "serving", totalAmount: 2 },
+    ]);
+    expect(groups[1]!.comparisonCountBins?.[0]?.activityCount).toBe(1);
+    expect(groups[1]!.comparisonVolumeBins?.[0]?.volume).toBe(20);
+    expect(groups[1]!.amounts[1]!.comparisonBins?.[0]?.amount).toBe(1);
+    expect(groups[1]!.timeOfDayBins[8]).toEqual({ hour: 8, count: 1, comparisonCount: 1, changePercent: 0 });
+    expect(() => buildStatisticsGroupBreakdown([], range, "food", { groupUids: [""] })).toThrow("must not be empty");
+  });
+
+  it("discovers only active groups in the selected or comparison range", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const groups = buildStatisticsGroupBreakdown([
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "food", groupUid: "b" },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), type: "food", groupUid: "a" },
+      { startMillis: new Date(2026, 2, 6, 9).getTime(), type: "food", groupUid: "old" },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "food", groupUid: "deleted", deleted: true },
+    ], range, "food");
+    expect(groups.map((group) => group.groupUid)).toEqual(["a", "b"]);
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {
