@@ -6,6 +6,7 @@ import {
   buildStatisticsAmountSummary,
   buildStatisticsDurationBins,
   buildStatisticsDurationSummary,
+  buildStatisticsTemperatureData,
   buildStatisticsVolumeBins,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
@@ -270,6 +271,33 @@ describe("native statistics date ranges", () => {
       comparisonValue: 30 * 60_000,
       changePercent: 0,
     });
+  });
+
+  it("builds native temperature scatter periods and selects the highest period average", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 9]);
+    const data = buildStatisticsTemperatureData([
+      { startMillis: new Date(2026, 2, 7, 18).getTime(), type: "temperature", temperature: 38 },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "temperature", temperature: 36 },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "temperature", temperature: 37.5 },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), type: "temperature" },
+      { startMillis: new Date(2026, 2, 8, 10).getTime(), type: "other", temperature: 50 },
+      { startMillis: new Date(2026, 2, 9, 8).getTime(), type: "temperature", temperature: 40, deleted: true },
+    ], range);
+
+    expect(data.points.map((point) => point.temperature)).toEqual([36, 38, 37.5]);
+    expect(data.periods.map(({ count, average, minimum, maximum }) => ({ count, average, minimum, maximum }))).toEqual([
+      { count: 2, average: 37, minimum: 36, maximum: 38 },
+      { count: 1, average: 37.5, minimum: 37.5, maximum: 37.5 },
+    ]);
+    expect(data.highestPeriodAverage).toBe(37.5);
+  });
+
+  it("keeps temperature data raw and validates selected readings", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    expect(buildStatisticsTemperatureData([], range)).toEqual({ points: [], periods: [], highestPeriodAverage: undefined });
+    expect(() => buildStatisticsTemperatureData([
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "temperature", temperature: Number.NaN },
+    ], range)).toThrow("Activity temperature must be finite");
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

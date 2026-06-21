@@ -92,6 +92,25 @@ export interface StatisticsDurationSummaryOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsTemperaturePoint {
+  timeMillis: number;
+  temperature: number;
+}
+
+export interface StatisticsTemperaturePeriod {
+  periodStartMillis: number;
+  count: number;
+  average: number;
+  minimum: number;
+  maximum: number;
+}
+
+export interface StatisticsTemperatureData {
+  points: StatisticsTemperaturePoint[];
+  periods: StatisticsTemperaturePeriod[];
+  highestPeriodAverage?: number;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -118,6 +137,13 @@ interface StatisticsDurationInput {
   startMillis: number;
   endMillis?: number;
   duration?: number;
+  type: string;
+  deleted?: boolean;
+}
+
+interface StatisticsTemperatureInput {
+  startMillis: number;
+  temperature?: number;
   type: string;
   deleted?: boolean;
 }
@@ -441,6 +467,56 @@ export function buildStatisticsDurationSummary(
     ? calculateAverageDurationPerDay(activities, options.comparisonRange, options.typeUid)
     : undefined;
   return { averagePerDayMillis: comparedValue(current, comparison) };
+}
+
+export function buildStatisticsTemperatureData(
+  activities: readonly Readonly<StatisticsTemperatureInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid = "temperature",
+): StatisticsTemperatureData {
+  validateRange(range);
+  const period = getStatisticsChartPeriod(range);
+  const points: StatisticsTemperaturePoint[] = [];
+  const accumulators = new Map<number, { count: number; sum: number; minimum: number; maximum: number }>();
+  for (const activity of activities) {
+    if (activity.deleted || activity.type !== typeUid || activity.temperature === undefined) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    assertFinite(activity.temperature, "Activity temperature");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    points.push({ timeMillis: activity.startMillis, temperature: activity.temperature });
+    const start = periodStart(new Date(activity.startMillis), period).getTime();
+    const accumulator = accumulators.get(start);
+    if (accumulator) {
+      accumulator.count += 1;
+      accumulator.sum += activity.temperature;
+      accumulator.minimum = Math.min(accumulator.minimum, activity.temperature);
+      accumulator.maximum = Math.max(accumulator.maximum, activity.temperature);
+    } else {
+      accumulators.set(start, {
+        count: 1,
+        sum: activity.temperature,
+        minimum: activity.temperature,
+        maximum: activity.temperature,
+      });
+    }
+  }
+  points.sort((left, right) => left.timeMillis - right.timeMillis);
+  const periods = [...accumulators.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([periodStartMillis, value]) => ({
+      periodStartMillis,
+      count: value.count,
+      average: value.sum / value.count,
+      minimum: value.minimum,
+      maximum: value.maximum,
+    }));
+  return {
+    points,
+    periods,
+    highestPeriodAverage: periods.length === 0
+      ? undefined
+      : Math.max(...periods.map((value) => value.average)),
+  };
 }
 
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
