@@ -19,6 +19,11 @@ export interface StatisticsDateRangeNavigation {
   canLoadNext: boolean;
 }
 
+export interface StatisticsChartBin {
+  periodStartMillis: number;
+  activityCount: number;
+}
+
 export function getStatisticsPredefinedDateRange(
   interval: StatisticsTimeInterval,
   babyBirthdayMillis?: number,
@@ -160,6 +165,31 @@ export function getStatisticsChangePercent(current: number, comparison: number):
     : 100 - comparison / current * 100;
 }
 
+export function buildStatisticsActivityCountBins(
+  activities: readonly Readonly<{ startMillis: number; type: string; deleted?: boolean }>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): StatisticsChartBin[] {
+  validateRange(range);
+  const period = getStatisticsChartPeriod(range);
+  const bins = createChartPeriodStarts(range, period).map((periodStartMillis) => ({ periodStartMillis, activityCount: 0 }));
+  const binMap = new Map(bins.map((bin) => [bin.periodStartMillis, bin]));
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    const periodStartMillis = periodStart(new Date(activity.startMillis), period).getTime();
+    const bin = binMap.get(periodStartMillis);
+    if (bin) bin.activityCount += 1;
+  }
+  return bins;
+}
+
+export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
+  validateRange(range);
+  return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
+}
+
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -184,6 +214,10 @@ function firstDayOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+function firstDayOfYear(date: Date): Date {
+  return new Date(date.getFullYear(), 0, 1);
+}
+
 function lastDayOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
@@ -200,6 +234,28 @@ function differenceInCalendarDays(left: Date, right: Date): number {
   const leftUtc = Date.UTC(left.getFullYear(), left.getMonth(), left.getDate());
   const rightUtc = Date.UTC(right.getFullYear(), right.getMonth(), right.getDate());
   return Math.trunc((leftUtc - rightUtc) / 86_400_000);
+}
+
+function createChartPeriodStarts(range: Readonly<StatisticsDateRange>, period: StatisticsChartPeriod): number[] {
+  const starts: number[] = [];
+  let current = periodStart(new Date(range.fromMillis), period);
+  while (current.getTime() <= range.toMillis) {
+    starts.push(current.getTime());
+    current = addPeriod(current, period);
+  }
+  return starts;
+}
+
+function periodStart(date: Date, period: StatisticsChartPeriod): Date {
+  if (period === "day") return startOfDay(date);
+  if (period === "month") return firstDayOfMonth(date);
+  return firstDayOfYear(date);
+}
+
+function addPeriod(date: Date, period: StatisticsChartPeriod): Date {
+  if (period === "day") return addCalendarDays(date, 1);
+  if (period === "month") return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  return new Date(date.getFullYear() + 1, 0, 1);
 }
 
 function validateRange(range: Readonly<StatisticsDateRange>): void {

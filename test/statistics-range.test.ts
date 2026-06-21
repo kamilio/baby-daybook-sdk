@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildStatisticsActivityCountBins,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
@@ -8,6 +9,7 @@ import {
   getPreviousStatisticsDateRange,
   getStatisticsChangePercent,
   getStatisticsChartPeriod,
+  getStatisticsChartPeriodStarts,
   getStatisticsComparisonDateRange,
   getStatisticsPredefinedDateRange,
   getStatisticsQueryDateRange,
@@ -87,6 +89,35 @@ describe("native statistics date ranges", () => {
     expect(getStatisticsChangePercent(10, 10)).toBe(0);
     expect(getStatisticsChangePercent(0, 10)).toBe(0);
     expect(() => getStatisticsChangePercent(Number.NaN, 10)).toThrow("must be finite");
+  });
+
+  it("creates native empty chart bins from the containing period start", () => {
+    const days = dateRange([2026, 2, 7], [2026, 2, 10]);
+    expect(getStatisticsChartPeriodStarts(days).map(parts).map((value) => value.slice(0, 3))).toEqual([
+      [2026, 2, 7], [2026, 2, 8], [2026, 2, 9], [2026, 2, 10],
+    ]);
+
+    const months = dateRange([2026, 0, 15], [2026, 3, 2]);
+    expect(getStatisticsChartPeriodStarts(months).map(parts).map((value) => value.slice(0, 3))).toEqual([
+      [2026, 0, 1], [2026, 1, 1], [2026, 2, 1], [2026, 3, 1],
+    ]);
+
+    const years = dateRange([2024, 5, 1], [2026, 0, 2]);
+    expect(getStatisticsChartPeriodStarts(years).map(parts).map((value) => value.slice(0, 3))).toEqual([
+      [2024, 0, 1], [2025, 0, 1], [2026, 0, 1],
+    ]);
+  });
+
+  it("aggregates active activity starts into native period bins", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 10]);
+    const bins = buildStatisticsActivityCountBins([
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 18).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), type: "sleeping" },
+      { startMillis: new Date(2026, 2, 9, 9).getTime(), type: "bottle", deleted: true },
+      { startMillis: new Date(2026, 2, 11, 9).getTime(), type: "bottle" },
+    ], range, "bottle");
+    expect(bins.map((bin) => bin.activityCount)).toEqual([2, 0, 0, 0]);
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

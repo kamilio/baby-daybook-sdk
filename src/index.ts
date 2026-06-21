@@ -114,12 +114,14 @@ export type {
   StatisticsTabDataType,
 } from "./statistics-screen.js";
 export {
+  buildStatisticsActivityCountBins,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
   canLoadPreviousStatisticsDateRange,
   getStatisticsChangePercent,
   getStatisticsChartPeriod,
+  getStatisticsChartPeriodStarts,
   getStatisticsComparisonDateRange,
   getStatisticsQueryDateRange,
   getNextStatisticsDateRange,
@@ -127,6 +129,7 @@ export {
   getStatisticsPredefinedDateRange,
 } from "./statistics-range.js";
 export type {
+  StatisticsChartBin,
   StatisticsChartPeriod,
   StatisticsDateRange,
   StatisticsDateRangeNavigation,
