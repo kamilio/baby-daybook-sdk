@@ -13,7 +13,6 @@ export default defineConfig([
   {
     entry: { toolcraft: "src/toolcraft.ts" },
     format: ["esm"],
-    banner: { js: 'import { createRequire as __babyDaybookCreateRequire } from "node:module"; const require = __babyDaybookCreateRequire(import.meta.url);' },
     dts: true,
     sourcemap: true,
     splitting: false,
@@ -23,7 +22,7 @@ export default defineConfig([
   {
     entry: { cli: "src/cli.ts" },
     format: ["esm"],
-    banner: { js: '#!/usr/bin/env node\nimport { createRequire as __babyDaybookCreateRequire } from "node:module"; const require = __babyDaybookCreateRequire(import.meta.url);' },
+    banner: { js: "#!/usr/bin/env node" },
     sourcemap: true,
     splitting: false,
     noExternal: [/^toolcraft(?:\/|$)/],
