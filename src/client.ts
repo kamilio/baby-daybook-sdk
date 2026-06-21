@@ -11,6 +11,7 @@ import {
 import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
 import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } from "./auth.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
+import { formatBabyDaybookDayId } from "./day-id.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
@@ -379,6 +380,33 @@ export class BabyClient {
     if (!uid) throw new RangeError("Group must not be empty");
     const group = await this.groups.get(uid);
     if (group && !group.deleted) await this.groups.softDelete(uid);
+  }
+
+  async getDailyNote(at: Date | number = Date.now(), timeZone?: string): Promise<DailyNote | undefined> {
+    const note = await this.dailyNotes.get(formatBabyDaybookDayId(at, timeZone));
+    return note?.deleted ? undefined : note;
+  }
+
+  async setDailyNote(note: string, at: Date | number = Date.now(), timeZone?: string): Promise<DailyNote | undefined> {
+    const uid = formatBabyDaybookDayId(at, timeZone);
+    const current = await this.dailyNotes.get(uid);
+    if (note.length === 0) {
+      if (current && !current.deleted) await this.dailyNotes.softDelete(uid);
+      return undefined;
+    }
+    return this.dailyNotes.save({
+      ...current,
+      uid,
+      userUid: current?.userUid ?? this.client.session.userId,
+      babyUid: this.babyUid,
+      updatedMillis: Date.now(),
+      deleted: false,
+      note,
+    });
+  }
+
+  async deleteDailyNote(at: Date | number = Date.now(), timeZone?: string): Promise<void> {
+    await this.setDailyNote("", at, timeZone);
   }
 
   async save(update: Partial<Baby>): Promise<Baby> {

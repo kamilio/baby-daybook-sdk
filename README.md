@@ -120,6 +120,17 @@ Deleting a custom type updates both activity-type configuration records, then to
 
 All direct collection repositories provide `list`, `get`, `save`, `softDelete`, and `hardDelete`. Prefer `softDelete` because the mobile app uses tombstones to synchronize deletions.
 
+Daily notes use the app's timezone-aware `yyyyMMdd` document IDs:
+
+```ts
+const day = new Date("2026-01-02T00:30:00Z");
+await baby.setDailyNote("First full night", day, "America/Chicago");
+console.log(await baby.getDailyNote(day, "America/Chicago"));
+await baby.deleteDailyNote(day, "America/Chicago");
+```
+
+`setDailyNote("", ...)` deletes the note exactly like the app. Whitespace-only notes remain valid because the native check distinguishes an empty string from non-empty text.
+
 ## Search and growth
 
 ```ts

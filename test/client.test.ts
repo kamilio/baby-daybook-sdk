@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
-import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, GrowthEntry, Reminder } from "../src/index.js";
+import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, DailyNote, GrowthEntry, Reminder } from "../src/index.js";
 import { mockFetch } from "./helpers.js";
 
 describe("BabyDaybookClient", () => {
@@ -193,6 +193,35 @@ describe("BabyClient", () => {
     await expect(baby.deleteGroup("formula")).resolves.toBeUndefined();
     expect(groups.items.find((group) => group.uid === "formula")).toMatchObject({ deleted: true });
     await expect(baby.deleteGroup("missing")).resolves.toBeUndefined();
+  });
+
+  it("gets, updates, recreates, and deletes timezone-keyed daily notes", async () => {
+    const { baby } = configuredBaby();
+    const notes = repo<DailyNote>([
+      { uid: "20260101", userUid: "original", babyUid: "baby", note: "Old note" },
+      { uid: "20260102", userUid: "original", babyUid: "baby", note: "Deleted note", deleted: true },
+    ]);
+    (baby as any).dailyNotes = notes;
+    const at = Date.parse("2026-01-02T00:30:00.000Z");
+
+    await expect(baby.getDailyNote(at, "America/Los_Angeles")).resolves.toMatchObject({ uid: "20260101" });
+    await expect(baby.getDailyNote(at, "Asia/Tokyo")).resolves.toBeUndefined();
+    await expect(baby.setDailyNote("   ", at, "America/Los_Angeles")).resolves.toMatchObject({
+      uid: "20260101",
+      userUid: "original",
+      note: "   ",
+      deleted: false,
+      updatedMillis: expect.any(Number),
+    });
+    await expect(baby.setDailyNote("Recreated", at, "Asia/Tokyo")).resolves.toMatchObject({
+      uid: "20260102",
+      userUid: "original",
+      note: "Recreated",
+      deleted: false,
+    });
+    await expect(baby.deleteDailyNote(at, "America/Los_Angeles")).resolves.toBeUndefined();
+    expect(notes.items.find((note) => note.uid === "20260101")).toMatchObject({ deleted: true });
+    await expect(baby.deleteDailyNote(Date.parse("2026-01-03T12:00:00Z"), "UTC")).resolves.toBeUndefined();
   });
 
   it("manages attachments, summaries, CSV, and backups", async () => {
