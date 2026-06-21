@@ -158,6 +158,18 @@ export interface Moment extends BabyDataRecord {
   description?: string;
 }
 
+export interface MomentMonth {
+  monthId: string;
+  dateMillis: number;
+  moments: Moment[];
+}
+
+export interface MomentMonthListOptions extends ListOptions {
+  fromMillis?: number;
+  toMillis?: number;
+  timeZone?: string;
+}
+
 export type CreateMomentInput = Omit<Moment, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted" | "dateMillis"> & {
   uid?: string;
   dateMillis?: number;

@@ -406,6 +406,23 @@ describe("BabyClient", () => {
     expect(teethingRepo.save).toHaveBeenCalledTimes(2);
   });
 
+  it("lists moments in native month and item order", async () => {
+    const { baby, momentsRepo } = configuredBaby();
+    momentsRepo.items = [
+      { uid: "later", userUid: "user", babyUid: "baby", dateMillis: Date.parse("2026-07-20T12:00:00Z") },
+      { uid: "earlier", userUid: "user", babyUid: "baby", dateMillis: Date.parse("2026-07-01T00:30:00Z") },
+      { uid: "old", userUid: "user", babyUid: "baby", dateMillis: Date.parse("2026-05-01T12:00:00Z") },
+    ];
+
+    await expect(baby.listMomentMonths({ timeZone: "America/Chicago" })).resolves.toEqual([
+      expect.objectContaining({ monthId: "202607", moments: [expect.objectContaining({ uid: "later" })] }),
+      expect.objectContaining({ monthId: "202606", moments: [expect.objectContaining({ uid: "earlier" })] }),
+      expect.objectContaining({ monthId: "202605", moments: [expect.objectContaining({ uid: "old" })] }),
+    ]);
+    await expect(baby.listMomentsForMonth(Date.parse("2026-06-15T12:00:00Z"), { timeZone: "America/Chicago" }))
+      .resolves.toEqual([expect.objectContaining({ uid: "earlier" })]);
+  });
+
   it("creates, normalizes, and deletes reminders like the native editor", async () => {
     const { baby, reminderRepo } = configuredBaby();
     const now = 1_750_000_000_000;

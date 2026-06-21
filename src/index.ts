@@ -43,6 +43,7 @@ export type {
 } from "./functions.js";
 export { paths } from "./paths.js";
 export { createNativeRandomUid } from "./native-id.js";
+export { formatMomentMonthId, groupMomentsByMonth } from "./moments.js";
 export { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";
 export {

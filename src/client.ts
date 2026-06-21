@@ -16,6 +16,7 @@ import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defau
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient, type FirestoreSetWrite } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
+import { groupMomentsByMonth } from "./moments.js";
 import { createNativeRandomUid } from "./native-id.js";
 import { paths } from "./paths.js";
 import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
@@ -79,6 +80,8 @@ import type {
   GrowthPdfOptions,
   ListOptions,
   Moment,
+  MomentMonth,
+  MomentMonthListOptions,
   Purchase,
   Reminder,
   ReminderSchedule,
@@ -495,6 +498,14 @@ export class BabyClient {
     const moment = await this.moments.get(uid);
     if (!moment) throw new Error(`Moment ${uid} does not exist`);
     return this.moments.save({ ...moment, deleted: true, updatedMillis: atMillis, svt: 0 });
+  }
+
+  async listMomentMonths(options: MomentMonthListOptions = {}): Promise<MomentMonth[]> {
+    return groupMomentsByMonth(await this.moments.list({ includeDeleted: options.includeDeleted }), options);
+  }
+
+  async listMomentsForMonth(at: Date | number, options: Omit<MomentMonthListOptions, "fromMillis" | "toMillis"> = {}): Promise<Moment[]> {
+    return (await this.listMomentMonths({ ...options, fromMillis: toMillis(at), toMillis: toMillis(at) }))[0]?.moments ?? [];
   }
 
   createTooth(input: CreateToothInput, atMillis = Date.now()): Promise<Tooth> {
@@ -1014,6 +1025,10 @@ export class BabyClient {
     }
     return snapshot;
   }
+}
+
+function toMillis(value: Date | number): number {
+  return value instanceof Date ? value.getTime() : value;
 }
 
 const ATTACHMENT_CATEGORIES = ["dailyActions", "growth", "moments", "teething"] as const satisfies readonly AttachmentCategory[];
