@@ -253,8 +253,18 @@ Moment month lists match the native screen's `date_millis DESC, uid` ordering an
 const nightFeeds = await baby.searchActivities({
   query: "night",
   types: ["bottle", "breastfeeding"],
+  reactions: ["liked"],
+  parameters: ["pee"],
+  offset: 0,
+  limit: 25,
 });
-const matchingNotes = await baby.searchDailyNotes("doctor");
+const activityCount = await baby.countSearchActivities({ query: "night" });
+const matchingNotes = await baby.searchDailyNotes("doctor", {
+  fromMillis: Date.parse("2026-01-01T00:00:00Z"),
+  toMillis: Date.parse("2026-12-31T00:00:00Z"),
+  limit: 25,
+});
+const noteCount = await baby.countSearchDailyNotes("doctor");
 
 const result = calculateGrowthPercentile({
   source: "who_0_60_months",
@@ -266,6 +276,8 @@ const result = calculateGrowthPercentile({
 ```
 
 Growth age uses the selected reference dataset's weeks, months, or years. Use `growthAgeAtDate` to convert timestamps and `calculateGrowthValueAtPercentile` to obtain a reference value for percentiles 1 through 99.
+
+Search reproduces the native SQLite screen behavior: activity keywords match notes only, reaction values are OR filters, selected `pee`, `poo`, and `hairWash` parameters are all required, and `groupsByType` applies the app's per-activity-type group map. Activities sort by `startMillis DESC, type, uid`; day notes sort by their `YYYYMMDD` ID descending. Count helpers intentionally ignore `offset` and `limit`, matching the app's separate count and paged-list queries.
 
 ## Sleep schedules
 

@@ -67,7 +67,7 @@ export {
   resolveReminderSchedule,
   sortReminderSchedules,
 } from "./reminders.js";
-export { searchActivities, searchDailyNotes } from "./search.js";
+export { countSearchActivities, countSearchDailyNotes, searchActivities, searchDailyNotes } from "./search.js";
 export {
   BABY_SETTING_TYPES,
   DEFAULT_BABY_SETTINGS,

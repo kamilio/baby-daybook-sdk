@@ -29,7 +29,7 @@ import {
   resolveReminderSchedule,
   sortReminderSchedules,
 } from "./reminders.js";
-import { searchActivities, searchDailyNotes } from "./search.js";
+import { countSearchActivities, countSearchDailyNotes, searchActivities, searchDailyNotes } from "./search.js";
 import {
   BABY_SETTING_TYPES,
   parseDaTypesConfig,
@@ -76,6 +76,7 @@ import type {
   CreateToothInput,
   DailyAction,
   DailyNote,
+  DailyNoteSearchOptions,
   FileMetadata,
   GrowthEntry,
   GrowthPdfOptions,
@@ -747,8 +748,16 @@ export class BabyClient {
     return searchActivities(await this.activities.list({ includeDeleted: options.includeDeleted }), options);
   }
 
-  async searchDailyNotes(query: string, options: { includeDeleted?: boolean } = {}): Promise<DailyNote[]> {
+  async countSearchActivities(options: ActivitySearchOptions = {}): Promise<number> {
+    return countSearchActivities(await this.activities.list({ includeDeleted: options.includeDeleted }), options);
+  }
+
+  async searchDailyNotes(query: string, options: DailyNoteSearchOptions = {}): Promise<DailyNote[]> {
     return searchDailyNotes(await this.dailyNotes.list({ includeDeleted: options.includeDeleted }), query, options);
+  }
+
+  async countSearchDailyNotes(query: string, options: DailyNoteSearchOptions = {}): Promise<number> {
+    return countSearchDailyNotes(await this.dailyNotes.list({ includeDeleted: options.includeDeleted }), query, options);
   }
 
   async getReminderSchedules(options: ReminderScheduleListOptions = {}): Promise<ReminderSchedule[]> {

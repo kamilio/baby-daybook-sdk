@@ -442,8 +442,23 @@ export interface ActivitySearchOptions {
   query?: string;
   types?: readonly string[];
   groupUids?: readonly string[];
+  groupsByType?: Readonly<Record<string, readonly string[]>>;
+  reactions?: readonly ActivityReaction[];
+  parameters?: readonly ActivityParameter[];
   fromMillis?: number;
   toMillis?: number;
+  offset?: number;
+  limit?: number;
+  includeDeleted?: boolean;
+}
+
+export type ActivityParameter = "pee" | "poo" | "hairWash";
+
+export interface DailyNoteSearchOptions {
+  fromMillis?: number;
+  toMillis?: number;
+  offset?: number;
+  limit?: number;
   includeDeleted?: boolean;
 }
 

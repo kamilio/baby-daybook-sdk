@@ -423,6 +423,27 @@ describe("BabyClient", () => {
       .resolves.toEqual([expect.objectContaining({ uid: "earlier" })]);
   });
 
+  it("exposes native paged search results and unpaged counts", async () => {
+    const { baby, activityRepo, dailyNotesRepo } = configuredBaby();
+    activityRepo.items = [
+      activity({ uid: "a", type: "bottle", startMillis: 100, notes: "Night feed", reaction: "liked" }),
+      activity({ uid: "b", type: "sleeping", startMillis: 200, notes: "Night sleep", reaction: "neutral" }),
+    ];
+    dailyNotesRepo.items = [
+      { uid: "20260101", userUid: "user", babyUid: "baby", note: "Doctor" },
+      { uid: "20260102", userUid: "user", babyUid: "baby", note: "Doctor follow-up" },
+    ];
+
+    await expect(baby.searchActivities({ query: "night", offset: 1, limit: 1 })).resolves.toEqual([
+      expect.objectContaining({ uid: "a" }),
+    ]);
+    await expect(baby.countSearchActivities({ query: "night", offset: 1, limit: 1 })).resolves.toBe(2);
+    await expect(baby.searchDailyNotes("doctor", { offset: 1, limit: 1 })).resolves.toEqual([
+      expect.objectContaining({ uid: "20260101" }),
+    ]);
+    await expect(baby.countSearchDailyNotes("doctor", { offset: 1, limit: 1 })).resolves.toBe(2);
+  });
+
   it("creates, normalizes, and deletes reminders like the native editor", async () => {
     const { baby, reminderRepo } = configuredBaby();
     const now = 1_750_000_000_000;
@@ -525,19 +546,20 @@ function configuredBaby() {
   const momentsRepo = repo<Moment>([]);
   const teethingRepo = repo<Tooth>([]);
   const reminderRepo = repo<Reminder>([]);
+  const dailyNotesRepo = repo<DailyNote>([]);
   (baby as any).activityTypes = repo([]);
   (baby as any).activities = activityRepo;
   (baby as any).groups = repo([]);
   (baby as any).growth = growthRepo;
   (baby as any).moments = momentsRepo;
-  (baby as any).dailyNotes = repo([]);
+  (baby as any).dailyNotes = dailyNotesRepo;
   (baby as any).teething = teethingRepo;
   (baby as any).reminders = reminderRepo;
   (baby as any).settings = repo([]);
   (baby as any).acceptedInvites = repo([]);
   (baby as any).pendingInvites = repo([]);
   (baby as any).fileMetadata = vi.fn(() => repo([]));
-  return { baby, client, activityRepo, growthRepo, momentsRepo, teethingRepo, reminderRepo };
+  return { baby, client, activityRepo, growthRepo, momentsRepo, teethingRepo, reminderRepo, dailyNotesRepo };
 }
 
 function repo<T extends Record<string, any>>(initial: T[]) {

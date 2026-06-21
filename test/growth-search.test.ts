@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   calculateGrowthPercentile,
   calculateGrowthValueAtPercentile,
+  countSearchActivities,
+  countSearchDailyNotes,
   growthAgeAtDate,
   searchActivities,
   searchDailyNotes,
@@ -52,25 +54,40 @@ describe("growth percentiles", () => {
 
 describe("search helpers", () => {
   const activities: DailyAction[] = [
-    activity({ uid: "a", type: "bottle", startMillis: 100, notes: "Night feed", groupUid: "milk" }),
-    activity({ uid: "b", type: "sleeping", startMillis: 200, notes: "Nap" }),
+    activity({ uid: "a", type: "bottle", startMillis: 100, notes: "Night feed", groupUid: "milk", reaction: "liked", pee: true, poo: true }),
+    activity({ uid: "b", type: "sleeping", startMillis: 200, notes: "Nap", groupUid: "crib", reaction: "neutral", pee: true }),
     activity({ uid: "c", type: "bottle", startMillis: 300, notes: "Deleted", deleted: true }),
+    activity({ uid: "d", type: "bottle", startMillis: 200, notes: "Another nap", groupUid: "formula", reaction: "liked", hairWash: true }),
   ];
 
   it("filters activities by text, type, group, date, and deletion state", () => {
     expect(searchActivities(activities, { query: "night" }).map((item) => item.uid)).toEqual(["a"]);
     expect(searchActivities(activities, { types: ["bottle"], groupUids: ["milk"] }).map((item) => item.uid)).toEqual(["a"]);
-    expect(searchActivities(activities, { fromMillis: 150, toMillis: 250 }).map((item) => item.uid)).toEqual(["b"]);
-    expect(searchActivities(activities, { includeDeleted: true }).map((item) => item.uid)).toEqual(["c", "b", "a"]);
+    expect(searchActivities(activities, { fromMillis: 150, toMillis: 250 }).map((item) => item.uid)).toEqual(["d", "b"]);
+    expect(searchActivities(activities, { includeDeleted: true }).map((item) => item.uid)).toEqual(["c", "d", "b", "a"]);
+    expect(searchActivities(activities, { query: "bottle" })).toEqual([]);
   });
 
-  it("searches daily notes case-insensitively", () => {
+  it("matches the native reaction, parameter, grouped, paging, and count filters", () => {
+    expect(searchActivities(activities, { reactions: ["liked"] }).map((item) => item.uid)).toEqual(["d", "a"]);
+    expect(searchActivities(activities, { parameters: ["pee", "poo"] }).map((item) => item.uid)).toEqual(["a"]);
+    expect(searchActivities(activities, { groupsByType: { bottle: ["formula"], sleeping: ["crib"] } }).map((item) => item.uid)).toEqual(["d", "b"]);
+    expect(searchActivities(activities, { offset: 1, limit: 1 }).map((item) => item.uid)).toEqual(["b"]);
+    expect(countSearchActivities(activities, { reactions: ["liked"], offset: 1, limit: 1 })).toBe(2);
+    expect(() => searchActivities(activities, { offset: -1 })).toThrow("non-negative integer");
+    expect(() => searchActivities(activities, { limit: 1.5 })).toThrow("non-negative integer");
+  });
+
+  it("searches daily notes with native date ordering, paging, and counts", () => {
     const notes: DailyNote[] = [
-      { uid: "a", userUid: "u", babyUid: "b", note: "Doctor appointment" },
-      { uid: "b", userUid: "u", babyUid: "b", note: "Hidden", deleted: true },
+      { uid: "20260101", userUid: "u", babyUid: "b", note: "Doctor appointment" },
+      { uid: "20260102", userUid: "u", babyUid: "b", note: "Doctor follow-up" },
+      { uid: "20260103", userUid: "u", babyUid: "b", note: "Hidden", deleted: true },
     ];
-    expect(searchDailyNotes(notes, "DOCTOR").map((note) => note.uid)).toEqual(["a"]);
-    expect(searchDailyNotes(notes, "", { includeDeleted: true })).toHaveLength(2);
+    expect(searchDailyNotes(notes, "DOCTOR").map((note) => note.uid)).toEqual(["20260102", "20260101"]);
+    expect(searchDailyNotes(notes, "", { fromMillis: Date.UTC(2026, 0, 2), toMillis: Date.UTC(2026, 0, 2) }).map((note) => note.uid)).toEqual(["20260102"]);
+    expect(searchDailyNotes(notes, "", { includeDeleted: true, offset: 1, limit: 1 }).map((note) => note.uid)).toEqual(["20260102"]);
+    expect(countSearchDailyNotes(notes, "doctor", { offset: 1, limit: 1 })).toBe(2);
   });
 });
 
