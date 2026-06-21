@@ -3,6 +3,8 @@ import type { BabyDaybookConfig } from "./types.js";
 export const BABY_DAYBOOK_CONFIG: Readonly<BabyDaybookConfig> = Object.freeze({
   apiKey: "AIzaSyDIjjUS-7888pKeaVgNM1g2lSLOX4i6Na8",
   appId: "1:219982030553:android:588c78aad27bc244",
+  androidPackageName: "com.drillyapps.babydaybook",
+  androidCertificateSha1: "F63803E1E071269A0DDAB71664A1A55F6F27F8D4",
   projectId: "baby-daybook-app",
   storageBucket: "baby-daybook-app.appspot.com",
   functionsRegion: "us-central1",

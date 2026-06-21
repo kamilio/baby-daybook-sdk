@@ -7,6 +7,8 @@ describe("BabyDaybookAuth", () => {
     const onSessionChanged = vi.fn();
     const fetch = mockFetch((url, init) => {
       expect(url).toContain("accounts:signInWithPassword");
+      expect(new Headers(init?.headers).get("X-Android-Package")).toBe("com.drillyapps.babydaybook");
+      expect(new Headers(init?.headers).get("X-Android-Cert")).toBe("F63803E1E071269A0DDAB71664A1A55F6F27F8D4");
       expect(JSON.parse(String(init?.body))).toEqual({ email: "a@example.com", password: "secret", returnSecureToken: true });
       return jsonResponse({ idToken: "id", refreshToken: "refresh", localId: "user", email: "a@example.com", expiresIn: "3600" });
     });
@@ -60,6 +62,21 @@ describe("BabyDaybookAuth", () => {
     await expect(Promise.all([session.getIdToken(), session.getIdToken()])).resolves.toEqual(["fresh", "fresh"]);
     expect(fetch).toHaveBeenCalledOnce();
     expect(onSessionChanged).toHaveBeenCalledOnce();
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get("X-Android-Package")).toBe("com.drillyapps.babydaybook");
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get("X-Android-Cert")).toBe("F63803E1E071269A0DDAB71664A1A55F6F27F8D4");
+  });
+
+  it("supports overriding the Android application identity", async () => {
+    const fetch = mockFetch((_, init) => {
+      expect(new Headers(init?.headers).get("X-Android-Package")).toBe("example.package");
+      expect(new Headers(init?.headers).get("X-Android-Cert")).toBe("CUSTOMCERT");
+      return jsonResponse({ idToken: "id", refreshToken: "refresh", localId: "user", expiresIn: "3600" });
+    });
+    const auth = new BabyDaybookAuth({
+      fetch,
+      config: { androidPackageName: "example.package", androidCertificateSha1: "CUSTOMCERT" },
+    });
+    await auth.signInWithEmail("a@example.com", "secret");
   });
 
   it("constructs ID-token sessions and rejects expired non-refreshable sessions", async () => {

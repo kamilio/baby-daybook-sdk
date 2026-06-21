@@ -3,6 +3,8 @@ export type FetchLike = (input: string | URL | Request, init?: RequestInit) => P
 export interface BabyDaybookConfig {
   apiKey: string;
   appId: string;
+  androidPackageName: string;
+  androidCertificateSha1: string;
   projectId: string;
   storageBucket: string;
   functionsRegion: string;

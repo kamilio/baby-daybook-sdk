@@ -134,7 +134,7 @@ export class AuthSession {
       `https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(this.config.apiKey)}`,
       {
         method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
+        headers: firebaseAndroidHeaders(this.config, { "content-type": "application/x-www-form-urlencoded" }),
         body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: this.#data.refreshToken! }),
       },
       BabyDaybookAuthError,
@@ -280,10 +280,17 @@ export class BabyDaybookAuth {
     return requestJson<T>(
       this.fetch,
       `https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(this.config.apiKey)}`,
-      { method: "POST", headers: jsonHeaders(), body: JSON.stringify(body) },
+      { method: "POST", headers: jsonHeaders(firebaseAndroidHeaders(this.config)), body: JSON.stringify(body) },
       BabyDaybookAuthError,
     );
   }
+}
+
+function firebaseAndroidHeaders(config: BabyDaybookConfig, extra: HeadersInit = {}): Headers {
+  const headers = new Headers(extra);
+  headers.set("X-Android-Package", config.androidPackageName);
+  headers.set("X-Android-Cert", config.androidCertificateSha1);
+  return headers;
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
