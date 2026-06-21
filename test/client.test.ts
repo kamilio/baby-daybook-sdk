@@ -233,7 +233,8 @@ describe("BabyClient", () => {
   it("manages attachments, summaries, CSV, and backups", async () => {
     const { baby, client, activityRepo, growthRepo } = configuredBaby();
     const metadata = repo<{ itemUid: string; babyUid: string; fileName: string; deleted?: boolean }>([]);
-    (baby as any).fileMetadata = vi.fn(() => metadata);
+    const emptyMetadata = repo<{ itemUid: string; babyUid: string; fileName: string; deleted?: boolean }>([]);
+    (baby as any).fileMetadata = vi.fn((category: string) => category === "moments" ? metadata : emptyMetadata);
     (client as any).storage = {
       attachmentPath: vi.fn(() => "path"),
       attachmentThumbnailPath: vi.fn(() => "thumb-path"),
@@ -255,6 +256,7 @@ describe("BabyClient", () => {
     metadata.items = [{ itemUid: "m", babyUid: "baby", fileName: "photo.jpg" }];
     await baby.deleteAttachment("moments", "m", "photo.jpg");
     expect((client as any).storage.deleteAttachment).toHaveBeenCalledWith("moments", "baby", "m", "photo.jpg");
+    metadata.items = [{ itemUid: "m", babyUid: "baby", fileName: "photo.jpg" }];
     await expect(baby.summarizeActivities()).resolves.toMatchObject({ count: 1, totalVolume: 60 });
     await expect(baby.exportActivitiesCsv()).resolves.toContain("bottle");
     const activityPdf = new TextDecoder().decode(await baby.exportActivitiesPdf({ timeZone: "UTC" }));
@@ -264,8 +266,16 @@ describe("BabyClient", () => {
     await expect(baby.exportTimelinePdf()).resolves.toEqual(expect.any(Uint8Array));
 
     const backup = await baby.createBackup();
-    expect(backup).toMatchObject({ format: "baby-daybook-sdk-backup", baby: { uid: "baby" } });
+    expect(backup).toMatchObject({
+      format: "baby-daybook-sdk-backup",
+      version: 2,
+      baby: { uid: "baby" },
+      attachmentsIncluded: true,
+      attachments: [{ category: "moments", itemUid: "m", fileName: "photo.jpg", contentType: "image/jpeg", dataBase64: "AQI=" }],
+    });
     await baby.restoreBackup(backup);
+    expect((client as any).storage.upload).toHaveBeenCalledWith("path", new Uint8Array([1, 2]).buffer, "image/jpeg");
+    await expect(baby.createBackup({ includeAttachments: false })).resolves.toMatchObject({ attachmentsIncluded: false, attachments: [] });
   });
 
   it("rejects invalid backups and missing activities", async () => {
@@ -277,6 +287,15 @@ describe("BabyClient", () => {
     await expect(baby.restoreBackup({ format: "bad" } as any)).rejects.toThrow("Unsupported");
     const backup = await baby.createBackup();
     await expect(baby.restoreBackup({ ...backup, baby: { ...backup.baby, uid: "other" } })).rejects.toThrow("belongs to baby other");
+    const attachmentMetadata = { itemUid: "m", babyUid: "baby", fileName: "photo.jpg" };
+    const files = { ...backup.files, moments: [attachmentMetadata] };
+    await expect(baby.restoreBackup({ ...backup, files, attachmentsIncluded: true, attachments: [] })).rejects.toThrow("Missing attachment data");
+    await expect(baby.restoreBackup({
+      ...backup,
+      files,
+      attachmentsIncluded: true,
+      attachments: [{ category: "moments", itemUid: "m", fileName: "photo.jpg", contentType: "image/jpeg", dataBase64: "broken" }],
+    })).rejects.toThrow("Invalid base64 attachment data");
   });
 
   it("emits polling changes and stops when aborted", async () => {

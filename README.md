@@ -276,6 +276,9 @@ await baby.deleteAttachment("moments", momentUid, "photo.jpg");
 
 const backup = await baby.createBackup();
 await baby.restoreBackup(backup);
+
+// Same-account lightweight snapshot; existing Storage objects must remain available.
+const metadataOnlyBackup = await baby.createBackup({ includeAttachments: false });
 const csv = await baby.exportActivitiesCsv();
 const pdf = await baby.exportActivitiesPdf({
   title: "Weekly activity report",
@@ -287,9 +290,9 @@ const statistics = await baby.getActivityStatistics({
 });
 ```
 
-Backup metadata does not embed attachment bytes. Download files separately when an offline media archive is required.
+Version 2 backups embed every active original attachment as base64 by default, so restored image and video records do not point at missing Storage objects. Native `thumb_` preview files are not embedded because downloads already fall back to the original; applications can regenerate thumbnails after restore. Backup creation fails if an active metadata record points at a missing file rather than silently creating an incomplete archive. Use `includeAttachments: false` only for lightweight same-account snapshots where the original Firebase Storage objects will remain available.
 
-The SDK backup is a portable JSON snapshot of cloud data. Baby Daybook's Android backup command instead copies the app's private SQLite database to a `.db` file; the two formats are intentionally not interchangeable.
+The SDK backup is a portable JSON snapshot of baby data, per-caregiver reminders and settings, attachment metadata, and optional attachment contents. It intentionally excludes caregiver access-control relationships, caregiver profiles, and purchases. Baby Daybook's Android backup command instead copies the app's nine-table private SQLite database to a `.db` file; the two formats are intentionally not interchangeable.
 
 ## Baby settings
 

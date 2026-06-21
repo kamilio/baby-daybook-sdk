@@ -48,12 +48,14 @@ import type {
   BabyAcceptedInvite,
   BabyCollectionName,
   BabyDaybookBackup,
+  BabyDaybookBackupAttachment,
   BabyDaytimeRange,
   BabyPendingInvite,
   BabySetting,
   BabySyncCollectionName,
   ChangeEvent,
   CloudRecord,
+  CreateBackupOptions,
   CreateActivityGroupInput,
   CreateActivityTypeInput,
   DailyAction,
@@ -674,7 +676,7 @@ export class BabyClient {
     });
   }
 
-  async createBackup(): Promise<BabyDaybookBackup> {
+  async createBackup(options: CreateBackupOptions = {}): Promise<BabyDaybookBackup> {
     const baby = await this.get();
     if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
     const [activityTypes, activities, groups, growth, moments, dailyNotes, teething, reminders, settings, dailyActionsFiles, growthFiles, momentsFiles, teethingFiles] = await Promise.all([
@@ -692,9 +694,12 @@ export class BabyClient {
       this.fileMetadata("moments").list({ includeDeleted: true }),
       this.fileMetadata("teething").list({ includeDeleted: true }),
     ]);
+    const files = { dailyActions: dailyActionsFiles, growth: growthFiles, moments: momentsFiles, teething: teethingFiles };
+    const attachmentsIncluded = options.includeAttachments ?? true;
+    const attachments = attachmentsIncluded ? await this.#backupAttachments(files) : [];
     return {
       format: "baby-daybook-sdk-backup",
-      version: 1,
+      version: 2,
       createdAt: new Date().toISOString(),
       baby,
       activityTypes,
@@ -706,13 +711,19 @@ export class BabyClient {
       teething,
       reminders,
       settings,
-      files: { dailyActions: dailyActionsFiles, growth: growthFiles, moments: momentsFiles, teething: teethingFiles },
+      files,
+      attachmentsIncluded,
+      attachments,
     };
   }
 
   async restoreBackup(backup: BabyDaybookBackup): Promise<void> {
-    if (backup.format !== "baby-daybook-sdk-backup" || backup.version !== 1) throw new Error("Unsupported Baby Daybook backup format");
+    if (backup.format !== "baby-daybook-sdk-backup" || backup.version !== 2) throw new Error("Unsupported Baby Daybook backup format");
     if (backup.baby.uid !== this.babyUid) throw new Error(`Backup belongs to baby ${backup.baby.uid}, not ${this.babyUid}`);
+    this.#validateBackupAttachments(backup);
+    if (backup.attachmentsIncluded) {
+      for (const attachment of backup.attachments) await this.#restoreAttachment(attachment);
+    }
     await this.client.firestore.set(paths.baby(this.babyUid), backup.baby as unknown as Record<string, unknown>);
     await Promise.all([
       ...backup.activityTypes.map((item) => this.activityTypes.save(item)),
@@ -726,6 +737,58 @@ export class BabyClient {
       ...backup.settings.map((item) => this.settings.save(item)),
       ...Object.entries(backup.files).flatMap(([category, files]) => files.map((item) => this.fileMetadata(category as AttachmentCategory).save(item))),
     ]);
+  }
+
+  async #backupAttachments(files: Record<AttachmentCategory, FileMetadata[]>): Promise<BabyDaybookBackupAttachment[]> {
+    const attachments: BabyDaybookBackupAttachment[] = [];
+    for (const category of ATTACHMENT_CATEGORIES) {
+      for (const item of files[category]) {
+        if (item.deleted) continue;
+        attachments.push({
+          category,
+          itemUid: item.itemUid,
+          fileName: item.fileName,
+          contentType: attachmentContentType(item.fileName),
+          dataBase64: Buffer.from(await this.downloadAttachment(category, item.itemUid, item.fileName)).toString("base64"),
+        });
+      }
+    }
+    return attachments;
+  }
+
+  async #restoreAttachment(attachment: BabyDaybookBackupAttachment): Promise<void> {
+    const path = this.client.storage.attachmentPath(attachment.category, this.babyUid, attachment.itemUid, attachment.fileName);
+    await this.client.storage.upload(path, decodeBackupBase64(attachment.dataBase64), attachment.contentType);
+  }
+
+  #validateBackupAttachments(backup: BabyDaybookBackup): void {
+    if (typeof backup.attachmentsIncluded !== "boolean" || !Array.isArray(backup.attachments)) {
+      throw new Error("Invalid Baby Daybook backup attachment manifest");
+    }
+    const expected = new Set<string>();
+    for (const category of ATTACHMENT_CATEGORIES) {
+      const metadata = backup.files?.[category];
+      if (!Array.isArray(metadata)) throw new Error(`Invalid Baby Daybook backup file metadata for ${category}`);
+      for (const item of metadata) {
+        if (item.babyUid !== this.babyUid) throw new Error(`Attachment metadata belongs to baby ${item.babyUid}, not ${this.babyUid}`);
+        if (!item.deleted) expected.add(backupAttachmentKey(category, item.itemUid, item.fileName));
+      }
+    }
+    if (!backup.attachmentsIncluded) {
+      if (backup.attachments.length) throw new Error("Metadata-only Baby Daybook backup cannot contain attachment data");
+      return;
+    }
+    const actual = new Set<string>();
+    for (const attachment of backup.attachments) {
+      if (!ATTACHMENT_CATEGORIES.includes(attachment.category)) throw new Error(`Invalid attachment category ${attachment.category}`);
+      if (!attachment.itemUid || !attachment.fileName || !attachment.contentType) throw new Error("Invalid Baby Daybook backup attachment");
+      decodeBackupBase64(attachment.dataBase64);
+      const key = backupAttachmentKey(attachment.category, attachment.itemUid, attachment.fileName);
+      if (!expected.has(key)) throw new Error(`Attachment data has no active metadata: ${key}`);
+      if (actual.has(key)) throw new Error(`Duplicate attachment data: ${key}`);
+      actual.add(key);
+    }
+    for (const key of expected) if (!actual.has(key)) throw new Error(`Missing attachment data: ${key}`);
   }
 
   async *watch(options: { intervalMillis?: number; signal?: AbortSignal } = {}): AsyncGenerator<ChangeEvent[]> {
@@ -793,6 +856,33 @@ export class BabyClient {
     }
     return snapshot;
   }
+}
+
+const ATTACHMENT_CATEGORIES = ["dailyActions", "growth", "moments", "teething"] as const satisfies readonly AttachmentCategory[];
+
+function backupAttachmentKey(category: AttachmentCategory, itemUid: string, fileName: string): string {
+  return `${category}:${itemUid}:${fileName}`;
+}
+
+function decodeBackupBase64(value: string): ArrayBuffer {
+  if (typeof value !== "string" || value.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    throw new Error("Invalid base64 attachment data in Baby Daybook backup");
+  }
+  const decoded = Buffer.from(value, "base64");
+  return decoded.buffer.slice(decoded.byteOffset, decoded.byteOffset + decoded.byteLength) as ArrayBuffer;
+}
+
+function attachmentContentType(fileName: string): string {
+  const extension = fileName.toLowerCase().split(".").pop();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "gif") return "image/gif";
+  if (extension === "webp") return "image/webp";
+  if (extension === "heic") return "image/heic";
+  if (extension === "heif") return "image/heif";
+  if (extension === "mp4") return "video/mp4";
+  if (extension === "mov") return "video/quicktime";
+  return "application/octet-stream";
 }
 
 function recordId(collection: BabySyncCollectionName, record: CloudRecord): string {

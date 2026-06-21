@@ -298,9 +298,21 @@ export interface FirestoreDocument<T = Record<string, unknown>> {
   data: T;
 }
 
+export interface BabyDaybookBackupAttachment {
+  category: AttachmentCategory;
+  itemUid: string;
+  fileName: string;
+  contentType: string;
+  dataBase64: string;
+}
+
+export interface CreateBackupOptions {
+  includeAttachments?: boolean;
+}
+
 export interface BabyDaybookBackup {
   format: "baby-daybook-sdk-backup";
-  version: 1;
+  version: 2;
   createdAt: string;
   baby: Baby;
   activityTypes: ActivityType[];
@@ -313,6 +325,8 @@ export interface BabyDaybookBackup {
   reminders: Reminder[];
   settings: BabySetting[];
   files: Record<AttachmentCategory, FileMetadata[]>;
+  attachmentsIncluded: boolean;
+  attachments: BabyDaybookBackupAttachment[];
 }
 
 export interface ActivitySummary {
