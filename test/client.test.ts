@@ -368,6 +368,80 @@ describe("BabyClient", () => {
     })).rejects.toThrow("Invalid base64 attachment data");
   });
 
+  it("persists a backup before migrating native imperial records to metric", async () => {
+    const { baby, client, activityRepo, growthRepo } = configuredBaby();
+    activityRepo.items = [
+      activity({ uid: "measurements", temperature: 98.6, volume: 2, updatedMillis: 111, svt: 9 }),
+      activity({ uid: "zero", temperature: 0, volume: 0, updatedMillis: 222, svt: 9 }),
+      activity({ uid: "deleted", temperature: 98.6, volume: 2, deleted: true, updatedMillis: 333, svt: 9 }),
+    ];
+    growthRepo.items = [
+      { uid: "growth", userUid: "user", babyUid: "baby", dateMillis: 100, weight: 22.0462262, height: 39.3700787, headSize: 19.68503935, updatedMillis: 444, svt: 9 },
+      { uid: "deleted-growth", userUid: "user", babyUid: "baby", dateMillis: 200, weight: 22.0462262, deleted: true, updatedMillis: 555, svt: 9 },
+    ];
+    const persistBackup = vi.fn(async () => undefined);
+
+    const result = await baby.migrateUnitsToMetric({
+      temperatureFahrenheit: true,
+      volumeFluidOunces: true,
+      growthWeightPoundsAndOunces: true,
+      growthHeightInches: true,
+      growthHeadSizeInches: true,
+      persistBackup,
+      atMillis: 1_000,
+    });
+
+    expect(result).toMatchObject({
+      baby: { uid: "baby", convertUnits: true, updatedMillis: 1_000, svt: 0 },
+      backup: { format: "baby-daybook-sdk-backup", attachmentsIncluded: false },
+      convertedActivities: 1,
+      convertedGrowthEntries: 1,
+    });
+    expect(persistBackup).toHaveBeenCalledOnce();
+    expect(persistBackup.mock.invocationCallOrder[0]).toBeLessThan(activityRepo.save.mock.invocationCallOrder[0]!);
+    expect(activityRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+      uid: "measurements",
+      temperature: expect.closeTo(37, 10),
+      volume: expect.closeTo(59.1470591, 7),
+      updatedMillis: 111,
+      svt: 0,
+    }));
+    expect(growthRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+      uid: "growth",
+      weight: expect.closeTo(10, 10),
+      height: expect.closeTo(100, 10),
+      headSize: expect.closeTo(50, 10),
+      updatedMillis: 444,
+      svt: 0,
+    }));
+    expect(activityRepo.save).toHaveBeenCalledTimes(1);
+    expect(growthRepo.save).toHaveBeenCalledTimes(1);
+    expect((client as any).firestore.set).toHaveBeenCalledWith(
+      expect.stringContaining("babyUid_baby"),
+      expect.objectContaining({ convertUnits: true, updatedMillis: 1_000, svt: 0 }),
+      { merge: true },
+    );
+  });
+
+  it("does not mutate unit data when the recovery backup cannot be persisted", async () => {
+    const { baby, client, activityRepo, growthRepo } = configuredBaby();
+    activityRepo.items = [activity({ temperature: 98.6 })];
+    growthRepo.items = [{ uid: "growth", userUid: "user", babyUid: "baby", dateMillis: 100, weight: 20 }];
+
+    await expect(baby.migrateUnitsToMetric({
+      temperatureFahrenheit: true,
+      volumeFluidOunces: false,
+      growthWeightPoundsAndOunces: true,
+      growthHeightInches: false,
+      growthHeadSizeInches: false,
+      persistBackup: async () => { throw new Error("disk full"); },
+    })).rejects.toThrow("disk full");
+
+    expect(activityRepo.save).not.toHaveBeenCalled();
+    expect(growthRepo.save).not.toHaveBeenCalled();
+    expect((client as any).firestore.set).not.toHaveBeenCalled();
+  });
+
   it("exposes the native tooth chart and populated tooth map", async () => {
     const { baby, teethingRepo } = configuredBaby();
     teethingRepo.items = [{

@@ -46,6 +46,7 @@ import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby
 import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
 import { buildToothMap, listToothChartItems, toothUid } from "./teething.js";
+import { convertValueToMetric } from "./units.js";
 import type {
   ActivityGroup,
   ActivityPdfOptions,
@@ -66,6 +67,8 @@ import type {
   BabyPendingInvite,
   BabySetting,
   BabySyncCollectionName,
+  BabyUnitMigrationOptions,
+  BabyUnitMigrationResult,
   ChangeEvent,
   CloudRecord,
   CreateBackupOptions,
@@ -924,6 +927,58 @@ export class BabyClient {
       attachmentsIncluded,
       attachments,
     };
+  }
+
+  async migrateUnitsToMetric(options: BabyUnitMigrationOptions): Promise<BabyUnitMigrationResult> {
+    const backup = await this.createBackup({ includeAttachments: false });
+    await options.persistBackup(backup);
+
+    const [activities, growthEntries] = await Promise.all([
+      this.activities.list(),
+      this.growth.list(),
+    ]);
+    let convertedActivities = 0;
+    for (const activity of activities) {
+      if (activity.deleted) continue;
+      const converted = { ...activity };
+      let changed = false;
+      if (options.temperatureFahrenheit && activity.temperature !== undefined && activity.temperature !== 0) {
+        converted.temperature = convertValueToMetric(activity.temperature, "temperature");
+        changed = true;
+      }
+      if (options.volumeFluidOunces && activity.volume !== undefined && activity.volume !== 0) {
+        converted.volume = convertValueToMetric(activity.volume, "volume");
+        changed = true;
+      }
+      if (!changed) continue;
+      await this.activities.save({ ...converted, svt: 0 });
+      convertedActivities += 1;
+    }
+
+    let convertedGrowthEntries = 0;
+    for (const growthEntry of growthEntries) {
+      if (growthEntry.deleted) continue;
+      const converted = { ...growthEntry };
+      let changed = false;
+      if (options.growthWeightPoundsAndOunces && growthEntry.weight !== undefined && growthEntry.weight !== 0) {
+        converted.weight = convertValueToMetric(growthEntry.weight, "weight");
+        changed = true;
+      }
+      if (options.growthHeightInches && growthEntry.height !== undefined && growthEntry.height !== 0) {
+        converted.height = convertValueToMetric(growthEntry.height, "height");
+        changed = true;
+      }
+      if (options.growthHeadSizeInches && growthEntry.headSize !== undefined && growthEntry.headSize !== 0) {
+        converted.headSize = convertValueToMetric(growthEntry.headSize, "headSize");
+        changed = true;
+      }
+      if (!changed) continue;
+      await this.growth.save({ ...converted, svt: 0 });
+      convertedGrowthEntries += 1;
+    }
+
+    const baby = await this.save({ convertUnits: true }, options.atMillis);
+    return { baby, backup, convertedActivities, convertedGrowthEntries };
   }
 
   async restoreBackup(backup: BabyDaybookBackup): Promise<void> {

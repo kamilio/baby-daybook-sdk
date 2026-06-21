@@ -449,6 +449,27 @@ formatGrowthLength(50, "inches"); // "19.7 in"
 
 Pure `convertValueToImperial` and `convertValueToMetric` helpers are also exported for volume, temperature, weight, height, and head-size values.
 
+When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
+
+```ts
+import { writeFile } from "node:fs/promises";
+
+await baby.migrateUnitsToMetric({
+  temperatureFahrenheit: true,
+  volumeFluidOunces: true,
+  growthWeightPoundsAndOunces: true,
+  growthHeightInches: true,
+  growthHeadSizeInches: true,
+  persistBackup: (backup) => writeFile(
+    "baby-daybook-pre-unit-conversion.json",
+    JSON.stringify(backup, null, 2),
+    { mode: 0o600 },
+  ),
+});
+```
+
+This follows the native backup-first order, converts only active nonzero values, preserves each converted activity or growth record's timestamp, resets its sync version, and marks the baby profile's `convertUnits` flag after the records succeed. If `persistBackup` rejects, no data is mutated.
+
 ## Change polling
 
 The mobile app uses Firestore listeners. The REST SDK offers an async polling stream that reports equivalent added, modified, and deleted records without requiring the Firebase browser bundle:
