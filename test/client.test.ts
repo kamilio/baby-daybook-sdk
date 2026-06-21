@@ -284,6 +284,8 @@ describe("BabyClient", () => {
       daytime: { totalDurationMillis: { value: 60_000 } },
       nighttime: { totalDurationMillis: { value: 7_200_000 } },
       nap: { averagePerActivityMillis: { value: 60_000 } },
+      awakeTime: { bins: [{ gapCount: 1 }] },
+      averageWakeBedTime: { averageBedTimeHour: 17, bedTimeSampleCount: 1 },
     });
   });
 

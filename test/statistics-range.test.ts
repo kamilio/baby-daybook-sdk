@@ -628,6 +628,52 @@ describe("native statistics date ranges", () => {
     expect(data.nap.averagePerActivityMillis).toEqual({ value: 1.5 * hour, comparisonValue: hour, changePercent: 50 });
   });
 
+  it("builds native awake-time and average wake-up/bedtime sleep cards", () => {
+    const hour = 60 * 60 * 1000;
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const data = buildStatisticsSleepDurationData([
+      {
+        startMillis: new Date(2026, 2, 4, 22).getTime(),
+        endMillis: new Date(2026, 2, 5, 7).getTime(),
+        type: "sleeping",
+      },
+      { startMillis: new Date(2026, 2, 5, 9).getTime(), duration: hour, type: "sleeping" },
+      {
+        startMillis: new Date(2026, 2, 6, 22).getTime(),
+        endMillis: new Date(2026, 2, 7, 7, 30).getTime(),
+        type: "sleeping",
+      },
+      { startMillis: new Date(2026, 2, 7, 7, 34).getTime(), duration: 26 * 60_000, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), duration: hour, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 12).getTime(), duration: hour, type: "sleeping" },
+      {
+        startMillis: new Date(2026, 2, 7, 17, 30).getTime(),
+        endMillis: new Date(2026, 2, 7, 19).getTime(),
+        type: "sleeping",
+      },
+    ], range, { comparisonRange });
+
+    expect(data.awakeTime.bins).toEqual([{
+      periodStartMillis: range.fromMillis,
+      awakeTimeMillis: (hour + 2 * hour + 4.5 * hour) / 3,
+      contributingDayCount: 1,
+      gapCount: 3,
+    }]);
+    expect(data.awakeTime.comparisonBins).toEqual([{
+      periodStartMillis: comparisonRange.fromMillis,
+      awakeTimeMillis: 2 * hour,
+      contributingDayCount: 1,
+      gapCount: 1,
+    }]);
+    expect(data.averageWakeBedTime).toEqual({
+      averageWakeUpHour: 7 + 30 / 59,
+      averageBedTimeHour: 17 + 30 / 59,
+      wakeUpSampleCount: 1,
+      bedTimeSampleCount: 1,
+    });
+  });
+
   it("rejects invalid timestamps and reversed ranges", () => {
     expect(() => getNextStatisticsDateRange({ fromMillis: 2, toMillis: 1 })).toThrow("must not be after");
     expect(() => canLoadNextStatisticsDateRange({ fromMillis: 0, toMillis: Number.NaN }, now)).toThrow("must be finite");

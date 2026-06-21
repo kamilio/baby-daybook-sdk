@@ -139,11 +139,32 @@ export interface StatisticsNapDurationMetric {
   averagePerActivityMillis: StatisticsComparedValue;
 }
 
+export interface StatisticsAwakeTimeBin {
+  periodStartMillis: number;
+  awakeTimeMillis: number;
+  contributingDayCount: number;
+  gapCount: number;
+}
+
+export interface StatisticsAwakeTimeData {
+  bins: StatisticsAwakeTimeBin[];
+  comparisonBins?: StatisticsAwakeTimeBin[];
+}
+
+export interface StatisticsAverageWakeBedTimeData {
+  averageWakeUpHour?: number;
+  averageBedTimeHour?: number;
+  wakeUpSampleCount: number;
+  bedTimeSampleCount: number;
+}
+
 export interface StatisticsSleepDurationData {
   total: StatisticsSleepDurationMetric;
   daytime: StatisticsSleepDurationMetric;
   nighttime: StatisticsSleepDurationMetric;
   nap: StatisticsNapDurationMetric;
+  awakeTime: StatisticsAwakeTimeData;
+  averageWakeBedTime: StatisticsAverageWakeBedTimeData;
 }
 
 export type StatisticsSleepDurationOptions = StatisticsNapCountOptions;
@@ -708,6 +729,19 @@ export function buildStatisticsSleepDurationData(
     daytime: buildSleepDurationMetric(daytime, range, options.comparisonRange),
     nighttime: buildSleepDurationMetric(nighttime, range, options.comparisonRange),
     nap: buildNapDurationMetric(daytime, range, options.comparisonRange),
+    awakeTime: buildAwakeTimeData(
+      sleeping,
+      range,
+      daytimeStartMinutes,
+      daytimeEndMinutes,
+      options.comparisonRange,
+    ),
+    averageWakeBedTime: buildAverageWakeBedTimeData(
+      sleeping,
+      range,
+      daytimeStartMinutes,
+      daytimeEndMinutes,
+    ),
   };
 }
 
@@ -1098,6 +1132,131 @@ function averageDuration(
 
 function sumDurationBins(bins: readonly Readonly<StatisticsDurationBin>[]): number {
   return bins.reduce((sum, bin) => sum + bin.durationMillis, 0);
+}
+
+function buildAwakeTimeData(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  daytimeStartMinutes: number,
+  daytimeEndMinutes: number,
+  comparisonRange?: Readonly<StatisticsDateRange>,
+): StatisticsAwakeTimeData {
+  const bins = buildAwakeTimeBins(activities, range, daytimeStartMinutes, daytimeEndMinutes);
+  const comparisonBins = comparisonRange
+    ? buildAwakeTimeBins(activities, comparisonRange, daytimeStartMinutes, daytimeEndMinutes)
+    : undefined;
+  return { bins, ...(comparisonBins ? { comparisonBins } : {}) };
+}
+
+function buildAwakeTimeBins(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  daytimeStartMinutes: number,
+  daytimeEndMinutes: number,
+): StatisticsAwakeTimeBin[] {
+  const period = getStatisticsChartPeriod(range);
+  const bins = getStatisticsChartPeriodStarts(range).map((periodStartMillis) => ({
+    periodStartMillis,
+    awakeTimeMillis: 0,
+    contributingDayCount: 0,
+    gapCount: 0,
+  }));
+  const binMap = new Map(bins.map((bin) => [bin.periodStartMillis, bin]));
+  forEachStatisticsDay(range, (day) => {
+    const selection = selectDaySleepActivities(activities, day, daytimeStartMinutes, daytimeEndMinutes);
+    let gapTotal = 0;
+    let gapCount = 0;
+    for (let index = 1; index < selection.sequence.length; index += 1) {
+      const previous = selection.sequence[index - 1];
+      const current = selection.sequence[index];
+      if (!previous || !current) continue;
+      const gap = current.startMillis - validateSleepRange(previous);
+      if (gap < MINIMUM_TIME_BETWEEN_MILLIS) continue;
+      gapTotal += gap;
+      gapCount += 1;
+    }
+    if (gapCount === 0) return;
+    const bin = binMap.get(periodStart(day, period).getTime());
+    if (!bin) return;
+    bin.awakeTimeMillis += gapTotal / gapCount;
+    bin.contributingDayCount += 1;
+    bin.gapCount += gapCount;
+  });
+  return bins;
+}
+
+function buildAverageWakeBedTimeData(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  daytimeStartMinutes: number,
+  daytimeEndMinutes: number,
+): StatisticsAverageWakeBedTimeData {
+  const wakeUpHours: number[] = [];
+  const bedTimeHours: number[] = [];
+  forEachStatisticsDay(range, (day) => {
+    const selection = selectDaySleepActivities(activities, day, daytimeStartMinutes, daytimeEndMinutes);
+    if (selection.wakeUp) wakeUpHours.push(nativeHourAndFraction(validateSleepRange(selection.wakeUp)));
+    if (selection.bedTime) bedTimeHours.push(nativeHourAndFraction(selection.bedTime.startMillis));
+  });
+  return {
+    ...(wakeUpHours.length > 0 ? { averageWakeUpHour: averageNumbers(wakeUpHours) } : {}),
+    ...(bedTimeHours.length > 0 ? { averageBedTimeHour: averageNumbers(bedTimeHours) } : {}),
+    wakeUpSampleCount: wakeUpHours.length,
+    bedTimeSampleCount: bedTimeHours.length,
+  };
+}
+
+function selectDaySleepActivities(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  day: Date,
+  daytimeStartMinutes: number,
+  daytimeEndMinutes: number,
+): {
+  wakeUp?: Readonly<StatisticsDurationInput>;
+  bedTime?: Readonly<StatisticsDurationInput>;
+  sequence: Readonly<StatisticsDurationInput>[];
+} {
+  const dayStartMillis = startOfDay(day).getTime();
+  const dayEndMillis = endOfDay(day).getTime();
+  const daytimeStartMillis = new Date(
+    day.getFullYear(), day.getMonth(), day.getDate(), 0, daytimeStartMinutes,
+  ).getTime();
+  const daytimeEndMillis = new Date(
+    day.getFullYear(), day.getMonth(), day.getDate(), 0, daytimeEndMinutes,
+  ).getTime();
+  let wakeUp: Readonly<StatisticsDurationInput> | undefined;
+  let bedTime: Readonly<StatisticsDurationInput> | undefined;
+  const naps: Readonly<StatisticsDurationInput>[] = [];
+  for (const activity of activities) {
+    const endMillis = validateSleepRange(activity);
+    const nap = isStatisticsNap(activity, daytimeStartMinutes, daytimeEndMinutes);
+    if (nap && activity.startMillis >= dayStartMillis && activity.startMillis <= dayEndMillis) {
+      naps.push(activity);
+      continue;
+    }
+    if (endMillis >= dayStartMillis && endMillis <= daytimeEndMillis
+      && (!wakeUp || endMillis > validateSleepRange(wakeUp))) wakeUp = activity;
+    if (activity.startMillis >= daytimeStartMillis && activity.startMillis <= dayEndMillis
+      && (!bedTime || activity.startMillis < bedTime.startMillis)) bedTime = activity;
+  }
+  const sequence = [...new Set([...(wakeUp ? [wakeUp] : []), ...naps, ...(bedTime ? [bedTime] : [])])]
+    .sort((left, right) => left.startMillis - right.startMillis);
+  return { ...(wakeUp ? { wakeUp } : {}), ...(bedTime ? { bedTime } : {}), sequence };
+}
+
+function forEachStatisticsDay(range: Readonly<StatisticsDateRange>, callback: (day: Date) => void): void {
+  for (let day = startOfDay(new Date(range.fromMillis)); day.getTime() <= range.toMillis; day = addCalendarDays(day, 1)) {
+    callback(day);
+  }
+}
+
+function nativeHourAndFraction(millis: number): number {
+  const date = new Date(millis);
+  return date.getHours() + date.getMinutes() / 59;
+}
+
+function averageNumbers(values: readonly number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function validateStatisticsDaytime(startMinutes: number, endMinutes: number): void {
