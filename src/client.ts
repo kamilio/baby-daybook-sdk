@@ -10,6 +10,7 @@ import {
 } from "./activity-queries.js";
 import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
 import { AuthSession, BabyDaybookAuth, type AppleCredential, type AuthOptions, type FirebaseAccount, type OAuthCredential } from "./auth.js";
+import { parseAppleCallbackUrl } from "./apple.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
 import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defaults.js";
@@ -147,6 +148,10 @@ export class BabyDaybookClient {
   static async signInWithAppleCredential(credential: AppleCredential, options: AuthOptions = {}): Promise<BabyDaybookClient> {
     const auth = new BabyDaybookAuth(options);
     return new BabyDaybookClient({ ...options, session: await auth.signInWithAppleCredential(credential) });
+  }
+
+  static signInWithAppleCallback(callbackUrl: string | URL, options: AuthOptions = {}): Promise<BabyDaybookClient> {
+    return this.signInWithAppleCredential(parseAppleCallbackUrl(callbackUrl), options);
   }
 
   static async fromRefreshToken(refreshToken: string, options: AuthOptions = {}): Promise<BabyDaybookClient> {

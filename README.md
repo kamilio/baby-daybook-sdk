@@ -110,6 +110,26 @@ await client.sendEmailVerification();
 
 This keeps the existing Firebase user ID, babies, and activity data, while adding email/password as another sign-in method. Do not use `signUpWithEmail` for this migration: it can create a separate Firebase user. Apple remains linked, and subsequent CLI runs can use `signInWithEmail` or the persisted refresh token. If Apple supplied a private-relay address, confirm which email you want associated with the account before linking it.
 
+The repository includes a one-time headed-browser command that performs this migration without asking for an Apple password in the terminal:
+
+```bash
+npm run baby-daybook:link-apple
+```
+
+The command opens a temporary Chrome, Edge, or Chromium profile, lets Apple handle credentials and two-factor authentication, captures Baby Daybook's native callback through the browser debugging protocol, signs into the existing Firebase user, asks which email to link, generates a 192-bit URL-safe password, and requests email verification. It stores only the rotating Firebase refresh token in `~/.config/baby-daybook/auth.json`; the directory is created with mode `0700` and the file with mode `0600`. Save the generated password in your password manager because it is displayed once and is not written to that file. Use `--email`, `--browser`, or `--auth-file` to override the interactive email, browser executable, or session location.
+
+An Apple app-specific password is not interchangeable with a Baby Daybook password and will not work with Firebase email/password authentication. The password must be linked after a successful Apple session, as the command does. To restore the saved session later:
+
+```ts
+import { readFile } from "node:fs/promises";
+import { BabyDaybookClient } from "baby-daybook-sdk";
+
+const saved = JSON.parse(await readFile(`${process.env.HOME}/.config/baby-daybook/auth.json`, "utf8"));
+const client = await BabyDaybookClient.fromRefreshToken(saved.refreshToken);
+```
+
+For a custom browser integration, `createAppleAuthorizationUrl()` recreates the native Android request, `parseAppleCallbackUrl()` validates the returned `intent://callback` credential, and `BabyDaybookClient.signInWithAppleCallback()` completes the Firebase exchange.
+
 Account lifecycle mirrors the mobile app. Display-name changes update both Firebase Authentication and the Baby Daybook user document, while sign-out invalidates the local SDK session and emits `undefined` through `onSessionChanged`:
 
 ```ts
