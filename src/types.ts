@@ -136,10 +136,20 @@ export interface GrowthEntry extends BabyDataRecord {
   notes?: string;
 }
 
+export type CreateGrowthInput = Omit<GrowthEntry, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted" | "dateMillis"> & {
+  uid?: string;
+  dateMillis?: number;
+};
+
 export interface Moment extends BabyDataRecord {
   dateMillis: number;
   description?: string;
 }
+
+export type CreateMomentInput = Omit<Moment, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted" | "dateMillis"> & {
+  uid?: string;
+  dateMillis?: number;
+};
 
 export interface DailyNote extends BabyDataRecord {
   note: string;
@@ -155,6 +165,8 @@ export interface Tooth extends BabyDataRecord {
   shedMillis?: number;
   notes?: string;
 }
+
+export type CreateToothInput = Pick<Tooth, "name" | "jaw" | "side"> & Pick<Partial<Tooth>, "notes">;
 
 export interface AgeInterval {
   unit: "month" | "year";

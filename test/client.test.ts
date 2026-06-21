@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
-import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, DailyNote, GrowthEntry, Reminder, Tooth } from "../src/index.js";
+import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, DailyNote, GrowthEntry, Moment, Reminder, Tooth } from "../src/index.js";
 import { mockFetch } from "./helpers.js";
 
 describe("BabyDaybookClient", () => {
@@ -316,6 +316,27 @@ describe("BabyClient", () => {
     ]));
   });
 
+  it("creates, saves, and deletes growth, moment, and tooth records with native sync stamps", async () => {
+    const { baby, growthRepo, momentsRepo, teethingRepo } = configuredBaby();
+    const now = 1_750_000_000_000;
+
+    const growth = await baby.createGrowth({ uid: "growth", weight: 7.5 }, now);
+    expect(growth).toMatchObject({ uid: "growth", dateMillis: now, weight: 7.5, notes: "", updatedMillis: now, svt: 0, deleted: false });
+    await expect(baby.deleteGrowth("growth", now + 1)).resolves.toMatchObject({ deleted: true, updatedMillis: now + 1, svt: 0 });
+
+    const moment = await baby.createMoment({ uid: "moment" }, now);
+    expect(moment).toMatchObject({ uid: "moment", dateMillis: now, description: "", updatedMillis: now, svt: 0, deleted: false });
+    await expect(baby.deleteMoment("moment", now + 1)).resolves.toMatchObject({ deleted: true, updatedMillis: now + 1, svt: 0 });
+
+    const tooth = await baby.createTooth({ name: "canine", jaw: "lower", side: "right" }, now);
+    expect(tooth).toMatchObject({ uid: "canine_lower_right", erupted: true, eruptedMillis: now, shed: false, notes: "", updatedMillis: now, svt: 0 });
+    await expect(baby.deleteTooth("canine_lower_right", now + 1)).resolves.toMatchObject({ deleted: true, updatedMillis: now + 1, svt: 0 });
+
+    expect(growthRepo.save).toHaveBeenCalledTimes(2);
+    expect(momentsRepo.save).toHaveBeenCalledTimes(2);
+    expect(teethingRepo.save).toHaveBeenCalledTimes(2);
+  });
+
   it("emits polling changes and stops when aborted", async () => {
     const { baby, client, activityRepo } = configuredBaby();
     activityRepo.items = [activity({ uid: "a" })];
@@ -364,12 +385,13 @@ function configuredBaby() {
   const baby = new BabyClient(client, "baby");
   const activityRepo = repo<DailyAction>([]);
   const growthRepo = repo<GrowthEntry>([]);
+  const momentsRepo = repo<Moment>([]);
   const teethingRepo = repo<Tooth>([]);
   (baby as any).activityTypes = repo([]);
   (baby as any).activities = activityRepo;
   (baby as any).groups = repo([]);
   (baby as any).growth = growthRepo;
-  (baby as any).moments = repo([]);
+  (baby as any).moments = momentsRepo;
   (baby as any).dailyNotes = repo([]);
   (baby as any).teething = teethingRepo;
   (baby as any).reminders = repo([]);
@@ -377,7 +399,7 @@ function configuredBaby() {
   (baby as any).acceptedInvites = repo([]);
   (baby as any).pendingInvites = repo([]);
   (baby as any).fileMetadata = vi.fn(() => repo([]));
-  return { baby, client, activityRepo, growthRepo, teethingRepo };
+  return { baby, client, activityRepo, growthRepo, momentsRepo, teethingRepo };
 }
 
 function repo<T extends Record<string, any>>(initial: T[]) {

@@ -34,7 +34,7 @@ import { getSleepRecommendation } from "./sleep-recommendations.js";
 import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
-import { buildToothMap, listToothChartItems } from "./teething.js";
+import { buildToothMap, listToothChartItems, toothUid } from "./teething.js";
 import type {
   ActivityGroup,
   ActivityPdfOptions,
@@ -59,6 +59,9 @@ import type {
   CreateBackupOptions,
   CreateActivityGroupInput,
   CreateActivityTypeInput,
+  CreateGrowthInput,
+  CreateMomentInput,
+  CreateToothInput,
   DailyAction,
   DailyNote,
   FileMetadata,
@@ -426,6 +429,74 @@ export class BabyClient {
 
   async deleteDailyNote(at: Date | number = Date.now(), timeZone?: string): Promise<void> {
     await this.setDailyNote("", at, timeZone);
+  }
+
+  createGrowth(input: CreateGrowthInput = {}, atMillis = Date.now()): Promise<GrowthEntry> {
+    return this.saveGrowth({
+      ...input,
+      uid: input.uid ?? crypto.randomUUID(),
+      userUid: this.client.session.userId,
+      babyUid: this.babyUid,
+      dateMillis: input.dateMillis ?? atMillis,
+      notes: input.notes ?? "",
+      deleted: false,
+    }, atMillis);
+  }
+
+  saveGrowth(growth: GrowthEntry, atMillis = Date.now()): Promise<GrowthEntry> {
+    return this.growth.save({ ...growth, babyUid: this.babyUid, updatedMillis: atMillis, svt: 0 });
+  }
+
+  async deleteGrowth(uid: string, atMillis = Date.now()): Promise<GrowthEntry> {
+    const growth = await this.growth.get(uid);
+    if (!growth) throw new Error(`Growth ${uid} does not exist`);
+    return this.growth.save({ ...growth, deleted: true, updatedMillis: atMillis, svt: 0 });
+  }
+
+  createMoment(input: CreateMomentInput = {}, atMillis = Date.now()): Promise<Moment> {
+    return this.saveMoment({
+      ...input,
+      uid: input.uid ?? crypto.randomUUID(),
+      userUid: this.client.session.userId,
+      babyUid: this.babyUid,
+      dateMillis: input.dateMillis ?? atMillis,
+      description: input.description ?? "",
+      deleted: false,
+    }, atMillis);
+  }
+
+  saveMoment(moment: Moment, atMillis = Date.now()): Promise<Moment> {
+    return this.moments.save({ ...moment, babyUid: this.babyUid, updatedMillis: atMillis, svt: 0 });
+  }
+
+  async deleteMoment(uid: string, atMillis = Date.now()): Promise<Moment> {
+    const moment = await this.moments.get(uid);
+    if (!moment) throw new Error(`Moment ${uid} does not exist`);
+    return this.moments.save({ ...moment, deleted: true, updatedMillis: atMillis, svt: 0 });
+  }
+
+  createTooth(input: CreateToothInput, atMillis = Date.now()): Promise<Tooth> {
+    return this.saveTooth({
+      ...input,
+      uid: toothUid(input.name, input.jaw, input.side),
+      userUid: this.client.session.userId,
+      babyUid: this.babyUid,
+      erupted: true,
+      eruptedMillis: atMillis,
+      shed: false,
+      notes: input.notes ?? "",
+      deleted: false,
+    }, atMillis);
+  }
+
+  saveTooth(tooth: Tooth, atMillis = Date.now()): Promise<Tooth> {
+    return this.teething.save({ ...tooth, babyUid: this.babyUid, updatedMillis: atMillis, svt: 0 });
+  }
+
+  async deleteTooth(uid: string, atMillis = Date.now()): Promise<Tooth> {
+    const tooth = await this.teething.get(uid);
+    if (!tooth) throw new Error(`Tooth ${uid} does not exist`);
+    return this.teething.save({ ...tooth, deleted: true, updatedMillis: atMillis, svt: 0 });
   }
 
   async save(update: Partial<Baby>): Promise<Baby> {

@@ -188,9 +188,15 @@ const map = await baby.getToothMap();
 
 const upperLeftCentralId = toothUid("central_incisor", "upper", "left");
 const upperCentralRange = getToothEruptionInterval("central_incisor", "upper");
+
+const growth = await baby.createGrowth({ weight: 7.5 });
+const moment = await baby.createMoment({ description: "First steps" });
+const tooth = await baby.createTooth({ name: "central_incisor", jaw: "lower", side: "left" });
 ```
 
 `listToothChartItems` returns the native ten-row eruption/shed order. `listPrimaryTeeth` and `baby.getToothMap()` return all 20 positions with deterministic IDs, native colors, expected age intervals, and `none`, `erupted`, or `shed` state. When both flags are present, `shed` takes precedence exactly like the app.
+
+Growth, moment, and tooth helpers reproduce native editor defaults. Growth and moment records receive random IDs and current timestamps; tooth IDs are deterministic and a newly selected tooth starts as erupted. Every save or delete resets `svt` to zero and refreshes `updatedMillis` for cloud synchronization.
 
 ## Search and growth
 
