@@ -560,12 +560,17 @@ export class BabyClient {
     return this.fileMetadata(category).save({ itemUid, babyUid: this.babyUid, fileName, deleted: false });
   }
 
-  downloadAttachment(category: AttachmentCategory, itemUid: string, fileName: string): Promise<Uint8Array> {
-    return this.client.storage.download(this.client.storage.attachmentPath(category, this.babyUid, itemUid, fileName));
+  async uploadAttachmentThumbnail(category: AttachmentCategory, itemUid: string, fileName: string, body: BodyInit, contentType?: string): Promise<void> {
+    const path = this.client.storage.attachmentThumbnailPath(category, this.babyUid, itemUid, fileName);
+    await this.client.storage.upload(path, body, contentType);
+  }
+
+  downloadAttachment(category: AttachmentCategory, itemUid: string, fileName: string, preferThumbnail = false): Promise<Uint8Array> {
+    return this.client.storage.downloadAttachment(category, this.babyUid, itemUid, fileName, preferThumbnail);
   }
 
   async deleteAttachment(category: AttachmentCategory, itemUid: string, fileName: string): Promise<void> {
-    await this.client.storage.delete(this.client.storage.attachmentPath(category, this.babyUid, itemUid, fileName));
+    await this.client.storage.deleteAttachment(category, this.babyUid, itemUid, fileName);
     await this.fileMetadata(category).softDelete(itemUid);
   }
 

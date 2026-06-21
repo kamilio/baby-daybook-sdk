@@ -88,6 +88,33 @@ describe("service clients", () => {
     await storage.delete(path);
   });
 
+  it("uses native thumbnail names, falls back to originals, and removes both files", async () => {
+    const fetch = mockFetch(
+      (url) => {
+        expect(url).toContain(encodeURIComponent("files/moments/babyUid_b/m/thumb_photo.jpg"));
+        return new Response("missing", { status: 404 });
+      },
+      (url) => {
+        expect(url).toContain(encodeURIComponent("files/moments/babyUid_b/m/photo.jpg"));
+        return new Response(new Uint8Array([4, 5]));
+      },
+      (url, init) => {
+        expect(url).toContain(encodeURIComponent("files/moments/babyUid_b/m/photo.jpg"));
+        expect(init?.method).toBe("DELETE");
+        return jsonResponse(undefined);
+      },
+      (url, init) => {
+        expect(url).toContain(encodeURIComponent("files/moments/babyUid_b/m/thumb_photo.jpg"));
+        expect(init?.method).toBe("DELETE");
+        return new Response("missing", { status: 404 });
+      },
+    );
+    const storage = new FirebaseStorageClient(session(fetch));
+    expect(storage.attachmentThumbnailPath("moments", "b", "m", "photo.jpg")).toBe("files/moments/babyUid_b/m/thumb_photo.jpg");
+    await expect(storage.downloadAttachment("moments", "b", "m", "photo.jpg", true)).resolves.toEqual(new Uint8Array([4, 5]));
+    await expect(storage.deleteAttachment("moments", "b", "m", "thumb_photo.jpg")).resolves.toBeUndefined();
+  });
+
   it("implements repository CRUD with document IDs", async () => {
     const firestore = {
       list: async () => [{ id: "a", path: "x/a", data: { value: 1 } }],

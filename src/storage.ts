@@ -13,6 +13,34 @@ export class FirebaseStorageClient {
     return `files/${category}/babyUid_${babyUid}/${itemUid}/${fileName}`;
   }
 
+  attachmentThumbnailPath(category: AttachmentCategory, babyUid: string, itemUid: string, fileName: string): string {
+    return this.attachmentPath(category, babyUid, itemUid, thumbnailFileName(fileName));
+  }
+
+  async downloadAttachment(
+    category: AttachmentCategory,
+    babyUid: string,
+    itemUid: string,
+    fileName: string,
+    preferThumbnail = false,
+  ): Promise<Uint8Array> {
+    const originalPath = this.attachmentPath(category, babyUid, itemUid, originalFileName(fileName));
+    if (!preferThumbnail) return this.download(originalPath);
+    try {
+      return await this.download(this.attachmentThumbnailPath(category, babyUid, itemUid, fileName));
+    } catch (error) {
+      if (!(error instanceof BabyDaybookApiError) || error.status !== 404) throw error;
+      return this.download(originalPath);
+    }
+  }
+
+  async deleteAttachment(category: AttachmentCategory, babyUid: string, itemUid: string, fileName: string): Promise<void> {
+    const original = this.attachmentPath(category, babyUid, itemUid, originalFileName(fileName));
+    const thumbnail = this.attachmentThumbnailPath(category, babyUid, itemUid, fileName);
+    await this.#deleteIfExists(original);
+    await this.#deleteIfExists(thumbnail);
+  }
+
   async upload(path: string, body: BodyInit, contentType = "application/octet-stream"): Promise<Record<string, unknown>> {
     const url = new URL(this.#baseUrl());
     url.searchParams.set("uploadType", "media");
@@ -41,9 +69,25 @@ export class FirebaseStorageClient {
     if (!response.ok) await throwStorageError(response);
   }
 
+  async #deleteIfExists(path: string): Promise<void> {
+    try {
+      await this.delete(path);
+    } catch (error) {
+      if (!(error instanceof BabyDaybookApiError) || error.status !== 404) throw error;
+    }
+  }
+
   #baseUrl(): string {
     return `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(this.session.config.storageBucket)}/o`;
   }
+}
+
+function thumbnailFileName(fileName: string): string {
+  return fileName.startsWith("thumb_") ? fileName : `thumb_${fileName}`;
+}
+
+function originalFileName(fileName: string): string {
+  return fileName.startsWith("thumb_") ? fileName.slice("thumb_".length) : fileName;
 }
 
 async function parseStorageResponse(response: Response): Promise<Record<string, unknown>> {

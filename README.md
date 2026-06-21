@@ -7,7 +7,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Firebase email/password, custom-token, refresh-token, Google, Facebook, and Apple credential authentication.
 - User profiles, owned babies, shared babies, purchases, caregivers, and pending invitations.
 - Activity types, timed activities, feeding sides, groups, growth, moments, daily notes, teething, reminders, and per-baby settings.
-- Attachment metadata plus Firebase Storage upload, download, and deletion.
+- Attachment metadata plus Firebase Storage upload, download, native `thumb_` previews, and paired deletion.
 - Soft deletion compatible with Baby Daybook synchronization.
 - Local activity and daily-note search matching the app's core filters.
 - CDC, WHO, and CDC Down syndrome growth percentile calculations using the app's bundled LMS reference data.
@@ -269,7 +269,10 @@ for (const schedule of schedules) {
 
 ```ts
 await baby.uploadAttachment("moments", momentUid, "photo.jpg", jpegBytes, "image/jpeg");
+await baby.uploadAttachmentThumbnail("moments", momentUid, "photo.jpg", thumbnailBytes, "image/jpeg");
 const jpeg = await baby.downloadAttachment("moments", momentUid, "photo.jpg");
+const preview = await baby.downloadAttachment("moments", momentUid, "photo.jpg", true);
+await baby.deleteAttachment("moments", momentUid, "photo.jpg");
 
 const backup = await baby.createBackup();
 await baby.restoreBackup(backup);

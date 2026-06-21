@@ -236,9 +236,10 @@ describe("BabyClient", () => {
     (baby as any).fileMetadata = vi.fn(() => metadata);
     (client as any).storage = {
       attachmentPath: vi.fn(() => "path"),
+      attachmentThumbnailPath: vi.fn(() => "thumb-path"),
       upload: vi.fn(async () => ({})),
-      download: vi.fn(async () => new Uint8Array([1, 2])),
-      delete: vi.fn(async () => undefined),
+      downloadAttachment: vi.fn(async () => new Uint8Array([1, 2])),
+      deleteAttachment: vi.fn(async () => undefined),
     };
     activityRepo.items = [activity({ uid: "a", type: "bottle", duration: 100, volume: 60 })];
     growthRepo.items = [{ uid: "g", userUid: "user", babyUid: "baby", dateMillis: 100, weight: 5 }];
@@ -247,8 +248,13 @@ describe("BabyClient", () => {
 
     await expect(baby.uploadAttachment("moments", "m", "photo.jpg", "image")).resolves.toMatchObject({ itemUid: "m" });
     await expect(baby.downloadAttachment("moments", "m", "photo.jpg")).resolves.toEqual(new Uint8Array([1, 2]));
+    await baby.uploadAttachmentThumbnail("moments", "m", "photo.jpg", "thumbnail", "image/jpeg");
+    expect((client as any).storage.upload).toHaveBeenLastCalledWith("thumb-path", "thumbnail", "image/jpeg");
+    await baby.downloadAttachment("moments", "m", "photo.jpg", true);
+    expect((client as any).storage.downloadAttachment).toHaveBeenLastCalledWith("moments", "baby", "m", "photo.jpg", true);
     metadata.items = [{ itemUid: "m", babyUid: "baby", fileName: "photo.jpg" }];
     await baby.deleteAttachment("moments", "m", "photo.jpg");
+    expect((client as any).storage.deleteAttachment).toHaveBeenCalledWith("moments", "baby", "m", "photo.jpg");
     await expect(baby.summarizeActivities()).resolves.toMatchObject({ count: 1, totalVolume: 60 });
     await expect(baby.exportActivitiesCsv()).resolves.toContain("bottle");
     const activityPdf = new TextDecoder().decode(await baby.exportActivitiesPdf({ timeZone: "UTC" }));
