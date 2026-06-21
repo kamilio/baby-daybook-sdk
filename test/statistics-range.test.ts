@@ -4,6 +4,8 @@ import {
   buildStatisticsActivityCountSummary,
   buildStatisticsAmountBins,
   buildStatisticsAmountSummary,
+  buildStatisticsDurationBins,
+  buildStatisticsDurationSummary,
   buildStatisticsVolumeBins,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
@@ -234,6 +236,40 @@ describe("native statistics date ranges", () => {
     expect(summary.averagePerDay).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
     expect(summary.averagePerActivity).toEqual({ value: 2, comparisonValue: 2, changePercent: 0 });
     expect(() => buildStatisticsAmountBins([], range, "  ")).toThrow("Amount unit must not be empty");
+  });
+
+  it("builds native duration period totals and the average-per-day card", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const activities = [
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), endMillis: new Date(2026, 2, 7, 9).getTime(), type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 12).getTime(), endMillis: new Date(2026, 2, 7, 14).getTime(), duration: 90 * 60_000, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "sleeping" },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), duration: 30 * 60_000, type: "tummy_time" },
+    ];
+
+    expect(buildStatisticsDurationBins(activities, range, "sleeping").map(({ durationMillis, activityCount }) => ({ durationMillis, activityCount }))).toEqual([
+      { durationMillis: 150 * 60_000, activityCount: 2 },
+      { durationMillis: 0, activityCount: 1 },
+    ]);
+    expect(buildStatisticsDurationSummary(activities, range, { typeUid: "sleeping" })).toEqual({
+      averagePerDayMillis: { value: 75 * 60_000 },
+    });
+  });
+
+  it("compares duration averages and clamps invalid negative spans", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 6]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const summary = buildStatisticsDurationSummary([
+      { startMillis: new Date(2026, 2, 5, 9).getTime(), duration: 60 * 60_000, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), duration: 60 * 60_000, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), endMillis: new Date(2026, 2, 8, 8).getTime(), type: "sleeping" },
+    ], range, { typeUid: "sleeping", comparisonRange });
+
+    expect(summary.averagePerDayMillis).toEqual({
+      value: 30 * 60_000,
+      comparisonValue: 30 * 60_000,
+      changePercent: 0,
+    });
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

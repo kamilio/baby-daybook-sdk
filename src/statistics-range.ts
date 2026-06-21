@@ -77,6 +77,21 @@ export interface StatisticsAmountSummaryOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsDurationBin {
+  periodStartMillis: number;
+  durationMillis: number;
+  activityCount: number;
+}
+
+export interface StatisticsDurationSummary {
+  averagePerDayMillis: StatisticsComparedValue;
+}
+
+export interface StatisticsDurationSummaryOptions {
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -95,6 +110,14 @@ interface StatisticsAmountInput {
   startMillis: number;
   amount?: number;
   amountUnit?: string;
+  type: string;
+  deleted?: boolean;
+}
+
+interface StatisticsDurationInput {
+  startMillis: number;
+  endMillis?: number;
+  duration?: number;
   type: string;
   deleted?: boolean;
 }
@@ -380,6 +403,46 @@ export function buildStatisticsAmountSummary(
   };
 }
 
+export function buildStatisticsDurationBins(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): StatisticsDurationBin[] {
+  validateRange(range);
+  const period = getStatisticsChartPeriod(range);
+  const bins = createChartPeriodStarts(range, period).map((periodStartMillis) => ({
+    periodStartMillis,
+    durationMillis: 0,
+    activityCount: 0,
+  }));
+  const binMap = new Map(bins.map((bin) => [bin.periodStartMillis, bin]));
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    validateDurationActivity(activity);
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    const bin = binMap.get(periodStart(new Date(activity.startMillis), period).getTime());
+    if (bin) {
+      bin.durationMillis += getActivityDurationMillis(activity);
+      bin.activityCount += 1;
+    }
+  }
+  return bins;
+}
+
+export function buildStatisticsDurationSummary(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsDurationSummaryOptions> = {},
+): StatisticsDurationSummary {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = calculateAverageDurationPerDay(activities, range, options.typeUid);
+  const comparison = options.comparisonRange
+    ? calculateAverageDurationPerDay(activities, options.comparisonRange, options.typeUid)
+    : undefined;
+  return { averagePerDayMillis: comparedValue(current, comparison) };
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -539,6 +602,22 @@ function calculateAmountSummary(
   };
 }
 
+function calculateAverageDurationPerDay(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): number {
+  let total = 0;
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    validateDurationActivity(activity);
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    total += getActivityDurationMillis(activity);
+  }
+  const dayCount = differenceInCalendarDays(new Date(range.toMillis), new Date(range.fromMillis)) + 1;
+  return total / dayCount;
+}
+
 function comparedValue(value: number, comparisonValue?: number): StatisticsComparedValue {
   return comparisonValue === undefined
     ? { value }
@@ -547,6 +626,18 @@ function comparedValue(value: number, comparisonValue?: number): StatisticsCompa
 
 function validateAmountUnit(amountUnit: string): void {
   if (!amountUnit.trim()) throw new RangeError("Amount unit must not be empty");
+}
+
+function validateDurationActivity(activity: Readonly<StatisticsDurationInput>): void {
+  assertFinite(activity.startMillis, "Activity start time");
+  if (activity.endMillis !== undefined) assertFinite(activity.endMillis, "Activity end time");
+  if (activity.duration !== undefined) assertFinite(activity.duration, "Activity duration");
+}
+
+function getActivityDurationMillis(activity: Readonly<StatisticsDurationInput>): number {
+  if (activity.duration !== undefined) return Math.max(0, activity.duration);
+  if (activity.endMillis !== undefined) return Math.max(0, activity.endMillis - activity.startMillis);
+  return 0;
 }
 
 function periodStart(date: Date, period: StatisticsChartPeriod): Date {
