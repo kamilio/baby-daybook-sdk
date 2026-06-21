@@ -59,6 +59,22 @@ export interface StatisticsVolumeSummaryOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsVolumeByHourBin {
+  hour: number;
+  totalVolume: number;
+  activityCount: number;
+  averageVolume: number;
+  comparisonTotalVolume?: number;
+  comparisonActivityCount?: number;
+  comparisonAverageVolume?: number;
+  changePercent?: number;
+}
+
+export interface StatisticsVolumeByHourOptions {
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+}
+
 export interface StatisticsAmountBin {
   periodStartMillis: number;
   amount: number;
@@ -454,6 +470,29 @@ export function buildStatisticsVolumeSummary(
   };
 }
 
+export function buildStatisticsVolumeByHour(
+  activities: readonly Readonly<StatisticsVolumeInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsVolumeByHourOptions> = {},
+): StatisticsVolumeByHourBin[] {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = calculateVolumeByHour(activities, range, options.typeUid);
+  const comparison = options.comparisonRange
+    ? calculateVolumeByHour(activities, options.comparisonRange, options.typeUid)
+    : undefined;
+  return current.map((value, hour) => comparison
+    ? {
+      hour,
+      ...value,
+      comparisonTotalVolume: comparison[hour]!.totalVolume,
+      comparisonActivityCount: comparison[hour]!.activityCount,
+      comparisonAverageVolume: comparison[hour]!.averageVolume,
+      changePercent: getStatisticsChangePercent(value.averageVolume, comparison[hour]!.averageVolume),
+    }
+    : { hour, ...value });
+}
+
 export function buildStatisticsAmountBins(
   activities: readonly Readonly<StatisticsAmountInput>[],
   range: Readonly<StatisticsDateRange>,
@@ -716,6 +755,28 @@ function withParameterDuration(
   if (parameter !== "left" && parameter !== "right") return activity;
   const sideDuration = parameter === "left" ? activity.leftDuration : activity.rightDuration;
   return { ...activity, duration: sideDuration ?? getActivityDurationMillis(activity) };
+}
+
+function calculateVolumeByHour(
+  activities: readonly Readonly<StatisticsVolumeInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): Array<{ totalVolume: number; activityCount: number; averageVolume: number }> {
+  const values = Array.from({ length: 24 }, () => ({ totalVolume: 0, activityCount: 0, averageVolume: 0 }));
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    const volume = activity.volume ?? 0;
+    assertFinite(volume, "Activity volume");
+    const value = values[new Date(activity.startMillis).getHours()]!;
+    value.totalVolume += volume;
+    value.activityCount += 1;
+  }
+  for (const value of values) {
+    if (value.activityCount > 0) value.averageVolume = value.totalVolume / value.activityCount;
+  }
+  return values;
 }
 
 function startOfDay(date: Date): Date {

@@ -125,6 +125,7 @@ export {
   buildStatisticsTemperatureData,
   buildStatisticsTimeOfDayDistribution,
   buildStatisticsVolumeBins,
+  buildStatisticsVolumeByHour,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
@@ -168,6 +169,8 @@ export type {
   StatisticsDateRangeNavigation,
   StatisticsTimeInterval,
   StatisticsVolumeBin,
+  StatisticsVolumeByHourBin,
+  StatisticsVolumeByHourOptions,
   StatisticsVolumeSummary,
   StatisticsVolumeSummaryOptions,
 } from "./statistics-range.js";

@@ -11,6 +11,7 @@ import {
   buildStatisticsTemperatureData,
   buildStatisticsTimeOfDayDistribution,
   buildStatisticsVolumeBins,
+  buildStatisticsVolumeByHour,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
@@ -206,6 +207,44 @@ describe("native statistics date ranges", () => {
     expect(() => buildStatisticsVolumeSummary([
       { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle", volume: Number.NaN },
     ], range, { typeUid: "bottle" })).toThrow("Activity volume must be finite");
+  });
+
+  it("builds the native hourly average-volume card", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const bins = buildStatisticsVolumeByHour([
+      { startMillis: new Date(2026, 2, 7, 8, 5).getTime(), type: "bottle", volume: 90 },
+      { startMillis: new Date(2026, 2, 8, 8, 45).getTime(), type: "bottle", volume: 150 },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "drink", volume: 500 },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "bottle", volume: 500, deleted: true },
+    ], range, { typeUid: "bottle" });
+
+    expect(bins).toHaveLength(24);
+    expect(bins[8]).toEqual({ hour: 8, totalVolume: 240, activityCount: 2, averageVolume: 120 });
+    expect(bins[9]).toEqual({ hour: 9, totalVolume: 0, activityCount: 1, averageVolume: 0 });
+    expect(bins[10]).toEqual({ hour: 10, totalVolume: 0, activityCount: 0, averageVolume: 0 });
+  });
+
+  it("adds native comparison values to hourly volume averages", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const bins = buildStatisticsVolumeByHour([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "bottle", volume: 100 },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle", volume: 100 },
+      { startMillis: new Date(2026, 2, 7, 8, 30).getTime(), type: "bottle", volume: 300 },
+    ], range, { typeUid: "bottle", comparisonRange });
+
+    expect(bins[8]).toEqual({
+      hour: 8,
+      totalVolume: 400,
+      activityCount: 2,
+      averageVolume: 200,
+      comparisonTotalVolume: 100,
+      comparisonActivityCount: 1,
+      comparisonAverageVolume: 100,
+      changePercent: 100,
+    });
+    expect(bins[9]?.changePercent).toBe(0);
   });
 
   it("keeps native amount charts and cards separated by unit", () => {

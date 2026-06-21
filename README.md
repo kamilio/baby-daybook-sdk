@@ -528,6 +528,8 @@ It returns configured activity types with all-time active record counts and the 
 
 `buildStatisticsParameterBreakdown` and `baby.getStatisticsParameterBreakdown(...)` reproduce the native parameter cards that appear within those tabs: left/right for breastfeeding and pumping, pee/poo/combined/empty for potty, wet/dirty/combined/dry for diaper changes, and hair-wash/no-hair-wash for baths. Each parameter includes date-period count and duration series, a 24-hour distribution, totals, and optional comparison-period series. Left and right duration charts use their dedicated side durations while side `both` contributes to both parameter series.
 
+`buildStatisticsVolumeByHour` reproduces the native hourly volume card. It returns all 24 local hours with total volume, activity count, and the app's displayed average volume per activity, plus an optional comparison series and percentage change.
+
 Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
 
 ```ts
