@@ -63,6 +63,7 @@ import {
 } from "./statistics-screen.js";
 import {
   buildStatisticsGroupBreakdown,
+  buildStatisticsNapCountData,
   buildStatisticsParameterBreakdown,
   buildStatisticsDateRangeNavigation,
   getStatisticsPredefinedDateRange,
@@ -70,6 +71,8 @@ import {
   type StatisticsDateRange,
   type StatisticsGroupBreakdownOptions,
   type StatisticsGroupSeries,
+  type StatisticsNapCountData,
+  type StatisticsNapCountOptions,
   type StatisticsParameterBreakdownOptions,
   type StatisticsParameterSeries,
   type StatisticsTimeInterval,
@@ -896,6 +899,13 @@ export class BabyClient {
       ...options,
       groupUids: options.groupUids ?? groups?.map((group) => group.uid),
     });
+  }
+
+  async getStatisticsNapCountData(
+    range: Readonly<StatisticsDateRange>,
+    options: Readonly<StatisticsNapCountOptions> = {},
+  ): Promise<StatisticsNapCountData> {
+    return buildStatisticsNapCountData(await this.activities.list(), range, options);
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {

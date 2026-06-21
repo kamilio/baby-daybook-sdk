@@ -532,6 +532,8 @@ It returns configured activity types with all-time active record counts and the 
 
 `buildStatisticsGroupBreakdown` and `baby.getStatisticsGroupBreakdown(...)` reproduce the native by-group cards across number of times, duration, volume, amount, reaction, and time of day. The baby-scoped method preserves the app's configured group order and includes groups with no data; each group carries period series, totals, amount-unit series, reaction distribution, hourly counts, and optional comparison series.
 
+`buildStatisticsNapCountData` and `baby.getStatisticsNapCountData(...)` reproduce the native naps-number-of-times chart and average-per-day card. A sleep counts as a nap only when its complete range belongs to the configured local daytime window; sleeps crossing either daytime boundary remain nighttime sleep.
+
 Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
 
 ```ts

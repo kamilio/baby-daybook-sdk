@@ -7,6 +7,7 @@ import {
   buildStatisticsDurationBins,
   buildStatisticsDurationSummary,
   buildStatisticsGroupBreakdown,
+  buildStatisticsNapCountData,
   buildStatisticsParameterBreakdown,
   buildStatisticsReactionDistribution,
   buildStatisticsTemperatureData,
@@ -519,6 +520,87 @@ describe("native statistics date ranges", () => {
       { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "food", groupUid: "deleted", deleted: true },
     ], range, "food");
     expect(groups.map((group) => group.groupUid)).toEqual(["a", "b"]);
+  });
+
+  it("counts only completed sleeps fully inside the native daytime window", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const data = buildStatisticsNapCountData([
+      {
+        startMillis: new Date(2026, 2, 7, 6).getTime(),
+        endMillis: new Date(2026, 2, 7, 7).getTime(),
+        type: "sleeping",
+      },
+      {
+        startMillis: new Date(2026, 2, 7, 17).getTime(),
+        endMillis: new Date(2026, 2, 7, 18).getTime(),
+        type: "sleeping",
+      },
+      {
+        startMillis: new Date(2026, 2, 7, 5, 59).getTime(),
+        endMillis: new Date(2026, 2, 7, 7).getTime(),
+        type: "sleeping",
+      },
+      {
+        startMillis: new Date(2026, 2, 7, 17).getTime(),
+        endMillis: new Date(2026, 2, 7, 18, 1).getTime(),
+        type: "sleeping",
+      },
+      {
+        startMillis: new Date(2026, 2, 7, 17).getTime(),
+        endMillis: new Date(2026, 2, 8, 7).getTime(),
+        type: "sleeping",
+      },
+      {
+        startMillis: new Date(2026, 2, 8, 8).getTime(),
+        duration: 90 * 60 * 1000,
+        type: "sleeping",
+      },
+      {
+        startMillis: new Date(2026, 2, 8, 10).getTime(),
+        endMillis: new Date(2026, 2, 8, 11).getTime(),
+        type: "bottle",
+      },
+      {
+        startMillis: new Date(2026, 2, 8, 12).getTime(),
+        endMillis: new Date(2026, 2, 8, 13).getTime(),
+        type: "sleeping",
+        deleted: true,
+      },
+    ], range);
+
+    expect(data.bins.map((bin) => bin.activityCount)).toEqual([2, 1]);
+    expect(data.total).toEqual({ value: 3 });
+    expect(data.averagePerDay).toEqual({ value: 1.5 });
+  });
+
+  it("compares native nap totals and averages per calendar day", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const data = buildStatisticsNapCountData([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), duration: 60_000, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), duration: 60_000, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), duration: 60_000, type: "sleeping" },
+    ], range, { comparisonRange });
+
+    expect(data.total).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
+    expect(data.averagePerDay).toEqual({ value: 1, comparisonValue: 1, changePercent: 0 });
+  });
+
+  it("validates nap daytime settings and sleep ranges", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    expect(() => buildStatisticsNapCountData([], range, { daytimeStartMinutes: 600, daytimeEndMinutes: 600 }))
+      .toThrow("must be before");
+    expect(() => buildStatisticsNapCountData([], range, { daytimeStartMinutes: 1.5 }))
+      .toThrow("integer minute");
+    expect(() => buildStatisticsNapCountData([], range, { daytimeEndMinutes: 1440 }))
+      .toThrow("integer minute");
+    expect(() => buildStatisticsNapCountData([
+      {
+        startMillis: new Date(2026, 2, 7, 8).getTime(),
+        endMillis: new Date(2026, 2, 7, 7).getTime(),
+        type: "sleeping",
+      },
+    ], range)).toThrow("must not precede");
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

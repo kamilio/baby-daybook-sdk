@@ -242,6 +242,33 @@ describe("BabyClient", () => {
     ]);
   });
 
+  it("composes native nap count statistics from baby sleep activities", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    activityRepo.items = [
+      activity({
+        uid: "nap",
+        type: "sleeping",
+        startMillis: new Date(2026, 2, 7, 8).getTime(),
+        endMillis: new Date(2026, 2, 7, 9).getTime(),
+      }),
+      activity({
+        uid: "night",
+        type: "sleeping",
+        startMillis: new Date(2026, 2, 7, 17).getTime(),
+        endMillis: new Date(2026, 2, 7, 19).getTime(),
+      }),
+    ];
+
+    await expect(baby.getStatisticsNapCountData({
+      fromMillis: new Date(2026, 2, 7).getTime(),
+      toMillis: new Date(2026, 2, 8).getTime() - 1,
+    })).resolves.toMatchObject({
+      bins: [{ activityCount: 1 }],
+      total: { value: 1 },
+      averagePerDay: { value: 1 },
+    });
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

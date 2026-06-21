@@ -108,6 +108,18 @@ export interface StatisticsDurationSummaryOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsNapCountData {
+  bins: StatisticsChartBin[];
+  total: StatisticsComparedValue;
+  averagePerDay: StatisticsComparedValue;
+}
+
+export interface StatisticsNapCountOptions {
+  daytimeStartMinutes?: number;
+  daytimeEndMinutes?: number;
+  comparisonRange?: StatisticsDateRange;
+}
+
 export interface StatisticsTemperaturePoint {
   timeMillis: number;
   temperature: number;
@@ -619,6 +631,36 @@ export function buildStatisticsDurationSummary(
   return { averagePerDayMillis: comparedValue(current, comparison) };
 }
 
+export function buildStatisticsNapCountData(
+  activities: readonly Readonly<StatisticsDurationInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsNapCountOptions> = {},
+): StatisticsNapCountData {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const daytimeStartMinutes = options.daytimeStartMinutes ?? 6 * 60;
+  const daytimeEndMinutes = options.daytimeEndMinutes ?? 18 * 60;
+  validateStatisticsDaytime(daytimeStartMinutes, daytimeEndMinutes);
+  const naps = activities.filter((activity) => activity.type === "sleeping"
+    && isStatisticsNap(activity, daytimeStartMinutes, daytimeEndMinutes));
+  const bins = buildStatisticsActivityCountBins(naps, range, "sleeping");
+  const total = bins.reduce((sum, bin) => sum + bin.activityCount, 0);
+  const comparisonBins = options.comparisonRange
+    ? buildStatisticsActivityCountBins(naps, options.comparisonRange, "sleeping")
+    : undefined;
+  const comparisonTotal = comparisonBins?.reduce((sum, bin) => sum + bin.activityCount, 0);
+  return {
+    bins,
+    total: comparedValue(total, comparisonTotal),
+    averagePerDay: comparedValue(
+      total / statisticsDayCount(range),
+      options.comparisonRange && comparisonTotal !== undefined
+        ? comparisonTotal / statisticsDayCount(options.comparisonRange)
+        : undefined,
+    ),
+  };
+}
+
 export function buildStatisticsTemperatureData(
   activities: readonly Readonly<StatisticsTemperatureInput>[],
   range: Readonly<StatisticsDateRange>,
@@ -919,6 +961,36 @@ function discoverStatisticsAmountUnits(
 function isInStatisticsRange(millis: number, range: Readonly<StatisticsDateRange>): boolean {
   assertFinite(millis, "Activity start time");
   return millis >= range.fromMillis && millis <= range.toMillis;
+}
+
+function isStatisticsNap(
+  activity: Readonly<StatisticsDurationInput>,
+  daytimeStartMinutes: number,
+  daytimeEndMinutes: number,
+): boolean {
+  if (activity.deleted) return false;
+  assertFinite(activity.startMillis, "Activity start time");
+  const endMillis = activity.endMillis ?? activity.startMillis + (activity.duration ?? 0);
+  assertFinite(endMillis, "Activity end time");
+  if (endMillis < activity.startMillis) throw new RangeError("Activity end time must not precede its start");
+  const start = new Date(activity.startMillis);
+  const daytimeStart = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, daytimeStartMinutes);
+  const daytimeEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, daytimeEndMinutes);
+  return activity.startMillis >= daytimeStart.getTime() && endMillis <= daytimeEnd.getTime();
+}
+
+function validateStatisticsDaytime(startMinutes: number, endMinutes: number): void {
+  if (!Number.isInteger(startMinutes) || startMinutes < 0 || startMinutes >= 24 * 60) {
+    throw new RangeError("Daytime start must be an integer minute from 0 to 1439");
+  }
+  if (!Number.isInteger(endMinutes) || endMinutes < 0 || endMinutes >= 24 * 60) {
+    throw new RangeError("Daytime end must be an integer minute from 0 to 1439");
+  }
+  if (startMinutes >= endMinutes) throw new RangeError("Daytime start must be before daytime end");
+}
+
+function statisticsDayCount(range: Readonly<StatisticsDateRange>): number {
+  return differenceInCalendarDays(new Date(range.toMillis), new Date(range.fromMillis)) + 1;
 }
 
 function startOfDay(date: Date): Date {
