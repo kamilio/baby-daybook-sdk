@@ -124,6 +124,38 @@ describe("BabyClient", () => {
     await expect(baby.countActivitiesForRange(options)).resolves.toBe(2);
   });
 
+  it("composes native home day-summary cards from repositories", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    (baby as any).activityTypes = repo<ActivityType>([
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle" },
+      { uid: "sleeping", userUid: "user", babyUid: "baby", title: "Sleep", hasDuration: true },
+    ]);
+    (baby as any).groups = repo<ActivityGroup>([
+      { uid: "milk", userUid: "user", babyUid: "baby", title: "Milk", daType: "bottle" },
+    ]);
+    (baby as any).settings = repo<BabySetting>([
+      { uid: "config", babyUid: "baby", settingType: "DA_TYPES_CONFIG", params: JSON.stringify({ daTypesConfig: "sleeping,bottle" }) },
+    ]);
+    activityRepo.items = [
+      activity({ uid: "sleep", type: "sleeping", startMillis: 50, endMillis: 150, duration: 100 }),
+      activity({ uid: "feed", type: "bottle", startMillis: 180, groupUid: "milk", volume: 90 }),
+    ];
+
+    await expect(baby.getDayActivityTypeSummaries({ fromMillis: 100, toMillis: 200, nowMillis: 200 })).resolves.toEqual([
+      expect.objectContaining({
+        activityType: expect.objectContaining({ uid: "bottle" }),
+        activityCount: 1,
+        volume: 90,
+        lastGroupTitle: "Milk",
+      }),
+      expect.objectContaining({
+        activityType: expect.objectContaining({ uid: "sleeping" }),
+        activityCount: 0,
+        durationMillis: 50,
+      }),
+    ]);
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

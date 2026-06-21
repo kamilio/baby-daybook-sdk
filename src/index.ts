@@ -22,6 +22,13 @@ export type { AppleAuthorizationOptions } from "./apple.js";
 export { BabyDaybookClient, BabyClient } from "./client.js";
 export { BABY_DATA_COLLECTIONS, BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BABY_DAYBOOK_CONFIG, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 export { formatBabyDaybookDayId } from "./day-id.js";
+export { buildDayActivityTypeSummaries } from "./day-summary.js";
+export type {
+  DayActivityTypeSummary,
+  DayActivityTypeSummaryAmountByGroup,
+  DayActivityTypeSummaryAmountByUnit,
+  DayActivityTypeSummaryOptions,
+} from "./day-summary.js";
 export {
   createDefaultActivityGroups,
   createDefaultActivityTypes,

@@ -490,6 +490,18 @@ const quickLaunch = await baby.getQuickLaunchItems({
 
 Each item contains its configured activity type, latest activity when present, and first relevant reminder schedule when present. Stored activity-type configuration order is preserved; unknown or deleted type IDs are skipped.
 
+The Home day-summary cards are available with the native aggregation and ordering rules:
+
+```ts
+const cards = await baby.getDayActivityTypeSummaries({
+  fromMillis: dayStartMillis,
+  toMillis: dayEndMillis,
+  nowMillis: Date.now(),
+});
+```
+
+Each card includes count and overlap-scaled duration, left/right feeding or pumping totals, volume, diaper and bath counters, maximum temperature, amount totals by group and unit, the active timer, and the native last-side/group/unit values. Cards with recent activities come first; configured cards without records remain available afterward.
+
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts

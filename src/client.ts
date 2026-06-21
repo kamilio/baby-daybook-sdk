@@ -13,6 +13,11 @@ import { AuthSession, BabyDaybookAuth, type AppleCredential, type AuthOptions, t
 import { parseAppleCallbackUrl } from "./apple.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
+import {
+  buildDayActivityTypeSummaries,
+  type DayActivityTypeSummary,
+  type DayActivityTypeSummaryOptions,
+} from "./day-summary.js";
 import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defaults.js";
 import {
   buildDevelopmentGrowthSummary,
@@ -487,6 +492,16 @@ export class BabyClient {
       this.activityTypes.list(),
     ]);
     return countActivitiesForRange(activities, activityTypes.filter((type) => type.hasDuration).map((type) => type.uid), options);
+  }
+
+  async getDayActivityTypeSummaries(options: DayActivityTypeSummaryOptions): Promise<DayActivityTypeSummary[]> {
+    const [activityTypes, activities, groups, configuredTypeUids] = await Promise.all([
+      this.activityTypes.list({ includeDeleted: options.includeDeleted }),
+      this.activities.list({ includeDeleted: options.includeDeleted }),
+      this.groups.list({ includeDeleted: options.includeDeleted }),
+      this.getDaTypesConfig(),
+    ]);
+    return buildDayActivityTypeSummaries(activityTypes, activities, groups, options, configuredTypeUids);
   }
 
   async hasGroupWithSameName(daType: string, title: string, excludingUid?: string): Promise<boolean> {
