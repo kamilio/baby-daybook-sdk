@@ -6,6 +6,7 @@ import {
   buildStatisticsAmountSummary,
   buildStatisticsDurationBins,
   buildStatisticsDurationSummary,
+  buildStatisticsReactionDistribution,
   buildStatisticsTemperatureData,
   buildStatisticsVolumeBins,
   buildStatisticsVolumeSummary,
@@ -298,6 +299,37 @@ describe("native statistics date ranges", () => {
     expect(() => buildStatisticsTemperatureData([
       { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "temperature", temperature: Number.NaN },
     ], range)).toThrow("Activity temperature must be finite");
+  });
+
+  it("builds the native three-category reaction distribution", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const distribution = buildStatisticsReactionDistribution([
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "food", reaction: "liked" },
+      { startMillis: new Date(2026, 2, 7, 9).getTime(), type: "food", reaction: "liked" },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), type: "food", reaction: "neutral" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "food", reaction: "disliked" },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), type: "food", reaction: "future-value" },
+      { startMillis: new Date(2026, 2, 8, 10).getTime(), type: "medicine", reaction: "liked" },
+      { startMillis: new Date(2026, 2, 8, 11).getTime(), type: "food", reaction: "liked", deleted: true },
+    ], range, { typeUid: "food" });
+
+    expect(distribution).toEqual({
+      counts: { liked: 2, neutral: 1, disliked: 1 },
+      total: 4,
+      liked: { value: 2 },
+    });
+  });
+
+  it("matches the native liked-reaction comparison summary", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 6]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const distribution = buildStatisticsReactionDistribution([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "food", reaction: "liked" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "food", reaction: "liked" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "food", reaction: "liked" },
+    ], range, { typeUid: "food", comparisonRange });
+
+    expect(distribution.liked).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

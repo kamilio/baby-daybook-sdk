@@ -111,6 +111,19 @@ export interface StatisticsTemperatureData {
   highestPeriodAverage?: number;
 }
 
+export type StatisticsReaction = "liked" | "neutral" | "disliked";
+
+export interface StatisticsReactionDistribution {
+  counts: Record<StatisticsReaction, number>;
+  total: number;
+  liked: StatisticsComparedValue;
+}
+
+export interface StatisticsReactionDistributionOptions {
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -144,6 +157,13 @@ interface StatisticsDurationInput {
 interface StatisticsTemperatureInput {
   startMillis: number;
   temperature?: number;
+  type: string;
+  deleted?: boolean;
+}
+
+interface StatisticsReactionInput {
+  startMillis: number;
+  reaction?: string;
   type: string;
   deleted?: boolean;
 }
@@ -519,6 +539,24 @@ export function buildStatisticsTemperatureData(
   };
 }
 
+export function buildStatisticsReactionDistribution(
+  activities: readonly Readonly<StatisticsReactionInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsReactionDistributionOptions> = {},
+): StatisticsReactionDistribution {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = countReactions(activities, range, options.typeUid);
+  const comparison = options.comparisonRange
+    ? countReactions(activities, options.comparisonRange, options.typeUid)
+    : undefined;
+  return {
+    counts: current,
+    total: current.liked + current.neutral + current.disliked,
+    liked: comparedValue(current.liked, comparison?.liked),
+  };
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -694,6 +732,21 @@ function calculateAverageDurationPerDay(
   return total / dayCount;
 }
 
+function countReactions(
+  activities: readonly Readonly<StatisticsReactionInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): Record<StatisticsReaction, number> {
+  const counts: Record<StatisticsReaction, number> = { liked: 0, neutral: 0, disliked: 0 };
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    if (isStatisticsReaction(activity.reaction)) counts[activity.reaction] += 1;
+  }
+  return counts;
+}
+
 function comparedValue(value: number, comparisonValue?: number): StatisticsComparedValue {
   return comparisonValue === undefined
     ? { value }
@@ -714,6 +767,10 @@ function getActivityDurationMillis(activity: Readonly<StatisticsDurationInput>):
   if (activity.duration !== undefined) return Math.max(0, activity.duration);
   if (activity.endMillis !== undefined) return Math.max(0, activity.endMillis - activity.startMillis);
   return 0;
+}
+
+function isStatisticsReaction(value: string | undefined): value is StatisticsReaction {
+  return value === "liked" || value === "neutral" || value === "disliked";
 }
 
 function periodStart(date: Date, period: StatisticsChartPeriod): Date {
