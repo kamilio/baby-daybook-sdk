@@ -30,17 +30,27 @@ describe("BabyDaybookAuth", () => {
       const body = JSON.parse(String(init?.body));
       expect(body.postBody).toContain("providerId=apple.com");
       expect(body.postBody).toContain("id_token=apple-token");
+      expect(body.postBody).toContain("access_token=apple-code");
+      expect(body.postBody).not.toContain("nonce=");
+      return response();
+    }, (url, init) => {
+      expect(url).toContain("accounts:signInWithIdp");
+      const body = JSON.parse(String(init?.body));
+      expect(body.postBody).toContain("providerId=apple.com");
+      expect(body.postBody).toContain("id_token=apple-token");
       expect(body.postBody).toContain("nonce=raw-nonce");
+      expect(body.postBody).not.toContain("access_token=");
       return response();
     });
     const auth = new BabyDaybookAuth({ fetch });
     await auth.signUpWithEmail("a@example.com", "secret");
     await auth.signInWithCustomToken("custom");
     await auth.signInWithOAuthCredential({ provider: "google.com", idToken: "google-token" });
-    await auth.signInWithAppleCredential("apple-token", "raw-nonce");
-    expect(fetch).toHaveBeenCalledTimes(4);
-    await expect(auth.signInWithAppleCredential("", "nonce")).rejects.toThrow("Apple ID token must not be empty");
-    await expect(auth.signInWithAppleCredential("token", "")).rejects.toThrow("Apple raw nonce must not be empty");
+    await auth.signInWithAppleCredential({ idToken: "apple-token", authorizationCode: "apple-code" });
+    await auth.signInWithAppleCredential({ idToken: "apple-token", nonce: "raw-nonce" });
+    expect(fetch).toHaveBeenCalledTimes(5);
+    await expect(auth.signInWithAppleCredential({ idToken: "", nonce: "nonce" })).rejects.toThrow("Apple ID token must not be empty");
+    await expect(auth.signInWithAppleCredential({ idToken: "token" })).rejects.toThrow("authorization code or raw nonce");
   });
 
   it("refreshes an expired token once for concurrent callers", async () => {

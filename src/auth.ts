@@ -61,6 +61,13 @@ export interface OAuthCredential {
   requestUri?: string;
 }
 
+export interface AppleCredential {
+  idToken: string;
+  authorizationCode?: string;
+  nonce?: string;
+  requestUri?: string;
+}
+
 export class AuthSession {
   #data: AuthSessionData;
   readonly config: BabyDaybookConfig;
@@ -194,10 +201,18 @@ export class BabyDaybookAuth {
     });
   }
 
-  async signInWithAppleCredential(idToken: string, nonce: string, requestUri?: string): Promise<AuthSession> {
-    if (!idToken) throw new RangeError("Apple ID token must not be empty");
-    if (!nonce) throw new RangeError("Apple raw nonce must not be empty");
-    return this.signInWithOAuthCredential({ provider: "apple.com", idToken, nonce, requestUri });
+  async signInWithAppleCredential(credential: AppleCredential): Promise<AuthSession> {
+    if (!credential.idToken) throw new RangeError("Apple ID token must not be empty");
+    if (!credential.authorizationCode && !credential.nonce) {
+      throw new RangeError("Apple authorization code or raw nonce must be provided");
+    }
+    return this.signInWithOAuthCredential({
+      provider: "apple.com",
+      idToken: credential.idToken,
+      accessToken: credential.authorizationCode,
+      nonce: credential.nonce,
+      requestUri: credential.requestUri,
+    });
   }
 
   async getAccount(session: AuthSession): Promise<FirebaseAccount> {

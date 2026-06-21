@@ -17,6 +17,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
 - Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
+- Native-compatible average sleep clock ranges, including crossing-midnight normalization.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
@@ -57,6 +58,14 @@ await baby.setDaytimeRange({
 });
 ```
 
+The app's average sleep-range calculator is available for sleep prediction and custom reporting. It aligns crossing-midnight sleeps before averaging their local clock times:
+
+```ts
+import { calculateAverageSleepRange } from "baby-daybook-sdk";
+
+const averageNight = calculateAverageSleepRange(daytimeRange, completedSleeps, "America/Chicago");
+```
+
 To restore a saved login without retaining the password:
 
 ```ts
@@ -65,12 +74,14 @@ const client = await BabyDaybookClient.fromRefreshToken(savedRefreshToken);
 
 ### Apple accounts and command-line use
 
-Apple sign-in requires a fresh Apple identity token and the matching raw nonce from a Sign in with Apple authorization flow. The raw nonce is the unhashed value whose SHA-256 hash was sent to Apple:
+Apple sign-in requires a fresh Apple identity token plus either the authorization code returned by Apple's Android/web flow or the matching raw nonce used by a nonce-based flow. The Android app uses the authorization-code form:
 
 ```ts
 const client = await BabyDaybookClient.signInWithAppleCredential(
-  appleIdentityToken,
-  rawNonce,
+  {
+    idToken: appleIdentityToken,
+    authorizationCode: appleAuthorizationCode,
+  },
   {
     onSessionChanged(session) {
       // Persist session?.refreshToken in an OS credential store.
@@ -78,6 +89,8 @@ const client = await BabyDaybookClient.signInWithAppleCredential(
   },
 );
 ```
+
+For platforms that create a nonce, pass `{ idToken, nonce: rawNonce }`; `rawNonce` is the unhashed value whose SHA-256 hash was sent to Apple.
 
 A headless CLI cannot generate a valid Apple identity token by itself. For convenient later CLI access, authenticate once with Apple, then link an email and a strong generated password to the already authenticated account:
 
