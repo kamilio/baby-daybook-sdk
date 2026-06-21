@@ -104,6 +104,26 @@ describe("BabyClient", () => {
     await expect(baby.hasOverlappingActivity(activity({ uid: "candidate", type: "bottle", startMillis: 150, endMillis: 250 }))).resolves.toBe(true);
   });
 
+  it("queries native home timeline ranges using duration activity types", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    (baby as any).activityTypes = repo<ActivityType>([
+      { uid: "sleeping", userUid: "user", babyUid: "baby", title: "Sleep", hasDuration: true },
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle", hasDuration: false },
+    ]);
+    activityRepo.items = [
+      activity({ uid: "sleep", type: "sleeping", startMillis: 50, endMillis: 150 }),
+      activity({ uid: "feed", type: "bottle", startMillis: 120 }),
+      activity({ uid: "old-feed", type: "bottle", startMillis: 50 }),
+    ];
+    const options = { fromMillis: 100, toMillis: 200, nowMillis: 180 };
+
+    await expect(baby.listActivitiesForRange(options)).resolves.toEqual([
+      expect.objectContaining({ uid: "feed" }),
+      expect.objectContaining({ uid: "sleep" }),
+    ]);
+    await expect(baby.countActivitiesForRange(options)).resolves.toBe(2);
+  });
+
   it("edits the baby and controls timed activities", async () => {
     const { baby, activityRepo } = configuredBaby();
     await expect(baby.get()).resolves.toMatchObject({ uid: "baby" });

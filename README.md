@@ -461,6 +461,19 @@ const momentsCard = await baby.getDevelopmentMoments(3);
 
 `getDevelopmentGrowth` keeps the newest growth record's identity and backfills each missing measurement from older records, matching the Android repository. `getDevelopmentMoments` counts all active moments, limits moments in `dateMillis DESC, uid` order, and then returns active preview-file metadata for that limited set.
 
+The Home and Timeline screens use an overlap-aware range query. It includes ordinary activities whose start is inside the inclusive range, plus duration activities that began earlier and either end after the range starts or remain in progress:
+
+```ts
+const activities = await baby.listActivitiesForRange({
+  fromMillis: dayStart,
+  toMillis: dayEnd,
+  types: ["sleeping", "bottle"],
+});
+const count = await baby.countActivitiesForRange({ fromMillis: dayStart, toMillis: dayEnd });
+```
+
+Results follow the native `startMillis DESC, type, uid` order. Duration types come from each activity type's `hasDuration` flag, including custom types.
+
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts

@@ -54,6 +54,11 @@ import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby
 import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
 import { buildToothMap, listToothChartItems, toothUid } from "./teething.js";
+import {
+  countActivitiesForRange,
+  listActivitiesForRange,
+  type ActivityRangeOptions,
+} from "./timeline.js";
 import { convertValueToMetric } from "./units.js";
 import type {
   ActivityGroup,
@@ -429,6 +434,22 @@ export class BabyClient {
   async listGroups(daType?: string): Promise<ActivityGroup[]> {
     const groups = sortActivityGroups(await this.groups.list());
     return daType === undefined ? groups : groups.filter((group) => group.daType === daType);
+  }
+
+  async listActivitiesForRange(options: ActivityRangeOptions): Promise<DailyAction[]> {
+    const [activities, activityTypes] = await Promise.all([
+      this.activities.list({ includeDeleted: options.includeDeleted }),
+      this.activityTypes.list(),
+    ]);
+    return listActivitiesForRange(activities, activityTypes.filter((type) => type.hasDuration).map((type) => type.uid), options);
+  }
+
+  async countActivitiesForRange(options: ActivityRangeOptions): Promise<number> {
+    const [activities, activityTypes] = await Promise.all([
+      this.activities.list({ includeDeleted: options.includeDeleted }),
+      this.activityTypes.list(),
+    ]);
+    return countActivitiesForRange(activities, activityTypes.filter((type) => type.hasDuration).map((type) => type.uid), options);
   }
 
   async hasGroupWithSameName(daType: string, title: string, excludingUid?: string): Promise<boolean> {

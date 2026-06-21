@@ -111,6 +111,8 @@ export {
   selectSleepScheduleForBaby,
 } from "./sleep-prediction.js";
 export { FirebaseStorageClient } from "./storage.js";
+export { countActivitiesForRange, listActivitiesForRange } from "./timeline.js";
+export type { ActivityRangeOptions } from "./timeline.js";
 export {
   BABY_DAYBOOK_TOOTH_COLORS,
   BABY_DAYBOOK_TOOTH_JAWS,
