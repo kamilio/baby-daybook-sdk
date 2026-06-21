@@ -8,6 +8,7 @@ import {
   buildStatisticsDurationSummary,
   buildStatisticsReactionDistribution,
   buildStatisticsTemperatureData,
+  buildStatisticsTimeOfDayDistribution,
   buildStatisticsVolumeBins,
   buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
@@ -330,6 +331,35 @@ describe("native statistics date ranges", () => {
     ], range, { typeUid: "food", comparisonRange });
 
     expect(distribution.liked).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
+  });
+
+  it("builds the native 24-hour time-of-day distribution", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const bins = buildStatisticsTimeOfDayDistribution([
+      { startMillis: new Date(2026, 2, 7, 0, 30).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 8, 15).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 8, 45).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 23, 59).getTime(), type: "sleeping" },
+      { startMillis: new Date(2026, 2, 8, 9).getTime(), type: "bottle", deleted: true },
+    ], range, { typeUid: "bottle" });
+
+    expect(bins).toHaveLength(24);
+    expect(bins[0]).toEqual({ hour: 0, count: 1 });
+    expect(bins[8]).toEqual({ hour: 8, count: 2 });
+    expect(bins[23]).toEqual({ hour: 23, count: 0 });
+  });
+
+  it("adds the native comparison series to every time-of-day hour", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 6]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const bins = buildStatisticsTimeOfDayDistribution([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "bottle" },
+    ], range, { typeUid: "bottle", comparisonRange });
+
+    expect(bins[8]).toEqual({ hour: 8, count: 2, comparisonCount: 1, changePercent: 100 });
+    expect(bins[9]).toEqual({ hour: 9, count: 0, comparisonCount: 0, changePercent: 0 });
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

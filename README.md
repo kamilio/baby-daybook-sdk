@@ -21,6 +21,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Native duration-chart period totals and average-per-day summaries, preferring stored pause-adjusted durations and safely handling unfinished activities.
 - Native temperature scatter points, per-period extrema and averages, and the app's highest-period-average summary rule.
 - Native liked/neutral/disliked reaction distributions and the app's liked-count comparison summary.
+- Native 24-hour time-of-day count distributions with optional previous-range comparison series.
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
 - Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
 - Native-compatible average sleep clock ranges, including crossing-midnight normalization.

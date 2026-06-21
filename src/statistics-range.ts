@@ -124,6 +124,18 @@ export interface StatisticsReactionDistributionOptions {
   comparisonRange?: StatisticsDateRange;
 }
 
+export interface StatisticsTimeOfDayBin {
+  hour: number;
+  count: number;
+  comparisonCount?: number;
+  changePercent?: number;
+}
+
+export interface StatisticsTimeOfDayOptions {
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
@@ -164,6 +176,12 @@ interface StatisticsTemperatureInput {
 interface StatisticsReactionInput {
   startMillis: number;
   reaction?: string;
+  type: string;
+  deleted?: boolean;
+}
+
+interface StatisticsTimeOfDayInput {
+  startMillis: number;
   type: string;
   deleted?: boolean;
 }
@@ -557,6 +575,27 @@ export function buildStatisticsReactionDistribution(
   };
 }
 
+export function buildStatisticsTimeOfDayDistribution(
+  activities: readonly Readonly<StatisticsTimeOfDayInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsTimeOfDayOptions> = {},
+): StatisticsTimeOfDayBin[] {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = countActivitiesByHour(activities, range, options.typeUid);
+  const comparison = options.comparisonRange
+    ? countActivitiesByHour(activities, options.comparisonRange, options.typeUid)
+    : undefined;
+  return current.map((count, hour) => comparison
+    ? {
+      hour,
+      count,
+      comparisonCount: comparison[hour] ?? 0,
+      changePercent: getStatisticsChangePercent(count, comparison[hour] ?? 0),
+    }
+    : { hour, count });
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -743,6 +782,22 @@ function countReactions(
     assertFinite(activity.startMillis, "Activity start time");
     if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
     if (isStatisticsReaction(activity.reaction)) counts[activity.reaction] += 1;
+  }
+  return counts;
+}
+
+function countActivitiesByHour(
+  activities: readonly Readonly<StatisticsTimeOfDayInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): number[] {
+  const counts = Array.from({ length: 24 }, () => 0);
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    const hour = new Date(activity.startMillis).getHours();
+    counts[hour] = (counts[hour] ?? 0) + 1;
   }
   return counts;
 }
