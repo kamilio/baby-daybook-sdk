@@ -156,6 +156,30 @@ describe("BabyClient", () => {
     ]);
   });
 
+  it("composes the native statistics selector and tab eligibility", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    (baby as any).activityTypes = repo<ActivityType>([
+      { uid: "sleeping", userUid: "user", babyUid: "baby", title: "Sleep", hasDuration: true },
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle" },
+    ]);
+    (baby as any).settings = repo<BabySetting>([
+      { uid: "config", babyUid: "baby", settingType: "DA_TYPES_CONFIG", params: JSON.stringify({ daTypesConfig: "bottle,sleeping" }) },
+    ]);
+    activityRepo.items = [
+      activity({ uid: "sleep", type: "sleeping" }),
+      activity({ uid: "feed-a", type: "bottle" }),
+      activity({ uid: "feed-b", type: "bottle" }),
+    ];
+
+    await expect(baby.getStatisticsScreenData("sleeping")).resolves.toMatchObject({
+      items: [
+        { activityType: { uid: "bottle" }, activityCount: 2, tabs: ["numberOfTimes", "volume", "timeOfDay"] },
+        { activityType: { uid: "sleeping" }, activityCount: 1, tabs: ["numberOfTimes", "duration", "timeOfDay"] },
+      ],
+      selectedItem: { activityType: { uid: "sleeping" } },
+    });
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

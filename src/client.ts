@@ -57,6 +57,10 @@ import {
 import { getSleepRecommendation } from "./sleep-recommendations.js";
 import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { buildActivityStatistics } from "./statistics.js";
+import {
+  buildStatisticsScreenData,
+  type StatisticsScreenData,
+} from "./statistics-screen.js";
 import { FirebaseStorageClient } from "./storage.js";
 import { buildToothMap, listToothChartItems, toothUid } from "./teething.js";
 import {
@@ -832,6 +836,15 @@ export class BabyClient {
 
   async getActivityStatistics(options: ActivityStatisticsOptions = {}): Promise<ActivityStatisticsReport> {
     return buildActivityStatistics(await this.activities.list(), options);
+  }
+
+  async getStatisticsScreenData(preferredTypeUid?: string): Promise<StatisticsScreenData> {
+    const [activityTypes, activities, configuredTypeUids] = await Promise.all([
+      this.activityTypes.list(),
+      this.activities.list(),
+      this.getDaTypesConfig(),
+    ]);
+    return buildStatisticsScreenData(activityTypes, activities, configuredTypeUids, preferredTypeUid);
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {

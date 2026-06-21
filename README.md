@@ -502,6 +502,14 @@ const cards = await baby.getDayActivityTypeSummaries({
 
 Each card includes count and overlap-scaled duration, left/right feeding or pumping totals, volume, diaper and bath counters, maximum temperature, amount totals by group and unit, the active timer, and the native last-side/group/unit values. Cards with recent activities come first; configured cards without records remain available afterward.
 
+The Statistics screen selector and native tab eligibility are also available:
+
+```ts
+const statisticsScreen = await baby.getStatisticsScreenData(preferredActivityTypeUid);
+```
+
+It returns configured activity types with all-time active record counts and the exact native tab order: number of times, optional duration, temperature, volume, amount, reaction, then time of day. A missing preferred type falls back to the first configured type.
+
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts

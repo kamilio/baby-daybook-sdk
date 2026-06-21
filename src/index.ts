@@ -107,6 +107,12 @@ export { clampSleepDurationToLooseConstraint, loosenSleepDurationConstraint } fr
 export { calculateAverageSleepRange } from "./sleep-range.js";
 export type { SleepRangeSample } from "./sleep-range.js";
 export { buildActivityStatistics } from "./statistics.js";
+export { buildStatisticsScreenData, getStatisticsTabDataTypes } from "./statistics-screen.js";
+export type {
+  StatisticsActivityTypeItem,
+  StatisticsScreenData,
+  StatisticsTabDataType,
+} from "./statistics-screen.js";
 export {
   babyAdjustedAgeMonths,
   getExpandedSleepSchedulesForAge,
