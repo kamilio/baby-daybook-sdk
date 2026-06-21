@@ -282,6 +282,10 @@ export class BabyDaybookClient {
     return this.auth.linkEmailPassword(this.session, email, password);
   }
 
+  setPassword(password: string): Promise<FirebaseAccount> {
+    return this.auth.setPassword(this.session, password);
+  }
+
   sendEmailVerification(): Promise<void> {
     return this.auth.sendEmailVerification(this.session);
   }

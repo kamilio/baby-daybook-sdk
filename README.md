@@ -108,6 +108,7 @@ A headless CLI cannot generate a valid Apple identity token by itself. For conve
 ```ts
 await client.linkEmailPassword("parent@example.com", generatedPassword);
 await client.sendEmailVerification();
+await client.setPassword(replacementPassword); // Later rotation on the authenticated account.
 ```
 
 This keeps the existing Firebase user ID, babies, and activity data, while adding email/password as another sign-in method. Do not use `signUpWithEmail` for this migration: it can create a separate Firebase user. Apple remains linked, and subsequent CLI runs can use `signInWithEmail` or the persisted refresh token. If Apple supplied a private-relay address, confirm which email you want associated with the account before linking it.

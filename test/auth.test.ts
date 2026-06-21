@@ -151,6 +151,36 @@ describe("BabyDaybookAuth", () => {
     await expect(auth.linkEmailPassword(session, "parent@example.com", "short")).rejects.toThrow("at least 6 characters");
   });
 
+  it("sets or rotates a password on an authenticated account", async () => {
+    const fetch = mockFetch((url, init) => {
+      expect(url).toContain("accounts:update");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        idToken: "current-token",
+        password: "replacement-password",
+        returnSecureToken: true,
+      });
+      return jsonResponse({
+        localId: "user",
+        email: "parent@example.com",
+        idToken: "next-token",
+        refreshToken: "next-refresh",
+        expiresIn: "3600",
+      });
+    });
+    const auth = new BabyDaybookAuth({ fetch });
+    const session = auth.fromSession({
+      idToken: "current-token",
+      refreshToken: "current-refresh",
+      userId: "user",
+      email: "parent@example.com",
+      expiresAt: Date.now() + 3_600_000,
+    });
+
+    await expect(auth.setPassword(session, "replacement-password")).resolves.toMatchObject({ email: "parent@example.com" });
+    expect(session.snapshot).toMatchObject({ idToken: "next-token", refreshToken: "next-refresh" });
+    await expect(auth.setPassword(session, "short")).rejects.toThrow("at least 6 characters");
+  });
+
   it("signs out idempotently and prevents later token use", async () => {
     const onSessionChanged = vi.fn();
     const auth = new BabyDaybookAuth({ onSessionChanged });

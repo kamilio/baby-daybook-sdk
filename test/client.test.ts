@@ -19,9 +19,10 @@ describe("BabyDaybookClient", () => {
     (client as any).functions = { call: vi.fn(async () => "deleted") };
     const updateAccount = vi.fn(async () => ({ localId: "user", displayName: "New Parent" }));
     const linkEmailPassword = vi.fn(async () => ({ localId: "user", email: "parent@example.com" }));
+    const setPassword = vi.fn(async () => ({ localId: "user", email: "parent@example.com" }));
     const sendEmailVerification = vi.fn(async () => undefined);
     const signOut = vi.fn(async () => undefined);
-    (client as any).auth = { linkEmailPassword, sendEmailVerification, updateAccount, signOut };
+    (client as any).auth = { linkEmailPassword, setPassword, sendEmailVerification, updateAccount, signOut };
 
     await expect(client.getUser()).resolves.toMatchObject({ displayName: "Parent" });
     await expect(client.saveUser({ uid: "user", displayName: "Updated" })).resolves.toMatchObject({ displayName: "Updated" });
@@ -45,6 +46,8 @@ describe("BabyDaybookClient", () => {
     expect(updateAccount).toHaveBeenCalledWith(client.session, { displayName: "New Parent" });
     await expect(client.linkEmailPassword("parent@example.com", "generated-password")).resolves.toMatchObject({ email: "parent@example.com" });
     expect(linkEmailPassword).toHaveBeenCalledWith(client.session, "parent@example.com", "generated-password");
+    await expect(client.setPassword("replacement-password")).resolves.toMatchObject({ email: "parent@example.com" });
+    expect(setPassword).toHaveBeenCalledWith(client.session, "replacement-password");
     await client.sendEmailVerification();
     expect(sendEmailVerification).toHaveBeenCalledWith(client.session);
     await expect(client.updateDisplayName("  ")).rejects.toThrow(RangeError);

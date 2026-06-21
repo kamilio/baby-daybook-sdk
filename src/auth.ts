@@ -246,8 +246,13 @@ export class BabyDaybookAuth {
   async linkEmailPassword(session: AuthSession, email: string, password: string): Promise<FirebaseAccount> {
     const normalizedEmail = email.trim();
     if (!normalizedEmail) throw new RangeError("Email must not be empty");
-    if (password.length < 6) throw new RangeError("Password must contain at least 6 characters");
+    validatePassword(password);
     return this.updateAccount(session, { email: normalizedEmail, password });
+  }
+
+  async setPassword(session: AuthSession, password: string): Promise<FirebaseAccount> {
+    validatePassword(password);
+    return this.updateAccount(session, { password });
   }
 
   signOut(session: AuthSession): Promise<void> {
@@ -291,6 +296,10 @@ function firebaseAndroidHeaders(config: BabyDaybookConfig, extra: HeadersInit = 
   headers.set("X-Android-Package", config.androidPackageName);
   headers.set("X-Android-Cert", config.androidCertificateSha1);
   return headers;
+}
+
+function validatePassword(password: string): void {
+  if (password.length < 6) throw new RangeError("Password must contain at least 6 characters");
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
