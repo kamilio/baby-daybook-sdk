@@ -541,6 +541,29 @@ describe("BabyClient", () => {
     expect(listGrowth).toHaveBeenCalledOnce();
   });
 
+  it("builds native development growth and moment summaries", async () => {
+    const { baby, growthRepo, momentsRepo } = configuredBaby();
+    growthRepo.items = [
+      { uid: "older", userUid: "user", babyUid: "baby", dateMillis: 100, weight: 5, height: 60 },
+      { uid: "latest", userUid: "user", babyUid: "baby", dateMillis: 200, headSize: 40 },
+    ];
+    momentsRepo.items = [
+      { uid: "older", userUid: "user", babyUid: "baby", dateMillis: 100 },
+      { uid: "latest", userUid: "user", babyUid: "baby", dateMillis: 200 },
+    ];
+    (baby as any).fileMetadata = vi.fn(() => repo([
+      { itemUid: "latest", babyUid: "baby", fileName: "latest.jpg" },
+      { itemUid: "older", babyUid: "baby", fileName: "older.jpg" },
+    ]));
+
+    await expect(baby.getLastGrowthWithValues()).resolves.toMatchObject({ uid: "latest", weight: 5, height: 60, headSize: 40 });
+    await expect(baby.getDevelopmentGrowth()).resolves.toMatchObject({ count: 2, growth: { uid: "latest" } });
+    await expect(baby.getDevelopmentMoments(1)).resolves.toEqual({
+      count: 2,
+      files: [expect.objectContaining({ itemUid: "latest", fileName: "latest.jpg" })],
+    });
+  });
+
   it("lists moments in native month and item order", async () => {
     const { baby, momentsRepo } = configuredBaby();
     momentsRepo.items = [

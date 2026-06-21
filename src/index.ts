@@ -29,6 +29,17 @@ export {
   DEFAULT_ACTIVITY_TYPE_DEFINITIONS,
 } from "./defaults.js";
 export {
+  buildDevelopmentGrowthSummary,
+  buildDevelopmentMomentsSummary,
+  getLastGrowthWithValues,
+} from "./development.js";
+export type {
+  DevelopmentGrowthItem,
+  DevelopmentGrowthOptions,
+  DevelopmentGrowthSummary,
+  DevelopmentMomentsSummary,
+} from "./development.js";
+export {
   BABY_DAYTIME_RANGE_BOUNDS,
   DEFAULT_BABY_DAYTIME_RANGE,
   babyDaytimeRangeDurationMinutes,

@@ -14,6 +14,14 @@ import { parseAppleCallbackUrl } from "./apple.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
 import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defaults.js";
+import {
+  buildDevelopmentGrowthSummary,
+  buildDevelopmentMomentsSummary,
+  getLastGrowthWithValues,
+  type DevelopmentGrowthOptions,
+  type DevelopmentGrowthSummary,
+  type DevelopmentMomentsSummary,
+} from "./development.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient, type FirestoreSetWrite } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
@@ -502,6 +510,14 @@ export class BabyClient {
     return sortGrowthEntries(await this.growth.list({ includeDeleted: options.includeDeleted }), options);
   }
 
+  async getLastGrowthWithValues(): Promise<GrowthEntry | undefined> {
+    return getLastGrowthWithValues(await this.growth.list());
+  }
+
+  async getDevelopmentGrowth(options: DevelopmentGrowthOptions = {}): Promise<DevelopmentGrowthSummary> {
+    return buildDevelopmentGrowthSummary(await this.growth.list(), options);
+  }
+
   saveGrowth(growth: GrowthEntry, atMillis = Date.now()): Promise<GrowthEntry> {
     return this.growth.save({ ...growth, babyUid: this.babyUid, updatedMillis: atMillis, svt: 0 });
   }
@@ -540,6 +556,14 @@ export class BabyClient {
 
   async listMomentsForMonth(at: Date | number, options: Omit<MomentMonthListOptions, "fromMillis" | "toMillis"> = {}): Promise<Moment[]> {
     return (await this.listMomentMonths({ ...options, fromMillis: toMillis(at), toMillis: toMillis(at) }))[0]?.moments ?? [];
+  }
+
+  async getDevelopmentMoments(limitCount: number): Promise<DevelopmentMomentsSummary> {
+    const [moments, files] = await Promise.all([
+      this.moments.list(),
+      this.fileMetadata("moments").list(),
+    ]);
+    return buildDevelopmentMomentsSummary(moments, files, limitCount);
   }
 
   createTooth(input: CreateToothInput, atMillis = Date.now()): Promise<Tooth> {

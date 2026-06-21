@@ -449,6 +449,18 @@ formatGrowthLength(50, "inches"); // "19.7 in"
 
 Pure `convertValueToImperial` and `convertValueToMetric` helpers are also exported for volume, temperature, weight, height, and head-size values.
 
+The native Development tab derives its cards from existing growth, moment, and attachment records. The SDK exposes the same derived data:
+
+```ts
+const growthCard = await baby.getDevelopmentGrowth({
+  weightUnit: "poundsAndOunces",
+  lengthUnit: "inches",
+});
+const momentsCard = await baby.getDevelopmentMoments(3);
+```
+
+`getDevelopmentGrowth` keeps the newest growth record's identity and backfills each missing measurement from older records, matching the Android repository. `getDevelopmentMoments` counts all active moments, limits moments in `dateMillis DESC, uid` order, and then returns active preview-file metadata for that limited set.
+
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts
