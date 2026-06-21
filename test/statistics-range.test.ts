@@ -8,6 +8,7 @@ import {
   buildStatisticsDurationSummary,
   buildStatisticsGroupBreakdown,
   buildStatisticsNapCountData,
+  buildStatisticsSleepDurationData,
   buildStatisticsParameterBreakdown,
   buildStatisticsReactionDistribution,
   buildStatisticsTemperatureData,
@@ -601,6 +602,30 @@ describe("native statistics date ranges", () => {
         type: "sleeping",
       },
     ], range)).toThrow("must not precede");
+  });
+
+  it("builds native total, daytime, nighttime, and average nap duration data", () => {
+    const hour = 60 * 60 * 1000;
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 5]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 7]);
+    const data = buildStatisticsSleepDurationData([
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), duration: hour, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), duration: hour, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 10).getTime(), duration: 2 * hour, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 5).getTime(), duration: 2 * hour, type: "sleeping" },
+      { startMillis: new Date(2026, 2, 7, 17).getTime(), duration: 2 * hour, type: "sleeping" },
+    ], range, { comparisonRange });
+
+    expect(data.total.totalDurationMillis).toEqual({ value: 7 * hour, comparisonValue: hour, changePercent: 600 });
+    expect(data.total.averagePerDayMillis).toEqual({ value: 7 * hour, comparisonValue: hour, changePercent: 600 });
+    expect(data.daytime.totalDurationMillis).toEqual({ value: 3 * hour, comparisonValue: hour, changePercent: 200 });
+    expect(data.nighttime.totalDurationMillis).toEqual({ value: 4 * hour, comparisonValue: 0, changePercent: 0 });
+    expect(data.nap.bins).toEqual([{
+      periodStartMillis: range.fromMillis,
+      averageDurationMillis: 1.5 * hour,
+      activityCount: 2,
+    }]);
+    expect(data.nap.averagePerActivityMillis).toEqual({ value: 1.5 * hour, comparisonValue: hour, changePercent: 50 });
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

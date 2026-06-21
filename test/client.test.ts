@@ -269,6 +269,24 @@ describe("BabyClient", () => {
     });
   });
 
+  it("composes native sleep duration statistics from baby activities", async () => {
+    const { baby, activityRepo } = configuredBaby();
+    activityRepo.items = [
+      activity({ uid: "nap", type: "sleeping", startMillis: new Date(2026, 2, 7, 8).getTime(), duration: 60_000 }),
+      activity({ uid: "night", type: "sleeping", startMillis: new Date(2026, 2, 7, 17).getTime(), duration: 2 * 60 * 60 * 1000 }),
+    ];
+
+    await expect(baby.getStatisticsSleepDurationData({
+      fromMillis: new Date(2026, 2, 7).getTime(),
+      toMillis: new Date(2026, 2, 8).getTime() - 1,
+    })).resolves.toMatchObject({
+      total: { totalDurationMillis: { value: 7_260_000 } },
+      daytime: { totalDurationMillis: { value: 60_000 } },
+      nighttime: { totalDurationMillis: { value: 7_200_000 } },
+      nap: { averagePerActivityMillis: { value: 60_000 } },
+    });
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

@@ -64,6 +64,7 @@ import {
 import {
   buildStatisticsGroupBreakdown,
   buildStatisticsNapCountData,
+  buildStatisticsSleepDurationData,
   buildStatisticsParameterBreakdown,
   buildStatisticsDateRangeNavigation,
   getStatisticsPredefinedDateRange,
@@ -73,6 +74,8 @@ import {
   type StatisticsGroupSeries,
   type StatisticsNapCountData,
   type StatisticsNapCountOptions,
+  type StatisticsSleepDurationData,
+  type StatisticsSleepDurationOptions,
   type StatisticsParameterBreakdownOptions,
   type StatisticsParameterSeries,
   type StatisticsTimeInterval,
@@ -906,6 +909,13 @@ export class BabyClient {
     options: Readonly<StatisticsNapCountOptions> = {},
   ): Promise<StatisticsNapCountData> {
     return buildStatisticsNapCountData(await this.activities.list(), range, options);
+  }
+
+  async getStatisticsSleepDurationData(
+    range: Readonly<StatisticsDateRange>,
+    options: Readonly<StatisticsSleepDurationOptions> = {},
+  ): Promise<StatisticsSleepDurationData> {
+    return buildStatisticsSleepDurationData(await this.activities.list(), range, options);
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {

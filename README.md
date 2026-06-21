@@ -534,6 +534,8 @@ It returns configured activity types with all-time active record counts and the 
 
 `buildStatisticsNapCountData` and `baby.getStatisticsNapCountData(...)` reproduce the native naps-number-of-times chart and average-per-day card. A sleep counts as a nap only when its complete range belongs to the configured local daytime window; sleeps crossing either daytime boundary remain nighttime sleep.
 
+`buildStatisticsSleepDurationData` and `baby.getStatisticsSleepDurationData(...)` reproduce the native total, daytime, nighttime, and nap-duration cards. Sleep sessions are classified whole rather than split at daytime boundaries. Total, daytime, and nighttime series include totals and per-day averages; nap-duration series contain the average completed nap duration per chart period and overall.
+
 Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
 
 ```ts
