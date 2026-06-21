@@ -114,6 +114,19 @@ export type {
   StatisticsTabDataType,
 } from "./statistics-screen.js";
 export {
+  buildStatisticsDateRangeNavigation,
+  canLoadNextStatisticsDateRange,
+  canLoadPreviousStatisticsDateRange,
+  getNextStatisticsDateRange,
+  getPreviousStatisticsDateRange,
+  getStatisticsPredefinedDateRange,
+} from "./statistics-range.js";
+export type {
+  StatisticsDateRange,
+  StatisticsDateRangeNavigation,
+  StatisticsTimeInterval,
+} from "./statistics-range.js";
+export {
   babyAdjustedAgeMonths,
   getExpandedSleepSchedulesForAge,
   getSleepSchedulesForAge,

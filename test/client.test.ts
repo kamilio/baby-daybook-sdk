@@ -180,6 +180,24 @@ describe("BabyClient", () => {
     });
   });
 
+  it("composes native statistics date presets and arrow state from the baby birthday", async () => {
+    const { baby, client } = configuredBaby();
+    const birthdayMillis = new Date(2026, 4, 20, 8).getTime();
+    (client as any).getBaby = vi.fn(async () => ({
+      uid: "baby", userUid: "user", name: "Baby", birthdayMillis,
+    }));
+    const nowMillis = new Date(2026, 6, 6, 13).getTime();
+
+    await expect(baby.getStatisticsDateRange("last7Days", nowMillis)).resolves.toEqual({
+      range: {
+        fromMillis: new Date(2026, 5, 30).getTime(),
+        toMillis: new Date(2026, 6, 7).getTime() - 1,
+      },
+      canLoadPrevious: true,
+      canLoadNext: false,
+    });
+  });
+
   it("composes native quick-launch items in configured order", async () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([

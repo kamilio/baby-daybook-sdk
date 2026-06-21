@@ -61,6 +61,12 @@ import {
   buildStatisticsScreenData,
   type StatisticsScreenData,
 } from "./statistics-screen.js";
+import {
+  buildStatisticsDateRangeNavigation,
+  getStatisticsPredefinedDateRange,
+  type StatisticsDateRangeNavigation,
+  type StatisticsTimeInterval,
+} from "./statistics-range.js";
 import { FirebaseStorageClient } from "./storage.js";
 import { buildToothMap, listToothChartItems, toothUid } from "./teething.js";
 import {
@@ -845,6 +851,17 @@ export class BabyClient {
       this.getDaTypesConfig(),
     ]);
     return buildStatisticsScreenData(activityTypes, activities, configuredTypeUids, preferredTypeUid);
+  }
+
+  async getStatisticsDateRange(
+    interval: StatisticsTimeInterval,
+    nowMillis = Date.now(),
+  ): Promise<StatisticsDateRangeNavigation> {
+    const baby = await this.get();
+    if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
+    if (baby.birthdayMillis === undefined) throw new Error(`Baby ${this.babyUid} does not have a birthday`);
+    const range = getStatisticsPredefinedDateRange(interval, baby.birthdayMillis, nowMillis);
+    return buildStatisticsDateRangeNavigation(range, baby.birthdayMillis, nowMillis);
   }
 
   async exportActivitiesCsv(options: ListOptions = {}): Promise<string> {

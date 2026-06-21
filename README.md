@@ -510,6 +510,16 @@ const statisticsScreen = await baby.getStatisticsScreenData(preferredActivityTyp
 
 It returns configured activity types with all-time active record counts and the exact native tab order: number of times, optional duration, temperature, volume, amount, reaction, then time of day. A missing preferred type falls back to the first configured type.
 
+Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
+
+```ts
+const navigation = await baby.getStatisticsDateRange("last7Days");
+// navigation.range, navigation.canLoadPrevious, navigation.canLoadNext
+
+const previousRange = getPreviousStatisticsDateRange(navigation.range);
+const nextRange = getNextStatisticsDateRange(navigation.range);
+```
+
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts
