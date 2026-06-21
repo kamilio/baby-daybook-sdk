@@ -79,6 +79,20 @@ export {
 } from "./sleep-prediction.js";
 export { FirebaseStorageClient } from "./storage.js";
 export {
+  BABY_DAYBOOK_TOOTH_COLORS,
+  BABY_DAYBOOK_TOOTH_JAWS,
+  BABY_DAYBOOK_TOOTH_NAMES,
+  BABY_DAYBOOK_TOOTH_SIDES,
+  buildToothMap,
+  getToothChartItem,
+  getToothEruptionInterval,
+  getToothShedInterval,
+  getToothState,
+  listPrimaryTeeth,
+  listToothChartItems,
+  toothUid,
+} from "./teething.js";
+export {
   BABY_DAYBOOK_UNIT_FACTORS,
   convertValueToImperial,
   convertValueToMetric,

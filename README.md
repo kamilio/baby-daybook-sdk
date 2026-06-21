@@ -19,6 +19,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
 - Native-compatible average sleep clock ranges, including crossing-midnight normalization.
 - Native sleep-duration constraint loosening and clamping used by prediction adjustments.
+- The native 20-position primary-tooth map, ten-row eruption/shed chart, deterministic tooth IDs, colors, and state precedence.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
@@ -176,6 +177,20 @@ await baby.deleteDailyNote(day, "America/Chicago");
 ```
 
 `setDailyNote("", ...)` deletes the note exactly like the app. Whitespace-only notes remain valid because the native check distinguishes an empty string from non-empty text.
+
+## Teething chart
+
+The SDK reproduces the app's complete primary-tooth model rather than exposing only raw Firestore records:
+
+```ts
+const chart = baby.listToothChart();
+const map = await baby.getToothMap();
+
+const upperLeftCentralId = toothUid("central_incisor", "upper", "left");
+const upperCentralRange = getToothEruptionInterval("central_incisor", "upper");
+```
+
+`listToothChartItems` returns the native ten-row eruption/shed order. `listPrimaryTeeth` and `baby.getToothMap()` return all 20 positions with deterministic IDs, native colors, expected age intervals, and `none`, `erupted`, or `shed` state. When both flags are present, `shed` takes precedence exactly like the app.
 
 ## Search and growth
 

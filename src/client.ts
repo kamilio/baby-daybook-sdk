@@ -34,6 +34,7 @@ import { getSleepRecommendation } from "./sleep-recommendations.js";
 import { babyAdjustedAgeMonths, predictSleepSchedule, selectSleepScheduleForBaby } from "./sleep-prediction.js";
 import { buildActivityStatistics } from "./statistics.js";
 import { FirebaseStorageClient } from "./storage.js";
+import { buildToothMap, listToothChartItems } from "./teething.js";
 import type {
   ActivityGroup,
   ActivityPdfOptions,
@@ -74,6 +75,8 @@ import type {
   SleepPredictionResult,
   StickyNotificationSetting,
   Tooth,
+  ToothChartItem,
+  ToothMapItem,
   TimelinePdfOptions,
   User,
   UserAcceptedInvite,
@@ -663,6 +666,14 @@ export class BabyClient {
     const baby = await this.get();
     if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
     return getSleepRecommendation(babyAdjustedAgeMonths(baby, at));
+  }
+
+  listToothChart(): ToothChartItem[] {
+    return listToothChartItems();
+  }
+
+  async getToothMap(options: ListOptions = {}): Promise<ToothMapItem[]> {
+    return buildToothMap(await this.teething.list(options));
   }
 
   async predictSleep(day: Date | number = Date.now(), napCount?: number): Promise<SleepPredictionResult> {

@@ -24,8 +24,10 @@ export type Gender = "male" | "female" | "other" | string;
 export type ActivitySide = "left" | "right" | string;
 export type ActivityReaction = "liked" | "neutral" | "disliked" | string;
 export type ReminderType = "basic" | "advanced" | "advanced_repeat_days" | "advanced_repeat_weekdays";
+export type ToothName = "central_incisor" | "lateral_incisor" | "canine" | "first_molar" | "second_molar";
 export type ToothJaw = "upper" | "lower";
 export type ToothSide = "left" | "right";
+export type ToothState = "none" | "erupted" | "shed";
 export type BabySettingType =
   | "STICKY_SINGLE_ACTION_NOTIFICATION"
   | "STICKY_NOTIFICATION"
@@ -144,7 +146,7 @@ export interface DailyNote extends BabyDataRecord {
 }
 
 export interface Tooth extends BabyDataRecord {
-  name: string;
+  name: ToothName;
   jaw: ToothJaw;
   side: ToothSide;
   erupted?: boolean;
@@ -152,6 +154,32 @@ export interface Tooth extends BabyDataRecord {
   shed?: boolean;
   shedMillis?: number;
   notes?: string;
+}
+
+export interface AgeInterval {
+  unit: "month" | "year";
+  from: number;
+  to: number;
+}
+
+export interface ToothChartItem {
+  order: number;
+  name: ToothName;
+  jaw: ToothJaw;
+  color: string;
+  erupts: AgeInterval;
+  sheds: AgeInterval;
+}
+
+export interface ToothDescriptor extends Omit<ToothChartItem, "order"> {
+  uid: string;
+  side: ToothSide;
+  chartOrder: number;
+}
+
+export interface ToothMapItem extends ToothDescriptor {
+  state: ToothState;
+  tooth?: Tooth;
 }
 
 export interface Reminder extends BabyDataRecord {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
-import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, DailyNote, GrowthEntry, Reminder } from "../src/index.js";
+import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, DailyNote, GrowthEntry, Reminder, Tooth } from "../src/index.js";
 import { mockFetch } from "./helpers.js";
 
 describe("BabyDaybookClient", () => {
@@ -298,6 +298,24 @@ describe("BabyClient", () => {
     })).rejects.toThrow("Invalid base64 attachment data");
   });
 
+  it("exposes the native tooth chart and populated tooth map", async () => {
+    const { baby, teethingRepo } = configuredBaby();
+    teethingRepo.items = [{
+      uid: "central_incisor_lower_left",
+      userUid: "user",
+      babyUid: "baby",
+      name: "central_incisor",
+      jaw: "lower",
+      side: "left",
+      erupted: true,
+    }];
+
+    expect(baby.listToothChart()).toHaveLength(10);
+    await expect(baby.getToothMap()).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ uid: "central_incisor_lower_left", state: "erupted" }),
+    ]));
+  });
+
   it("emits polling changes and stops when aborted", async () => {
     const { baby, client, activityRepo } = configuredBaby();
     activityRepo.items = [activity({ uid: "a" })];
@@ -346,19 +364,20 @@ function configuredBaby() {
   const baby = new BabyClient(client, "baby");
   const activityRepo = repo<DailyAction>([]);
   const growthRepo = repo<GrowthEntry>([]);
+  const teethingRepo = repo<Tooth>([]);
   (baby as any).activityTypes = repo([]);
   (baby as any).activities = activityRepo;
   (baby as any).groups = repo([]);
   (baby as any).growth = growthRepo;
   (baby as any).moments = repo([]);
   (baby as any).dailyNotes = repo([]);
-  (baby as any).teething = repo([]);
+  (baby as any).teething = teethingRepo;
   (baby as any).reminders = repo([]);
   (baby as any).settings = repo([]);
   (baby as any).acceptedInvites = repo([]);
   (baby as any).pendingInvites = repo([]);
   (baby as any).fileMetadata = vi.fn(() => repo([]));
-  return { baby, client, activityRepo, growthRepo };
+  return { baby, client, activityRepo, growthRepo, teethingRepo };
 }
 
 function repo<T extends Record<string, any>>(initial: T[]) {
