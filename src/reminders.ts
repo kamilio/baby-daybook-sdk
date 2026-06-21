@@ -7,7 +7,23 @@ import type {
 } from "./types.js";
 
 const DAY_MILLIS = 86_400_000;
+export const BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS = 3 * 60 * 60_000;
 export const BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS = 30 * 60_000;
+
+export function normalizeReminderForSave(reminder: Reminder): Reminder {
+  const basic = reminder.type === "basic";
+  const repeatDays = reminder.type === "advanced_repeat_days" ? Math.max(1, reminder.repeatDays ?? 0) : 0;
+  return {
+    ...reminder,
+    dateMillis: basic ? 0 : reminder.dateMillis,
+    intervalMillis: basic ? reminder.intervalMillis : 0,
+    repeatDays,
+    repeatWeekdays: reminder.type === "advanced_repeat_weekdays" ? reminder.repeatWeekdays : "",
+    dndFrom: basic ? reminder.dndFrom : "",
+    dndTo: basic ? reminder.dndTo : "",
+    dismissedMillis: 0,
+  };
+}
 
 export function parseReminderWeekdays(value: string | undefined): number[] {
   if (!value) return [];

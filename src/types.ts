@@ -219,6 +219,11 @@ export interface Reminder extends BabyDataRecord {
   dismissedMillis?: number;
 }
 
+export type CreateReminderInput = Omit<Partial<Reminder>, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted" | "daType"> & {
+  daType: string;
+  uid?: string;
+};
+
 export interface ReminderScheduleContext {
   nowMillis?: number;
   lastActivity?: DailyAction;

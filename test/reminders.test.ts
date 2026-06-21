@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { BabyClient } from "../src/client.js";
 import {
+  BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS,
   BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS,
   getEarliestReminderDisplayMillis,
   getExpiredReminderMillis,
   getNextReminderMillis,
   getRelevantReminderSchedules,
   isReminderMillisInDnd,
+  normalizeReminderForSave,
   parseReminderWeekdays,
   resolveReminderSchedule,
   sortReminderSchedules,
@@ -14,6 +16,44 @@ import {
 import type { ActivityType, DailyAction, Reminder } from "../src/types.js";
 
 describe("Baby Daybook reminder scheduling", () => {
+  it("normalizes editor fields exactly when saving each native reminder type", () => {
+    const base = makeReminder({
+      intervalMillis: BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS,
+      repeatDays: 0,
+      repeatWeekdays: "1,3",
+      dndFrom: "22:00",
+      dndTo: "07:00",
+      dismissedMillis: 123,
+    });
+
+    expect(normalizeReminderForSave({ ...base, type: "basic", dateMillis: 999 })).toMatchObject({
+      dateMillis: 0,
+      intervalMillis: BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS,
+      repeatDays: 0,
+      repeatWeekdays: "",
+      dndFrom: "22:00",
+      dndTo: "07:00",
+      dismissedMillis: 0,
+    });
+    expect(normalizeReminderForSave({ ...base, type: "advanced", dateMillis: 999 })).toMatchObject({
+      dateMillis: 999,
+      intervalMillis: 0,
+      repeatDays: 0,
+      repeatWeekdays: "",
+      dndFrom: "",
+      dndTo: "",
+      dismissedMillis: 0,
+    });
+    expect(normalizeReminderForSave({ ...base, type: "advanced_repeat_days", dateMillis: 999 })).toMatchObject({
+      repeatDays: 1,
+      repeatWeekdays: "",
+    });
+    expect(normalizeReminderForSave({ ...base, type: "advanced_repeat_weekdays", dateMillis: 999 })).toMatchObject({
+      repeatDays: 0,
+      repeatWeekdays: "1,3",
+    });
+  });
+
   it("resolves one-time reminders and honors dismissal and later activity", () => {
     const due = localMillis(2026, 7, 6, 9);
     const now = localMillis(2026, 7, 6, 10);

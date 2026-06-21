@@ -5,6 +5,7 @@ import type {
   DefaultActivityGroupDefinition,
   DefaultActivityGroupTitleResolver,
 } from "./types.js";
+import { createNativeRandomUid } from "./native-id.js";
 
 interface DefaultActivityTypeDefinition {
   uid: BuiltInActivityType;
@@ -97,7 +98,7 @@ export function createDefaultActivityGroups(
   resolveTitle: DefaultActivityGroupTitleResolver = ({ title }) => title,
 ): ActivityGroup[] {
   return DEFAULT_ACTIVITY_GROUP_DEFINITIONS.map((definition) => ({
-    uid: randomNativeUid(),
+    uid: createNativeRandomUid(),
     babyUid,
     userUid: "",
     updatedMillis,
@@ -105,17 +106,4 @@ export function createDefaultActivityGroups(
     description: "",
     daType: definition.daType,
   }));
-}
-
-function randomNativeUid(): string {
-  const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  let result = "";
-  while (result.length < 16) {
-    const bytes = crypto.getRandomValues(new Uint8Array(16 - result.length));
-    for (const byte of bytes) {
-      if (byte >= 248) continue;
-      result += alphabet[byte % alphabet.length];
-    }
-  }
-  return result;
 }

@@ -16,10 +16,17 @@ import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defau
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient, type FirestoreSetWrite } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
+import { createNativeRandomUid } from "./native-id.js";
 import { paths } from "./paths.js";
 import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
-import { getRelevantReminderSchedules, resolveReminderSchedule, sortReminderSchedules } from "./reminders.js";
+import {
+  BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS,
+  getRelevantReminderSchedules,
+  normalizeReminderForSave,
+  resolveReminderSchedule,
+  sortReminderSchedules,
+} from "./reminders.js";
 import { searchActivities, searchDailyNotes } from "./search.js";
 import {
   BABY_SETTING_TYPES,
@@ -63,6 +70,7 @@ import type {
   CreateActivityTypeInput,
   CreateGrowthInput,
   CreateMomentInput,
+  CreateReminderInput,
   CreateToothInput,
   DailyAction,
   DailyNote,
@@ -739,6 +747,40 @@ export class BabyClient {
       });
     });
     return sortReminderSchedules(schedules);
+  }
+
+  createReminder(input: CreateReminderInput, atMillis = Date.now()): Promise<Reminder> {
+    const type = input.type ?? "basic";
+    return this.saveReminder({
+      ...input,
+      uid: input.uid ?? createNativeRandomUid(),
+      userUid: "",
+      babyUid: this.babyUid,
+      type,
+      dateMillis: input.dateMillis ?? (type === "basic" ? 0 : atMillis),
+      intervalMillis: input.intervalMillis ?? (type === "basic" ? BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS : 0),
+      repeatDays: input.repeatDays ?? (type === "advanced_repeat_days" ? 1 : 0),
+      repeatWeekdays: input.repeatWeekdays ?? "",
+      dndFrom: input.dndFrom ?? "",
+      dndTo: input.dndTo ?? "",
+      dismissedMillis: 0,
+      deleted: false,
+    }, atMillis);
+  }
+
+  saveReminder(reminder: Reminder, atMillis = Date.now()): Promise<Reminder> {
+    return this.reminders.save({
+      ...normalizeReminderForSave(reminder),
+      babyUid: this.babyUid,
+      updatedMillis: atMillis,
+      svt: 0,
+    });
+  }
+
+  async deleteReminder(uid: string, atMillis = Date.now()): Promise<Reminder> {
+    const reminder = await this.reminders.get(uid);
+    if (!reminder) throw new Error(`Reminder ${uid} does not exist`);
+    return this.reminders.save({ ...reminder, deleted: true, updatedMillis: atMillis, svt: 0 });
   }
 
   async getRelevantReminderSchedules(options: ReminderScheduleListOptions = {}): Promise<ReminderSchedule[]> {

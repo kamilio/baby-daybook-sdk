@@ -380,6 +380,57 @@ describe("BabyClient", () => {
     expect(teethingRepo.save).toHaveBeenCalledTimes(2);
   });
 
+  it("creates, normalizes, and deletes reminders like the native editor", async () => {
+    const { baby, reminderRepo } = configuredBaby();
+    const now = 1_750_000_000_000;
+
+    const basic = await baby.createReminder({ daType: "bottle", groupUid: "formula" }, now);
+    expect(basic).toMatchObject({
+      uid: expect.stringMatching(/^[0-9A-Za-z]{16}$/),
+      userUid: "",
+      babyUid: "baby",
+      daType: "bottle",
+      groupUid: "formula",
+      type: "basic",
+      dateMillis: 0,
+      intervalMillis: 10_800_000,
+      repeatDays: 0,
+      repeatWeekdays: "",
+      dndFrom: "",
+      dndTo: "",
+      dismissedMillis: 0,
+      updatedMillis: now,
+      svt: 0,
+      deleted: false,
+    });
+
+    const repeating = await baby.createReminder({
+      uid: "repeat",
+      daType: "sleeping",
+      type: "advanced_repeat_days",
+      intervalMillis: 99,
+      repeatDays: 0,
+      repeatWeekdays: "1,2",
+      dndFrom: "22:00",
+      dndTo: "07:00",
+      dismissedMillis: 55,
+    }, now);
+    expect(repeating).toMatchObject({
+      uid: "repeat",
+      dateMillis: now,
+      intervalMillis: 0,
+      repeatDays: 1,
+      repeatWeekdays: "",
+      dndFrom: "",
+      dndTo: "",
+      dismissedMillis: 0,
+    });
+
+    await expect(baby.deleteReminder("repeat", now + 1)).resolves.toMatchObject({ deleted: true, updatedMillis: now + 1, svt: 0 });
+    await expect(baby.deleteReminder("missing", now + 1)).rejects.toThrow("Reminder missing does not exist");
+    expect(reminderRepo.save).toHaveBeenCalledTimes(3);
+  });
+
   it("emits polling changes and stops when aborted", async () => {
     const { baby, client, activityRepo } = configuredBaby();
     activityRepo.items = [activity({ uid: "a" })];
@@ -430,6 +481,7 @@ function configuredBaby() {
   const growthRepo = repo<GrowthEntry>([]);
   const momentsRepo = repo<Moment>([]);
   const teethingRepo = repo<Tooth>([]);
+  const reminderRepo = repo<Reminder>([]);
   (baby as any).activityTypes = repo([]);
   (baby as any).activities = activityRepo;
   (baby as any).groups = repo([]);
@@ -437,12 +489,12 @@ function configuredBaby() {
   (baby as any).moments = momentsRepo;
   (baby as any).dailyNotes = repo([]);
   (baby as any).teething = teethingRepo;
-  (baby as any).reminders = repo([]);
+  (baby as any).reminders = reminderRepo;
   (baby as any).settings = repo([]);
   (baby as any).acceptedInvites = repo([]);
   (baby as any).pendingInvites = repo([]);
   (baby as any).fileMetadata = vi.fn(() => repo([]));
-  return { baby, client, activityRepo, growthRepo, momentsRepo, teethingRepo };
+  return { baby, client, activityRepo, growthRepo, momentsRepo, teethingRepo, reminderRepo };
 }
 
 function repo<T extends Record<string, any>>(initial: T[]) {

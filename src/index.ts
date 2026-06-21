@@ -42,15 +42,18 @@ export type {
   BabyDaybookCloudFunctionResults,
 } from "./functions.js";
 export { paths } from "./paths.js";
+export { createNativeRandomUid } from "./native-id.js";
 export { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";
 export {
+  BABY_DAYBOOK_DEFAULT_REMINDER_INTERVAL_MILLIS,
   BABY_DAYBOOK_RELEVANT_REMINDER_LEAD_MILLIS,
   getEarliestReminderDisplayMillis,
   getExpiredReminderMillis,
   getNextReminderMillis,
   getRelevantReminderSchedules,
   isReminderMillisInDnd,
+  normalizeReminderForSave,
   parseReminderWeekdays,
   resolveReminderSchedule,
   sortReminderSchedules,

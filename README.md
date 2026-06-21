@@ -308,7 +308,25 @@ const relevant = await baby.getRelevantReminderSchedules();
 await baby.dismissReminder(relevant[0].reminder.uid);
 ```
 
-The relevant-reminder helper matches the home screen: expired reminders are always included, upcoming reminders enter the list strictly less than 30 minutes before their occurrence, and `getEarliestReminderDisplayMillis` returns the next time a caller should refresh. Dismissal stamps `dismissedMillis` and `updatedMillis` while resetting `svt` to zero for synchronization.
+Create, edit, and delete reminders through the native editor lifecycle rather than writing raw documents:
+
+```ts
+const reminder = await baby.createReminder({
+  daType: "bottle",
+  groupUid: formulaGroupUid,
+});
+
+await baby.saveReminder({
+  ...reminder,
+  type: "advanced_repeat_weekdays",
+  dateMillis: Date.now(),
+  repeatWeekdays: "1,3,5",
+});
+
+await baby.deleteReminder(reminder.uid);
+```
+
+New basic reminders use the app's three-hour interval and native 16-character ID format. Saving clears fields that do not belong to the selected mode, resets dismissal, and enforces a minimum one-day interval for `advanced_repeat_days`. The relevant-reminder helper matches the home screen: expired reminders are always included, upcoming reminders enter the list strictly less than 30 minutes before their occurrence, and `getEarliestReminderDisplayMillis` returns the next time a caller should refresh. Dismissal stamps `dismissedMillis` and `updatedMillis` while resetting `svt` to zero for synchronization.
 
 ## Attachments and backups
 
