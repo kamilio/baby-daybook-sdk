@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildStatisticsActivityCountBins,
   buildStatisticsActivityCountSummary,
+  buildStatisticsVolumeBins,
+  buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
@@ -154,6 +156,46 @@ describe("native statistics date ranges", () => {
     expect(summary.total).toEqual({ value: 4, comparisonValue: 2, changePercent: 100 });
     expect(summary.averagePerDay).toEqual({ value: 2, comparisonValue: 1, changePercent: 100 });
     expect(summary.averageTimeBetweenMillis).toEqual({ value: 90 * 60 * 1_000, comparisonValue: 0, changePercent: 0 });
+  });
+
+  it("builds native volume bins and total, per-day, and per-activity cards", () => {
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const activities = [
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle", volume: 90 },
+      { startMillis: new Date(2026, 2, 7, 12).getTime(), type: "bottle", volume: 120 },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "bottle" },
+      { startMillis: new Date(2026, 2, 8, 10).getTime(), type: "drink", volume: 50 },
+      { startMillis: new Date(2026, 2, 8, 12).getTime(), type: "bottle", volume: 500, deleted: true },
+    ];
+
+    expect(buildStatisticsVolumeBins(activities, range, "bottle").map(({ volume, activityCount }) => ({ volume, activityCount }))).toEqual([
+      { volume: 210, activityCount: 2 },
+      { volume: 0, activityCount: 1 },
+    ]);
+    expect(buildStatisticsVolumeSummary(activities, range, { typeUid: "bottle" })).toEqual({
+      total: { value: 210 },
+      averagePerDay: { value: 105 },
+      averagePerActivity: { value: 70 },
+    });
+  });
+
+  it("compares native volume cards and rejects malformed selected values", () => {
+    const comparisonRange = dateRange([2026, 2, 5], [2026, 2, 6]);
+    const range = dateRange([2026, 2, 7], [2026, 2, 8]);
+    const activities = [
+      { startMillis: new Date(2026, 2, 5, 8).getTime(), type: "bottle", volume: 100 },
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle", volume: 100 },
+      { startMillis: new Date(2026, 2, 8, 8).getTime(), type: "bottle", volume: 100 },
+      { startMillis: Number.NaN, type: "drink", volume: Number.NaN },
+    ];
+    const summary = buildStatisticsVolumeSummary(activities, range, { typeUid: "bottle", comparisonRange });
+
+    expect(summary.total).toEqual({ value: 200, comparisonValue: 100, changePercent: 100 });
+    expect(summary.averagePerDay).toEqual({ value: 100, comparisonValue: 50, changePercent: 100 });
+    expect(summary.averagePerActivity).toEqual({ value: 100, comparisonValue: 100, changePercent: 0 });
+    expect(() => buildStatisticsVolumeSummary([
+      { startMillis: new Date(2026, 2, 7, 8).getTime(), type: "bottle", volume: Number.NaN },
+    ], range, { typeUid: "bottle" })).toThrow("Activity volume must be finite");
   });
 
   it("rejects invalid timestamps and reversed ranges", () => {

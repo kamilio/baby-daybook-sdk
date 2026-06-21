@@ -116,6 +116,8 @@ export type {
 export {
   buildStatisticsActivityCountBins,
   buildStatisticsActivityCountSummary,
+  buildStatisticsVolumeBins,
+  buildStatisticsVolumeSummary,
   buildStatisticsDateRangeNavigation,
   canShowStatisticsComparison,
   canLoadNextStatisticsDateRange,
@@ -138,6 +140,9 @@ export type {
   StatisticsDateRange,
   StatisticsDateRangeNavigation,
   StatisticsTimeInterval,
+  StatisticsVolumeBin,
+  StatisticsVolumeSummary,
+  StatisticsVolumeSummaryOptions,
 } from "./statistics-range.js";
 export {
   babyAdjustedAgeMonths,

@@ -42,9 +42,33 @@ export interface StatisticsActivityCountSummaryOptions {
   timeBetweenFromEnd?: boolean;
 }
 
+export interface StatisticsVolumeBin {
+  periodStartMillis: number;
+  volume: number;
+  activityCount: number;
+}
+
+export interface StatisticsVolumeSummary {
+  total: StatisticsComparedValue;
+  averagePerDay: StatisticsComparedValue;
+  averagePerActivity: StatisticsComparedValue;
+}
+
+export interface StatisticsVolumeSummaryOptions {
+  typeUid?: string;
+  comparisonRange?: StatisticsDateRange;
+}
+
 interface StatisticsActivityCountInput {
   startMillis: number;
   endMillis?: number;
+  type: string;
+  deleted?: boolean;
+}
+
+interface StatisticsVolumeInput {
+  startMillis: number;
+  volume?: number;
   type: string;
   deleted?: boolean;
 }
@@ -233,6 +257,52 @@ export function buildStatisticsActivityCountSummary(
   };
 }
 
+export function buildStatisticsVolumeBins(
+  activities: readonly Readonly<StatisticsVolumeInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): StatisticsVolumeBin[] {
+  validateRange(range);
+  const period = getStatisticsChartPeriod(range);
+  const bins = createChartPeriodStarts(range, period).map((periodStartMillis) => ({
+    periodStartMillis,
+    volume: 0,
+    activityCount: 0,
+  }));
+  const binMap = new Map(bins.map((bin) => [bin.periodStartMillis, bin]));
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    const volume = activity.volume ?? 0;
+    assertFinite(volume, "Activity volume");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    const bin = binMap.get(periodStart(new Date(activity.startMillis), period).getTime());
+    if (bin) {
+      bin.volume += volume;
+      bin.activityCount += 1;
+    }
+  }
+  return bins;
+}
+
+export function buildStatisticsVolumeSummary(
+  activities: readonly Readonly<StatisticsVolumeInput>[],
+  range: Readonly<StatisticsDateRange>,
+  options: Readonly<StatisticsVolumeSummaryOptions> = {},
+): StatisticsVolumeSummary {
+  validateRange(range);
+  if (options.comparisonRange) validateRange(options.comparisonRange);
+  const current = calculateVolumeSummary(activities, range, options.typeUid);
+  const comparison = options.comparisonRange
+    ? calculateVolumeSummary(activities, options.comparisonRange, options.typeUid)
+    : undefined;
+  return {
+    total: comparedValue(current.total, comparison?.total),
+    averagePerDay: comparedValue(current.averagePerDay, comparison?.averagePerDay),
+    averagePerActivity: comparedValue(current.averagePerActivity, comparison?.averagePerActivity),
+  };
+}
+
 export function getStatisticsChartPeriodStarts(range: Readonly<StatisticsDateRange>): number[] {
   validateRange(range);
   return createChartPeriodStarts(range, getStatisticsChartPeriod(range));
@@ -338,6 +408,30 @@ function calculateActivityCountSummary(
     total,
     averagePerDay: total / dayCount,
     averageTimeBetweenMillis: timeBetweenCount === 0 ? 0 : timeBetweenTotal / timeBetweenCount,
+  };
+}
+
+function calculateVolumeSummary(
+  activities: readonly Readonly<StatisticsVolumeInput>[],
+  range: Readonly<StatisticsDateRange>,
+  typeUid?: string,
+): { total: number; averagePerDay: number; averagePerActivity: number } {
+  let total = 0;
+  let activityCount = 0;
+  for (const activity of activities) {
+    if (activity.deleted || (typeUid !== undefined && activity.type !== typeUid)) continue;
+    assertFinite(activity.startMillis, "Activity start time");
+    const volume = activity.volume ?? 0;
+    assertFinite(volume, "Activity volume");
+    if (activity.startMillis < range.fromMillis || activity.startMillis > range.toMillis) continue;
+    total += volume;
+    activityCount += 1;
+  }
+  const dayCount = differenceInCalendarDays(new Date(range.toMillis), new Date(range.fromMillis)) + 1;
+  return {
+    total,
+    averagePerDay: total / dayCount,
+    averagePerActivity: activityCount === 0 ? 0 : total / activityCount,
   };
 }
 

@@ -16,6 +16,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - PDF exports matching the app's daily-list, growth, and timeline report modes.
 - Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
 - Native count-chart cards for total, average per day, and average time between activities, including comparison percentages and the app's five-minute interval cutoff.
+- Native volume-chart period bins and total, average-per-day, and average-per-activity cards with adjacent-range comparisons.
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
 - Baby Daybook sleep recommendations for newborns through 59 months, including grouped age ranges.
 - Native-compatible average sleep clock ranges, including crossing-midnight normalization.
