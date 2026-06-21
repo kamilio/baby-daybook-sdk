@@ -63,6 +63,31 @@ To restore a saved login without retaining the password:
 const client = await BabyDaybookClient.fromRefreshToken(savedRefreshToken);
 ```
 
+### Apple accounts and command-line use
+
+Apple sign-in requires a fresh Apple identity token and the matching raw nonce from a Sign in with Apple authorization flow. The raw nonce is the unhashed value whose SHA-256 hash was sent to Apple:
+
+```ts
+const client = await BabyDaybookClient.signInWithAppleCredential(
+  appleIdentityToken,
+  rawNonce,
+  {
+    onSessionChanged(session) {
+      // Persist session?.refreshToken in an OS credential store.
+    },
+  },
+);
+```
+
+A headless CLI cannot generate a valid Apple identity token by itself. For convenient later CLI access, authenticate once with Apple, then link an email and a strong generated password to the already authenticated account:
+
+```ts
+await client.linkEmailPassword("parent@example.com", generatedPassword);
+await client.sendEmailVerification();
+```
+
+This keeps the existing Firebase user ID, babies, and activity data, while adding email/password as another sign-in method. Do not use `signUpWithEmail` for this migration: it can create a separate Firebase user. Apple remains linked, and subsequent CLI runs can use `signInWithEmail` or the persisted refresh token. If Apple supplied a private-relay address, confirm which email you want associated with the account before linking it.
+
 Account lifecycle mirrors the mobile app. Display-name changes update both Firebase Authentication and the Baby Daybook user document, while sign-out invalidates the local SDK session and emits `undefined` through `onSessionChanged`:
 
 ```ts

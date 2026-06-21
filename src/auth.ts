@@ -19,6 +19,12 @@ interface RefreshResponse {
   expires_in: string;
 }
 
+interface AccountUpdateResponse extends FirebaseAccount {
+  idToken?: string;
+  refreshToken?: string;
+  expiresIn?: string;
+}
+
 export interface AuthOptions {
   config?: Partial<BabyDaybookConfig>;
   fetch?: FetchLike;
@@ -109,6 +115,12 @@ export class AuthSession {
     await this.onSessionChanged?.(this.snapshot);
   }
 
+  async updateAuthentication(update: Partial<AuthSessionData>): Promise<void> {
+    if (this.#signedOut) throw new BabyDaybookAuthError("The Firebase session has been signed out", { code: "SIGNED_OUT" });
+    this.#data = { ...this.#data, ...update };
+    await this.onSessionChanged?.(this.snapshot);
+  }
+
   async #refresh(): Promise<string> {
     const response = await requestJson<RefreshResponse>(
       this.fetch,
@@ -182,6 +194,12 @@ export class BabyDaybookAuth {
     });
   }
 
+  async signInWithAppleCredential(idToken: string, nonce: string, requestUri?: string): Promise<AuthSession> {
+    if (!idToken) throw new RangeError("Apple ID token must not be empty");
+    if (!nonce) throw new RangeError("Apple raw nonce must not be empty");
+    return this.signInWithOAuthCredential({ provider: "apple.com", idToken, nonce, requestUri });
+  }
+
   async getAccount(session: AuthSession): Promise<FirebaseAccount> {
     const response = await this.#request<{ users?: FirebaseAccount[] }>("accounts:lookup", {
       idToken: await session.getIdToken(),
@@ -192,14 +210,29 @@ export class BabyDaybookAuth {
   }
 
   async updateAccount(session: AuthSession, update: { displayName?: string; photoUrl?: string; password?: string; email?: string }): Promise<FirebaseAccount> {
-    const account = await this.#request<FirebaseAccount>("accounts:update", { idToken: await session.getIdToken(), ...update, returnSecureToken: false });
-    if (update.displayName !== undefined || update.email !== undefined) {
-      await session.updateProfile({
-        displayName: update.displayName ?? session.snapshot.displayName,
-        email: update.email ?? session.snapshot.email,
-      });
-    }
+    const response = await this.#request<AccountUpdateResponse>("accounts:update", {
+      idToken: await session.getIdToken(),
+      ...update,
+      returnSecureToken: true,
+    });
+    const { idToken, refreshToken, expiresIn, ...account } = response;
+    const snapshot = session.snapshot;
+    await session.updateAuthentication({
+      idToken: idToken ?? snapshot.idToken,
+      refreshToken: refreshToken ?? snapshot.refreshToken,
+      userId: account.localId ?? snapshot.userId,
+      expiresAt: expiresIn === undefined ? snapshot.expiresAt : Date.now() + Number(expiresIn) * 1000,
+      displayName: update.displayName ?? account.displayName ?? snapshot.displayName,
+      email: update.email ?? account.email ?? snapshot.email,
+    });
     return account;
+  }
+
+  async linkEmailPassword(session: AuthSession, email: string, password: string): Promise<FirebaseAccount> {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) throw new RangeError("Email must not be empty");
+    if (password.length < 6) throw new RangeError("Password must contain at least 6 characters");
+    return this.updateAccount(session, { email: normalizedEmail, password });
   }
 
   signOut(session: AuthSession): Promise<void> {

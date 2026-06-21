@@ -9,7 +9,7 @@ import {
   type LastActivityOptions,
 } from "./activity-queries.js";
 import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
-import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } from "./auth.js";
+import { AuthSession, BabyDaybookAuth, type AuthOptions, type FirebaseAccount, type OAuthCredential } from "./auth.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
@@ -122,6 +122,11 @@ export class BabyDaybookClient {
     return new BabyDaybookClient({ ...options, session: await auth.signInWithOAuthCredential(credential) });
   }
 
+  static async signInWithAppleCredential(idToken: string, nonce: string, options: AuthOptions = {}): Promise<BabyDaybookClient> {
+    const auth = new BabyDaybookAuth(options);
+    return new BabyDaybookClient({ ...options, session: await auth.signInWithAppleCredential(idToken, nonce) });
+  }
+
   static async fromRefreshToken(refreshToken: string, options: AuthOptions = {}): Promise<BabyDaybookClient> {
     const auth = new BabyDaybookAuth(options);
     return new BabyDaybookClient({ ...options, session: await auth.fromRefreshToken(refreshToken) });
@@ -177,6 +182,14 @@ export class BabyDaybookClient {
     await this.auth.updateAccount(this.session, { displayName: normalized });
     const current = await this.getUser();
     return this.saveUser({ ...current, uid: this.session.userId, displayName: normalized });
+  }
+
+  linkEmailPassword(email: string, password: string): Promise<FirebaseAccount> {
+    return this.auth.linkEmailPassword(this.session, email, password);
+  }
+
+  sendEmailVerification(): Promise<void> {
+    return this.auth.sendEmailVerification(this.session);
   }
 
   signOut(): Promise<void> {

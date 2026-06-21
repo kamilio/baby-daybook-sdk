@@ -17,8 +17,10 @@ describe("BabyDaybookClient", () => {
     (client as any).userAcceptedInvites = repo([{ babyUid: "baby" }, { babyUid: "shared" }]);
     (client as any).functions = { call: vi.fn(async () => "deleted") };
     const updateAccount = vi.fn(async () => ({ localId: "user", displayName: "New Parent" }));
+    const linkEmailPassword = vi.fn(async () => ({ localId: "user", email: "parent@example.com" }));
+    const sendEmailVerification = vi.fn(async () => undefined);
     const signOut = vi.fn(async () => undefined);
-    (client as any).auth = { updateAccount, signOut };
+    (client as any).auth = { linkEmailPassword, sendEmailVerification, updateAccount, signOut };
 
     await expect(client.getUser()).resolves.toMatchObject({ displayName: "Parent" });
     await expect(client.saveUser({ uid: "user", displayName: "Updated" })).resolves.toMatchObject({ displayName: "Updated" });
@@ -28,6 +30,10 @@ describe("BabyDaybookClient", () => {
     await expect(client.deleteAccount()).resolves.toBeUndefined();
     await expect(client.updateDisplayName("  New Parent  ")).resolves.toMatchObject({ displayName: "New Parent" });
     expect(updateAccount).toHaveBeenCalledWith(client.session, { displayName: "New Parent" });
+    await expect(client.linkEmailPassword("parent@example.com", "generated-password")).resolves.toMatchObject({ email: "parent@example.com" });
+    expect(linkEmailPassword).toHaveBeenCalledWith(client.session, "parent@example.com", "generated-password");
+    await client.sendEmailVerification();
+    expect(sendEmailVerification).toHaveBeenCalledWith(client.session);
     await expect(client.updateDisplayName("  ")).rejects.toThrow(RangeError);
     await client.signOut();
     expect(signOut).toHaveBeenCalledWith(client.session);
