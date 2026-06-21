@@ -51,6 +51,7 @@ import type {
   BabyDaytimeRange,
   BabyPendingInvite,
   BabySetting,
+  BabySyncCollectionName,
   ChangeEvent,
   CloudRecord,
   CreateActivityGroupInput,
@@ -751,7 +752,10 @@ export class BabyClient {
   }
 
   async #snapshot(): Promise<Map<string, CloudRecord>> {
-    const entries = await Promise.all([
+    const [baby, acceptedInvites, pendingInvites, ...baseEntries] = await Promise.all([
+      this.get(),
+      this.acceptedInvites.list({ includeDeleted: true }),
+      this.pendingInvites.list({ includeDeleted: true }),
       this.activityTypes.list({ includeDeleted: true }).then((items) => ["daTypes", items] as const),
       this.activities.list({ includeDeleted: true }).then((items) => ["dailyActions", items] as const),
       this.groups.list({ includeDeleted: true }).then((items) => ["groups", items] as const),
@@ -761,17 +765,42 @@ export class BabyClient {
       this.teething.list({ includeDeleted: true }).then((items) => ["teething", items] as const),
       this.reminders.list({ includeDeleted: true }).then((items) => ["reminders", items] as const),
       this.settings.list({ includeDeleted: true }).then((items) => ["settings", items] as const),
+      ...(["dailyActions", "growth", "moments", "teething"] as const).map((category) => this.fileMetadata(category)
+        .list({ includeDeleted: true })
+        .then((items) => [`${category}Files` as BabySyncCollectionName, items] as const)),
     ]);
+    const caregiverUids = new Set<string>();
+    if (baby && !baby.deleted) caregiverUids.add(baby.userUid);
+    for (const invite of acceptedInvites) if (!invite.deleted) caregiverUids.add(invite.userUid);
+    const caregiverData = await Promise.all([...caregiverUids].map(async (userUid) => {
+      const [userDocument, purchases] = await Promise.all([
+        this.client.firestore.get<User>(paths.user(userUid)),
+        new CollectionRepository<Purchase>(this.client.firestore, paths.purchases(userUid), "productId").list({ includeDeleted: true }),
+      ]);
+      return { user: userDocument?.data, purchases };
+    }));
+    const entries: readonly (readonly [BabySyncCollectionName, readonly CloudRecord[]])[] = [
+      ...baseEntries,
+      ["acceptedInvites", acceptedInvites],
+      ["pendingInvites", pendingInvites],
+      ["caregivers", caregiverData.flatMap(({ user }) => user ? [user] : [])],
+      ["caregiversPurchases", caregiverData.flatMap(({ purchases }) => purchases)],
+    ];
     const snapshot = new Map<string, CloudRecord>();
+    if (baby) snapshot.set(`baby:${baby.uid}`, baby);
     for (const [collection, items] of entries) {
-      for (const item of items) snapshot.set(`${collection}:${recordId(item)}`, item);
+      for (const item of items) snapshot.set(`${collection}:${recordId(collection, item)}`, item);
     }
     return snapshot;
   }
 }
 
-function recordId(record: CloudRecord): string {
+function recordId(collection: BabySyncCollectionName, record: CloudRecord): string {
   const item = record as any;
+  if (collection === "acceptedInvites") return item.userUid;
+  if (collection === "pendingInvites") return item.userEmailMD5;
+  if (collection.endsWith("Files")) return item.itemUid;
+  if (collection === "caregiversPurchases") return `${item.userUid}:${item.productId}`;
   return item.uid ?? item.settingType ?? item.itemUid ?? item.babyUid ?? JSON.stringify(item);
 }
 

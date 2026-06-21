@@ -266,6 +266,19 @@ export interface CaregiverInfo {
 
 export type AttachmentCategory = "dailyActions" | "growth" | "moments" | "teething";
 export type BabyCollectionName = "daTypes" | "dailyActions" | "groups" | "growth" | "moments" | "dailyNotes" | "teething";
+export type BabySyncCollectionName =
+  | "baby"
+  | BabyCollectionName
+  | "dailyActionsFiles"
+  | "growthFiles"
+  | "momentsFiles"
+  | "teethingFiles"
+  | "acceptedInvites"
+  | "pendingInvites"
+  | "reminders"
+  | "settings"
+  | "caregivers"
+  | "caregiversPurchases";
 
 export interface ListOptions {
   includeDeleted?: boolean;
@@ -311,7 +324,7 @@ export interface ActivitySummary {
 }
 
 export interface ChangeEvent {
-  collection: BabyCollectionName | "reminders" | "settings";
+  collection: BabySyncCollectionName;
   type: "added" | "modified" | "deleted";
   id: string;
   value: CloudRecord;

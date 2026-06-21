@@ -280,12 +280,32 @@ describe("BabyClient", () => {
   });
 
   it("emits polling changes and stops when aborted", async () => {
-    const { baby, activityRepo } = configuredBaby();
+    const { baby, client, activityRepo } = configuredBaby();
     activityRepo.items = [activity({ uid: "a" })];
+    (baby as any).acceptedInvites = repo([{ babyUid: "baby", userUid: "caregiver" }]);
+    (baby as any).pendingInvites = repo([{ babyUid: "baby", userEmailMD5: "hash", userEmail: "care@example.com" }]);
+    (baby as any).fileMetadata = vi.fn((category: string) => repo(category === "moments"
+      ? [{ itemUid: "moment", babyUid: "baby", fileName: "photo.jpg" }]
+      : []));
+    (client as any).firestore.get = vi.fn(async (path: string) => ({ data: {
+      uid: path.endsWith("caregiver") ? "caregiver" : "user",
+      displayName: path.endsWith("caregiver") ? "Caregiver" : "Parent",
+    } }));
+    (client as any).firestore.list = vi.fn(async (path: string) => path.includes("/purchases")
+      ? [{ id: "premium", path: `${path}/premium`, data: { userUid: path.includes("caregiver") ? "caregiver" : "user", productId: "premium" } }]
+      : []);
     const controller = new AbortController();
     const iterator = baby.watch({ intervalMillis: 1, signal: controller.signal });
     const first = await iterator.next();
-    expect(first.value).toEqual(expect.arrayContaining([expect.objectContaining({ collection: "dailyActions", id: "a", type: "added" })]));
+    expect(first.value).toEqual(expect.arrayContaining([
+      expect.objectContaining({ collection: "baby", id: "baby", type: "added" }),
+      expect.objectContaining({ collection: "dailyActions", id: "a", type: "added" }),
+      expect.objectContaining({ collection: "momentsFiles", id: "moment", type: "added" }),
+      expect.objectContaining({ collection: "acceptedInvites", id: "caregiver", type: "added" }),
+      expect.objectContaining({ collection: "pendingInvites", id: "hash", type: "added" }),
+      expect.objectContaining({ collection: "caregivers", id: "caregiver", type: "added" }),
+      expect.objectContaining({ collection: "caregiversPurchases", id: "caregiver:premium", type: "added" }),
+    ]));
     controller.abort();
     await expect(iterator.next()).resolves.toMatchObject({ done: true });
   });
@@ -316,6 +336,8 @@ function configuredBaby() {
   (baby as any).teething = repo([]);
   (baby as any).reminders = repo([]);
   (baby as any).settings = repo([]);
+  (baby as any).acceptedInvites = repo([]);
+  (baby as any).pendingInvites = repo([]);
   (baby as any).fileMetadata = vi.fn(() => repo([]));
   return { baby, client, activityRepo, growthRepo };
 }

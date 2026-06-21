@@ -12,7 +12,7 @@ Unofficial, typed JavaScript SDK for accessing a user's Baby Daybook data throug
 - Local activity and daily-note search matching the app's core filters.
 - CDC, WHO, and CDC Down syndrome growth percentile calculations using the app's bundled LMS reference data.
 - Baby Daybook's 42 bundled sleep schedules, corrected-age handling, age buckets, transition options, and nap-count selection.
-- Full JSON backups, restore, activity CSV/PDF exports, activity summaries, and polling-based change streams.
+- Full JSON backups, restore, activity CSV/PDF exports, activity summaries, and polling change streams covering all 18 native sync categories.
 - PDF exports matching the app's daily-list, growth, and timeline report modes.
 - Typed statistics for counts, durations, amounts, units, volumes, reactions, temperatures, hours, groups, and day/night sleep.
 - App-compatible reminder scheduling for one-time, activity-relative, day-interval, and weekday reminders, including DND and dismissal handling.
