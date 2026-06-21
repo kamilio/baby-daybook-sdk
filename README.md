@@ -130,6 +130,12 @@ The command opens a temporary Chrome, Edge, or Chromium profile, lets Apple hand
 
 An Apple app-specific password is not interchangeable with a Baby Daybook password and will not work with Firebase email/password authentication. The password must be linked after a successful Apple session, as the command does. To restore the saved session later:
 
+```bash
+npm run baby-daybook:check-session
+```
+
+This health check refreshes and safely re-persists the rotating session when needed, verifies that Firebase and the active SDK session identify the same account, reports whether email/password is linked, and prints only the number of accessible babies. Pass `--auth-file path` after `--` when using a non-default session file.
+
 ```ts
 import { readFile } from "node:fs/promises";
 import { BabyDaybookClient } from "baby-daybook-sdk";
