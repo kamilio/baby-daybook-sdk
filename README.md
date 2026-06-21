@@ -100,10 +100,23 @@ Last-activity queries reproduce the app's one-minute future-entry grace window. 
 Primary caregivers can delete custom activity types with the same cascade used by the Android app:
 
 ```ts
-await baby.deleteActivityType(customActivityTypeUid);
+const customType = await baby.createActivityType({
+  title: "Outdoor time",
+  hasDuration: true,
+});
+
+const stroller = await baby.createGroup({
+  title: "Stroller",
+  daType: customType.uid,
+});
+
+console.log(await baby.listGroups(customType.uid));
+await baby.deleteActivityType(customType.uid);
 ```
 
-This updates both activity-type configuration records, then tombstones matching reminders, groups, activities, and the custom type in native order. Built-in activity types cannot be deleted.
+New custom types use the app's `pen_ink` icon, disabled optional fields, and one of its exact 80 hexadecimal color strings unless overridden. Group names are unique case-insensitively within each activity type and list in the app's activity-type/title order. Deleting a group tombstones only that group, matching the app.
+
+Deleting a custom type updates both activity-type configuration records, then tombstones matching reminders, groups, activities, and the custom type in native order. Built-in activity types cannot be deleted.
 
 All direct collection repositories provide `list`, `get`, `save`, `softDelete`, and `hardDelete`. Prefer `softDelete` because the mobile app uses tombstones to synchronize deletions.
 

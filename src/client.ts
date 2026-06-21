@@ -8,8 +8,9 @@ import {
   type ActivityAmount,
   type LastActivityOptions,
 } from "./activity-queries.js";
+import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
 import { AuthSession, BabyDaybookAuth, type AuthOptions, type OAuthCredential } from "./auth.js";
-import { BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
+import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaytimeRange, isBabyDaytimeRangeValid, parseBabyDaytimeRange } from "./daytime-range.js";
 import { FirestoreClient } from "./firestore.js";
 import { CallableFunctionsClient, FamilyClient } from "./functions.js";
@@ -51,6 +52,8 @@ import type {
   BabySetting,
   ChangeEvent,
   CloudRecord,
+  CreateActivityGroupInput,
+  CreateActivityTypeInput,
   DailyAction,
   DailyNote,
   FileMetadata,
@@ -279,6 +282,33 @@ export class BabyClient {
     return this.#saveSingletonSetting(BABY_SETTING_TYPES.daTypesConfig, serializeDaTypesConfig(daTypes));
   }
 
+  createActivityType(input: CreateActivityTypeInput): Promise<ActivityType> {
+    const color = input.color ?? BABY_DAYBOOK_ACTIVITY_TYPE_COLORS[Math.floor(Math.random() * BABY_DAYBOOK_ACTIVITY_TYPE_COLORS.length)]!;
+    return this.saveActivityType({
+      category: "",
+      hasAmount: false,
+      hasDuration: false,
+      hasReaction: false,
+      icon: "pen_ink",
+      ...input,
+      color,
+      uid: input.uid ?? crypto.randomUUID(),
+      userUid: this.client.session.userId,
+      babyUid: this.babyUid,
+    });
+  }
+
+  async saveActivityType(activityType: ActivityType): Promise<ActivityType> {
+    if (!activityType.title.trim()) throw new RangeError("Activity type title must not be empty");
+    const current = await this.activityTypes.get(activityType.uid);
+    return this.activityTypes.save({
+      ...activityType,
+      userUid: current?.userUid ?? activityType.userUid,
+      babyUid: this.babyUid,
+      updatedMillis: Date.now(),
+    });
+  }
+
   async deleteActivityType(uid: string): Promise<void> {
     if (!uid) throw new RangeError("Activity type must not be empty");
     if ((BUILT_IN_ACTIVITY_TYPES as readonly string[]).includes(uid)) {
@@ -308,6 +338,47 @@ export class BabyClient {
     await this.#softDeleteAll(this.groups, groups.filter((group) => group.daType === uid));
     await this.#softDeleteAll(this.activities, activities.filter((activity) => activity.type === uid));
     if (activityType && !activityType.deleted) await this.activityTypes.softDelete(uid);
+  }
+
+  async listGroups(daType?: string): Promise<ActivityGroup[]> {
+    const groups = sortActivityGroups(await this.groups.list());
+    return daType === undefined ? groups : groups.filter((group) => group.daType === daType);
+  }
+
+  async hasGroupWithSameName(daType: string, title: string, excludingUid?: string): Promise<boolean> {
+    return hasActivityGroupWithSameName(await this.groups.list(), daType, title, excludingUid);
+  }
+
+  createGroup(input: CreateActivityGroupInput): Promise<ActivityGroup> {
+    return this.saveGroup({
+      description: "",
+      ...input,
+      uid: input.uid ?? crypto.randomUUID(),
+      userUid: this.client.session.userId,
+      babyUid: this.babyUid,
+    });
+  }
+
+  async saveGroup(group: ActivityGroup): Promise<ActivityGroup> {
+    if (!group.title.trim()) throw new RangeError("Group title must not be empty");
+    if (!group.daType) throw new RangeError("Group activity type must not be empty");
+    const groups = await this.groups.list();
+    if (hasActivityGroupWithSameName(groups, group.daType, group.title, group.uid)) {
+      throw new Error("A group with this name already exists for the activity type.");
+    }
+    const current = groups.find((item) => item.uid === group.uid);
+    return this.groups.save({
+      ...group,
+      userUid: current?.userUid ?? group.userUid,
+      babyUid: this.babyUid,
+      updatedMillis: Date.now(),
+    });
+  }
+
+  async deleteGroup(uid: string): Promise<void> {
+    if (!uid) throw new RangeError("Group must not be empty");
+    const group = await this.groups.get(uid);
+    if (group && !group.deleted) await this.groups.softDelete(uid);
   }
 
   async save(update: Partial<Baby>): Promise<Baby> {

@@ -81,13 +81,17 @@ export interface BabyDataRecord extends CloudRecord {
 
 export interface ActivityType extends BabyDataRecord {
   title: string;
-  color?: number;
+  color?: string;
   icon?: string;
   category?: string;
   hasDuration?: boolean;
   hasAmount?: boolean;
   hasReaction?: boolean;
 }
+
+export type CreateActivityTypeInput = Omit<ActivityType, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted"> & {
+  uid?: string;
+};
 
 export interface DailyAction extends BabyDataRecord {
   type: string;
@@ -116,6 +120,11 @@ export interface ActivityGroup extends BabyDataRecord {
   description?: string;
   daType?: string;
 }
+
+export type CreateActivityGroupInput = Omit<ActivityGroup, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted" | "daType"> & {
+  daType: string;
+  uid?: string;
+};
 
 export interface GrowthEntry extends BabyDataRecord {
   dateMillis: number;

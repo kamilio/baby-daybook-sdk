@@ -8,10 +8,11 @@ export {
   getLastAmountForGroup,
 } from "./activity-queries.js";
 export type { ActivityAmount, LastActivityOptions } from "./activity-queries.js";
+export { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
 export { AuthSession, BabyDaybookAuth } from "./auth.js";
 export type { AuthOptions, FirebaseAccount, FirebaseProviderInfo, OAuthCredential } from "./auth.js";
 export { BabyDaybookClient, BabyClient } from "./client.js";
-export { BABY_DATA_COLLECTIONS, BABY_DAYBOOK_CONFIG, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
+export { BABY_DATA_COLLECTIONS, BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BABY_DAYBOOK_CONFIG, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 export {
   BABY_DAYTIME_RANGE_BOUNDS,
   DEFAULT_BABY_DAYTIME_RANGE,

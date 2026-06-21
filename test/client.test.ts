@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
+import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, AuthSession, BabyClient, BabyDaybookClient } from "../src/index.js";
 import type { ActivityGroup, ActivityType, Baby, BabySetting, DailyAction, GrowthEntry, Reminder } from "../src/index.js";
 import { mockFetch } from "./helpers.js";
 
@@ -140,6 +140,59 @@ describe("BabyClient", () => {
 
     (client as any).getBaby = vi.fn(async () => ({ uid: "baby", userUid: "owner", name: "Baby" }));
     await expect(baby.deleteActivityType("custom")).rejects.toThrow("Only primary caregiver can delete activity type.");
+  });
+
+  it("creates native-compatible activity types", async () => {
+    const { baby } = configuredBaby();
+    const activityTypes = repo<ActivityType>([]);
+    (baby as any).activityTypes = activityTypes;
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+
+    const created = await baby.createActivityType({ uid: "custom", title: "Custom" });
+
+    expect(created).toMatchObject({
+      uid: "custom",
+      userUid: "user",
+      babyUid: "baby",
+      title: "Custom",
+      icon: "pen_ink",
+      color: BABY_DAYBOOK_ACTIVITY_TYPE_COLORS[40],
+      category: "",
+      hasAmount: false,
+      hasDuration: false,
+      hasReaction: false,
+      updatedMillis: expect.any(Number),
+    });
+    expect(BABY_DAYBOOK_ACTIVITY_TYPE_COLORS).toHaveLength(80);
+    random.mockRestore();
+    await expect(baby.createActivityType({ title: "  " })).rejects.toThrow("Activity type title must not be empty");
+  });
+
+  it("creates, orders, validates, and deletes groups like the native app", async () => {
+    const { baby } = configuredBaby();
+    const groups = repo<ActivityGroup>([
+      { uid: "sleep", userUid: "user", babyUid: "baby", title: "Night", daType: "sleeping" },
+      { uid: "formula", userUid: "user", babyUid: "baby", title: "Formula", daType: "bottle" },
+    ]);
+    (baby as any).groups = groups;
+
+    await expect(baby.listGroups()).resolves.toEqual([
+      expect.objectContaining({ uid: "formula" }),
+      expect.objectContaining({ uid: "sleep" }),
+    ]);
+    await expect(baby.listGroups("bottle")).resolves.toEqual([expect.objectContaining({ uid: "formula" })]);
+    await expect(baby.createGroup({ uid: "milk", title: "Milk", daType: "bottle" })).resolves.toMatchObject({
+      uid: "milk",
+      description: "",
+      userUid: "user",
+      babyUid: "baby",
+      updatedMillis: expect.any(Number),
+    });
+    await expect(baby.createGroup({ title: "FORMULA", daType: "bottle" })).rejects.toThrow("already exists");
+    await expect(baby.hasGroupWithSameName("bottle", "formula", "formula")).resolves.toBe(false);
+    await expect(baby.deleteGroup("formula")).resolves.toBeUndefined();
+    expect(groups.items.find((group) => group.uid === "formula")).toMatchObject({ deleted: true });
+    await expect(baby.deleteGroup("missing")).resolves.toBeUndefined();
   });
 
   it("manages attachments, summaries, CSV, and backups", async () => {
