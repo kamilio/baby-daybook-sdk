@@ -36,8 +36,8 @@ describe("FirestoreClient", () => {
   it("lists all pages and filters soft-deleted records", async () => {
     const fetch = mockFetch(
       (url) => {
-        expect(url).not.toContain("babyData%2FbabyUid_b");
-        expect(url).toContain("babyData/babyUid_b/dailyActions");
+        expect(url).not.toContain("babyData%2Fb");
+        expect(url).toContain("babyData/b/dailyActions");
         return jsonResponse({ documents: [wire("a", { uid: "a" }), wire("b", { uid: "b", deleted: true })], nextPageToken: "next" });
       },
       (url) => {
@@ -45,7 +45,7 @@ describe("FirestoreClient", () => {
         return jsonResponse({ documents: [wire("c", { uid: "c" })] });
       },
     );
-    const records = await client(fetch).list<{ uid: string; deleted?: boolean }>("babyData/babyUid_b/dailyActions");
+    const records = await client(fetch).list<{ uid: string; deleted?: boolean }>("babyData/b/dailyActions");
     expect(records.map((record) => record.id)).toEqual(["a", "c"]);
   });
 

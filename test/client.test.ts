@@ -32,7 +32,7 @@ describe("BabyDaybookClient", () => {
     const babyWrites = firestore.setMany.mock.calls[0]![0];
     const initializationWrites = firestore.setMany.mock.calls[1]![0];
     expect(babyWrites).toHaveLength(1);
-    expect(babyWrites[0]).toMatchObject({ path: "babyData/babyUid_new", data: { uid: "new", userUid: "user", name: "New" } });
+    expect(babyWrites[0]).toMatchObject({ path: "babyData/new", data: { uid: "new", userUid: "user", name: "New" } });
     expect(initializationWrites).toHaveLength(59);
     expect(initializationWrites.filter((write: { path: string }) => write.path.includes("/daTypes/"))).toHaveLength(20);
     expect(initializationWrites.find((write: { path: string }) => write.path.endsWith("/daTypes/food"))).toMatchObject({
@@ -99,7 +99,7 @@ describe("BabyDaybookClient", () => {
 
     await expect(client.createBaby({ uid: "failed-defaults", name: "Failed Defaults" })).rejects.toBe(failure);
     expect(setMany).toHaveBeenCalledTimes(2);
-    expect(deleteDocument).toHaveBeenCalledWith("babyData/babyUid_failed-defaults");
+    expect(deleteDocument).toHaveBeenCalledWith("babyData/failed-defaults");
   });
 });
 
@@ -413,7 +413,7 @@ describe("BabyClient", () => {
 
     expect(JSON.parse(settings.items[0]!.params ?? "{}")).toEqual({ daTypesConfig: "bottle,sleeping" });
     expect((client.firestore.set as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
-      "babyData/babyUid_baby",
+      "babyData/baby",
       expect.objectContaining({ daTypesConfig: "bottle,sleeping" }),
       { merge: true },
     );
@@ -691,7 +691,7 @@ describe("BabyClient", () => {
     expect(activityRepo.save).toHaveBeenCalledTimes(1);
     expect(growthRepo.save).toHaveBeenCalledTimes(1);
     expect((client as any).firestore.set).toHaveBeenCalledWith(
-      expect.stringContaining("babyUid_baby"),
+      expect.stringContaining("babyData/baby"),
       expect.objectContaining({ convertUnits: true, updatedMillis: 1_000, svt: 0 }),
       { merge: true },
     );
@@ -779,7 +779,7 @@ describe("BabyClient", () => {
       svt: 0,
     });
     expect((client as any).firestore.set).toHaveBeenCalledWith(
-      "babyData/babyUid_baby",
+      "babyData/baby",
       expect.objectContaining({ updatedMillis: now, svt: 0 }),
       { merge: true },
     );
