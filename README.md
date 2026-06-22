@@ -49,12 +49,13 @@ baby-daybook --help
 
 ## CLI
 
-The CLI uses the persisted rotating refresh-token session at `~/.config/baby-daybook/auth.json` by default. Create it with `npm run baby-daybook:link-apple`, or authenticate through environment variables:
+The CLI uses the persisted rotating refresh-token session at `~/.config/baby-daybook/auth.json` by default. Create or refresh it with automatic Apple login, or authenticate through environment variables:
 
 ```bash
 export BABY_DAYBOOK_EMAIL="parent@example.com"
 export BABY_DAYBOOK_PASSWORD="your-linked-password"
 
+baby-daybook login apple
 baby-daybook session status
 baby-daybook babies list
 baby-daybook activities list BABY_UID
@@ -64,6 +65,8 @@ baby-daybook notes set BABY_UID "Slept well"
 baby-daybook sleep predict BABY_UID
 baby-daybook statistics sleep BABY_UID --interval last7Days
 ```
+
+`baby-daybook login apple` opens a temporary Chrome, Edge, or Chromium profile and captures Baby Daybook's native callback automatically. It never asks you to paste the callback. Use `--browser`, `--auth-file`, or `--timeout-minutes` to override the browser executable, session location, or 30-minute timeout. The login command requires Node.js 22 or newer; the remaining SDK, CLI, and MCP features support Node.js 20 or newer.
 
 Use `BABY_DAYBOOK_REFRESH_TOKEN` for an explicit refresh token or `BABY_DAYBOOK_AUTH_FILE` for another session path. Email and password must always be provided together. A successful token rotation is atomically persisted in the versioned session format with directory mode `0700` and file mode `0600`.
 

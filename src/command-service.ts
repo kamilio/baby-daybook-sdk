@@ -57,6 +57,16 @@ export class DefaultBabyDaybookCommandService implements BabyDaybookCommandServi
   }
 }
 
+export async function persistBabyDaybookSession(authFile: string, session: AuthSessionSnapshot): Promise<void> {
+  if (!session.refreshToken) throw new Error("Firebase did not return a refresh token; persistent CLI login is unavailable");
+  await writeStoredSession(authFile, {
+    userId: session.userId,
+    email: session.email,
+    displayName: session.displayName,
+    refreshToken: session.refreshToken,
+  });
+}
+
 export function defaultBabyDaybookAuthFile(): string {
   return path.join(os.homedir(), ".config", "baby-daybook", "auth.json");
 }
