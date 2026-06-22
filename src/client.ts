@@ -227,7 +227,7 @@ export class BabyDaybookClient {
 
   async getBaby(babyUid: string): Promise<Baby | undefined> {
     const document = await this.firestore.get<Baby>(paths.baby(babyUid));
-    return document ? { ...document.data, uid: document.data.uid ?? babyUid } : undefined;
+    return document ? { ...document.data, uid: document.data.uid ?? babyUid.replace(/^babyUid_/, "") } : undefined;
   }
 
   async listGrowthComparisonBabies(activeBabyUid: string, options: ListOptions = {}): Promise<Baby[]> {

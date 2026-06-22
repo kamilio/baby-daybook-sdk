@@ -111,6 +111,7 @@ describe("service clients", () => {
     );
     const storage = new FirebaseStorageClient(session(fetch));
     expect(storage.attachmentThumbnailPath("moments", "b", "m", "photo.jpg")).toBe("files/moments/babyUid_b/m/thumb_photo.jpg");
+    expect(storage.attachmentPath("moments", "babyUid_b", "m", "photo.jpg")).toBe("files/moments/babyUid_b/m/photo.jpg");
     await expect(storage.downloadAttachment("moments", "b", "m", "photo.jpg", true)).resolves.toEqual(new Uint8Array([4, 5]));
     await expect(storage.deleteAttachment("moments", "b", "m", "thumb_photo.jpg")).resolves.toBeUndefined();
   });

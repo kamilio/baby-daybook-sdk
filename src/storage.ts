@@ -1,6 +1,7 @@
 import { BabyDaybookApiError } from "./errors.js";
 import type { AuthSession } from "./auth.js";
 import type { AttachmentCategory } from "./types.js";
+import { babyDocumentId } from "./paths.js";
 
 export class FirebaseStorageClient {
   readonly session: AuthSession;
@@ -10,7 +11,7 @@ export class FirebaseStorageClient {
   }
 
   attachmentPath(category: AttachmentCategory, babyUid: string, itemUid: string, fileName: string): string {
-    return `files/${category}/babyUid_${babyUid}/${itemUid}/${fileName}`;
+    return `files/${category}/${babyDocumentId(babyUid)}/${itemUid}/${fileName}`;
   }
 
   attachmentThumbnailPath(category: AttachmentCategory, babyUid: string, itemUid: string, fileName: string): string {
