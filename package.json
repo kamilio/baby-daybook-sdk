@@ -1,10 +1,18 @@
 {
-  "name": "baby-daybook-sdk",
+  "name": "@kamilio/baby-daybook-sdk",
   "version": "0.1.0",
   "description": "Unofficial JavaScript SDK, Toolcraft MCP server, and CLI for Baby Daybook",
   "author": {
     "name": "Kamil Jopek",
     "email": "kjopek@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/kamilio/baby-daybook-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/kamilio/baby-daybook-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kamilio/baby-daybook-sdk.git"
   },
   "type": "module",
   "main": "./dist/index.cjs",
@@ -64,6 +72,9 @@
     "toolcraft"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },

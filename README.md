@@ -37,7 +37,7 @@ The default Firebase configuration includes the Android package name and release
 ## Install
 
 ```bash
-npm install baby-daybook-sdk
+npm install @kamilio/baby-daybook-sdk
 ```
 
 To install the CLI globally from this repository's current source:

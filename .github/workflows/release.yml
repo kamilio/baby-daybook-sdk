@@ -1,0 +1,42 @@
+name: Publish npm package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 24.14.0
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@^11.15.0
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Select next patch version
+        run: |
+          PACKAGE_NAME="$(node -p "require('./package.json').name")"
+          REMOTE_VERSION="$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo 0.0.0)"
+          node -e 'if (process.argv[1].includes("-")) process.exit(1)' "$REMOTE_VERSION"
+          npm version --no-git-tag-version --allow-same-version "$REMOTE_VERSION"
+          npm version --no-git-tag-version patch
+          node -e 'if (require("./package.json").version.includes("-")) process.exit(1)'
+      - run: npm publish --provenance --access public --tag latest
