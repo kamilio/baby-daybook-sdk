@@ -4,7 +4,7 @@ import path from "node:path";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-for (const name of ["cli.js", "toolcraft.js", "toolcraft-http.js"]) {
+for (const name of ["cli.js", "toolcraft.js", "toolcraft-http.js", "oauth-server.js"]) {
   await canonicalize(path.join(packageRoot, "dist", name));
 }
 

@@ -29,6 +29,14 @@ export default defineConfig([
     target: "node20",
   },
   {
+    entry: { "oauth-server": "src/oauth-server.ts" },
+    format: ["esm"],
+    sourcemap: true,
+    splitting: false,
+    noExternal: [/^toolcraft(?:\/|$)/],
+    target: "node24",
+  },
+  {
     entry: { cli: "src/cli.ts" },
     format: ["esm"],
     banner: { js: "#!/usr/bin/env node" },

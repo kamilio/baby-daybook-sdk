@@ -78,7 +78,6 @@ describe("Baby Daybook Toolcraft commands", () => {
   it("executes every declared command handler through the SDK", async () => {
     const snapshot = await createCLICommandTreeSnapshot(babyDaybookCommands, { casing: "kebab" });
     const sdk = createBabyDaybookToolcraftSDK({
-      approvals: true,
       services: { babyDaybook: commandService(universalClient()) },
     }) as Record<string, unknown>;
     for (const command of commands(snapshot.root)) {

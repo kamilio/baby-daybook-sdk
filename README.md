@@ -141,6 +141,24 @@ console.log(handle.url);
 
 The HTTP surface requires Node.js 20 or newer. Toolcraft owns the HTTP adapter and bundles `tiny-http-mcp-server`; consumers do not install or wire the transport separately.
 
+### Public OAuth MCP service
+
+The repository also deploys the same tool tree as a public, multi-user OAuth MCP service:
+
+```text
+https://baby-daybook-kjopek.fly.dev/mcp
+```
+
+Connect that URL from an OAuth-capable MCP client. The client discovers protected-resource and authorization-server metadata, dynamically registers, and starts authorization code with PKCE. The hosted interaction offers Sign in with Apple using a one-time `intent://callback…` paste-back step and an email/password option for accounts that already have password sign-in enabled. Each OAuth subject receives a separate encrypted Baby Daybook refresh token; there is no shared account, static service token, or anonymous fallback.
+
+Maintainers deploy the bundled Node.js 24 OAuth server with:
+
+```bash
+npm run baby-daybook:deploy
+```
+
+The deployment uses Toolcraft's supported authorization server, SQLite on a persistent Fly volume, AES-256-GCM session encryption, ES256 access tokens, PKCE S256, exact redirect URIs, token rotation with replay revocation, secure interaction cookies, request limits, and rate limits. See the repository's `BABY_DAYBOOK_OAUTH.md` for the full contract and secret setup.
+
 ## Toolcraft SDK
 
 The regular package root remains the dual ESM/CommonJS low-level typed Baby Daybook SDK. The ESM-only `baby-daybook-sdk/toolcraft` export provides the shared command tree and generated in-process SDK:
