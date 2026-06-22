@@ -23,7 +23,8 @@ describe("Baby Daybook OAuth app", () => {
     const databasePath = path.join(directory, "oauth.sqlite");
     const encryptionKey = randomBytes(32);
     let identity = 0;
-    const firebaseFetch = vi.fn(async () => {
+    const firebaseFetch = vi.fn(async (_input, init) => {
+      if (String(init?.body).includes("stale-code")) return jsonResponse({ error: { message: "INVALID_IDP_RESPONSE" } }, 400);
       identity += 1;
       return jsonResponse({
         idToken: `firebase-id-${identity}`,
@@ -46,13 +47,13 @@ describe("Baby Daybook OAuth app", () => {
     expect(unauthorized.status).toBe(401);
     expect(unauthorized.headers.get("www-authenticate")).toContain(`${baseUrl}/.well-known/oauth-protected-resource/mcp`);
 
-    const first = await authorizeApple(baseUrl, "firebase-user-1");
+    const first = await authorizeApple(baseUrl, "firebase-user-1", true);
     const second = await authorizeApple(baseUrl, "firebase-user-2");
     expect(first.token.sub).not.toBe(second.token.sub);
     expect(first.token.aud).toBe(`${baseUrl}/mcp`);
     expect(first.response.scope).toContain("baby-daybook");
     expect(first.response.refresh_token).toBeTypeOf("string");
-    expect(firebaseFetch).toHaveBeenCalledTimes(2);
+    expect(firebaseFetch).toHaveBeenCalledTimes(3);
 
     const refreshed = await tokenRequest(baseUrl, {
       grant_type: "refresh_token",
@@ -103,7 +104,7 @@ interface TokenResponse {
   scope: string;
 }
 
-async function authorizeApple(baseUrl: string, expectedFirebaseUser: string): Promise<{
+async function authorizeApple(baseUrl: string, expectedFirebaseUser: string, retryRejectedIntent = false): Promise<{
   clientId: string;
   response: TokenResponse;
   token: Record<string, unknown>;
@@ -131,24 +132,26 @@ async function authorizeApple(baseUrl: string, expectedFirebaseUser: string): Pr
   }).toString();
   const pageResponse = await fetch(authorize);
   expect(pageResponse.status).toBe(200);
-  const page = await pageResponse.text();
-  const cookie = pageResponse.headers.getSetCookie()[0]?.split(";", 1)[0];
-  const csrf = hiddenValue(page, "csrf");
-  const transactionId = hiddenValue(page, "transaction_id");
-  const appleState = hiddenValue(page, "state");
-  const callback = `intent://callback?state=${encodeURIComponent(appleState)}&code=apple-code&id_token=apple-id#Intent;package=com.drillyapps.babydaybook;scheme=signinwithapple;end`;
-  const completion = await fetch(`${baseUrl}/interaction/apple`, {
-    method: "POST",
-    redirect: "manual",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      cookie: cookie ?? "",
-      origin: baseUrl,
-    },
-    body: new URLSearchParams({ csrf, transaction_id: transactionId, state: appleState, callback }),
-  });
-  expect(completion.status).toBe(303);
-  const callbackUrl = new URL(completion.headers.get("location") ?? "");
+  let page = await pageResponse.text();
+  let cookie = pageResponse.headers.getSetCookie()[0]?.split(";", 1)[0];
+  let csrf = hiddenValue(page, "csrf");
+  let transactionId = hiddenValue(page, "transaction_id");
+  let appleState = hiddenValue(page, "state");
+  if (retryRejectedIntent) {
+    const rejected = await submitAppleIntent(baseUrl, { cookie, csrf, transactionId, appleState, code: "stale-code" });
+    expect(rejected.status).toBe(200);
+    page = await rejected.text();
+    expect(page).toContain("did not accept this one-time Apple callback");
+    cookie = rejected.headers.getSetCookie()[0]?.split(";", 1)[0];
+    csrf = hiddenValue(page, "csrf");
+    transactionId = hiddenValue(page, "transaction_id");
+    appleState = hiddenValue(page, "state");
+  }
+  const completion = await submitAppleIntent(baseUrl, { cookie, csrf, transactionId, appleState, code: "apple-code" });
+  expect(completion.status).toBe(200);
+  const completionPage = await completion.text();
+  expect(completionPage).toContain("Authentication succeeded");
+  const callbackUrl = new URL(linkHref(completionPage, "Return to MCP client"));
   const code = callbackUrl.searchParams.get("code");
   expect(code).toBeTruthy();
   const tokenResponse = await tokenRequest(baseUrl, {
@@ -166,6 +169,31 @@ async function authorizeApple(baseUrl: string, expectedFirebaseUser: string): Pr
   return { clientId, response, token };
 }
 
+function submitAppleIntent(baseUrl: string, input: {
+  cookie?: string;
+  csrf: string;
+  transactionId: string;
+  appleState: string;
+  code: string;
+}): Promise<Response> {
+  const callback = `intent://callback?state=${encodeURIComponent(input.appleState)}&code=${encodeURIComponent(input.code)}&id_token=apple-id#Intent;package=com.drillyapps.babydaybook;scheme=signinwithapple;end`;
+  return fetch(`${baseUrl}/interaction/apple`, {
+    method: "POST",
+    redirect: "manual",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      cookie: input.cookie ?? "",
+      origin: baseUrl,
+    },
+    body: new URLSearchParams({
+      csrf: input.csrf,
+      transaction_id: input.transactionId,
+      state: input.appleState,
+      callback,
+    }),
+  });
+}
+
 function tokenRequest(baseUrl: string, values: Record<string, string>): Promise<Response> {
   return fetch(`${baseUrl}/token`, {
     method: "POST",
@@ -178,6 +206,12 @@ function hiddenValue(page: string, name: string): string {
   const match = page.match(new RegExp(`<input type="hidden" name="${name}" value="([^"]+)">`));
   if (!match?.[1]) throw new Error(`Missing ${name}`);
   return match[1];
+}
+
+function linkHref(page: string, label: string): string {
+  const match = page.match(new RegExp(`<a class="button" href="([^"]+)">${label}</a>`));
+  if (!match?.[1]) throw new Error(`Missing ${label} link`);
+  return match[1].replaceAll("&amp;", "&");
 }
 
 async function availablePort(): Promise<number> {

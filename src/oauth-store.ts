@@ -107,6 +107,10 @@ export class BabyDaybookOAuthDatabase implements AuthorizationServerStore {
     return this.#takeRecord<AuthorizationTransactionRecord>(RECORD_TRANSACTION, transactionId);
   }
 
+  getAuthorizationTransaction(transactionId: string): AuthorizationTransactionRecord | undefined {
+    return this.#getRecord<AuthorizationTransactionRecord>(RECORD_TRANSACTION, transactionId);
+  }
+
   async putAuthorizationCode(code: AuthorizationCodeRecord): Promise<void> {
     this.#putRecord(RECORD_CODE, code.tokenHash, code);
   }

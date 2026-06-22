@@ -82,7 +82,7 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
     store: database,
     interaction,
     accessTokenTtlSeconds: 300,
-    authorizationCodeTtlSeconds: 60,
+    authorizationCodeTtlSeconds: 300,
     authorizationTransactionTtlSeconds: 600,
     refreshTokenTtlSeconds: 30 * 24 * 60 * 60,
     maxRequestBodyBytes: 64 * 1024,
@@ -143,7 +143,17 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
         return;
       }
       if (pathname === "/interaction/apple" && request.method === "POST") {
-        await completeAppleAuthorization(request, response, { baseUrl, database, authorizationServer, fetch, encryptionKey: options.encryptionKey });
+        const context = { baseUrl, database, authorizationServer, fetch, encryptionKey: options.encryptionKey };
+        try {
+          await completeAppleAuthorization(request, response, context);
+        } catch (error) {
+          if (error instanceof AuthorizationInteractionError && error.transactionId
+            && await restartAuthorization(response, context, error.transactionId, error.userMessage)) {
+            console.warn("Baby Daybook OAuth interaction retry", { pathname, stage: error.stage });
+            return;
+          }
+          throw error;
+        }
         return;
       }
       if (pathname === "/interaction/email" && request.method === "POST") {
@@ -161,7 +171,11 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
       sendJson(response, 404, { error: "not_found" });
     } catch (error) {
       const pathname = new URL(request.url ?? "/", baseUrl).pathname;
-      console.error("Baby Daybook OAuth request failed", { pathname, error: error instanceof Error ? error.name : "UnknownError" });
+      console.error("Baby Daybook OAuth request failed", {
+        pathname,
+        stage: error instanceof AuthorizationInteractionError ? error.stage : "request",
+        error: error instanceof Error ? error.name : "UnknownError",
+      });
       if (!response.headersSent) sendFetchResponse(response, htmlResponse(renderErrorPage(), 400));
       else response.destroy();
     }
@@ -210,13 +224,47 @@ async function completeAppleAuthorization(
   response: ServerResponse,
   context: CompletionContext,
 ): Promise<void> {
-  const form = await readForm(request);
-  validateInteractionRequest(request, context.baseUrl, requiredFormValue(form, "csrf"));
-  const transactionId = requiredFormValue(form, "transaction_id");
-  const callback = validateAppleCallback(requiredFormValue(form, "callback"), form.get("state") ?? "");
+  let form: URLSearchParams;
+  try {
+    form = await readForm(request);
+  } catch {
+    throw new AuthorizationInteractionError("form", "The submitted form was invalid.");
+  }
+  const transactionId = form.get("transaction_id")?.trim();
+  try {
+    validateInteractionRequest(request, context.baseUrl, requiredFormValue(form, "csrf"));
+  } catch {
+    throw new AuthorizationInteractionError("csrf", "The authorization page expired. Restart the MCP connection.");
+  }
+  if (!transactionId) throw new AuthorizationInteractionError("transaction", "The authorization transaction is missing.");
+  let callback: URL;
+  try {
+    callback = validateAppleCallback(requiredFormValue(form, "callback"), form.get("state") ?? "");
+  } catch {
+    throw new AuthorizationInteractionError(
+      "callback",
+      "The Apple callback was incomplete or belonged to another attempt. Open Apple sign-in again and paste the newly generated intent.",
+      transactionId,
+    );
+  }
   const state = callback.searchParams.get("state") ?? "";
-  if (!context.database.takeInteraction(transactionId, state)) throw new Error("Authorization interaction is invalid or expired");
-  const client = await BabyDaybookClient.signInWithAppleCallback(callback, { fetch: context.fetch });
+  if (!context.database.takeInteraction(transactionId, state)) {
+    throw new AuthorizationInteractionError(
+      "state",
+      "This Apple callback was already used, expired, or belongs to another attempt. Open Apple sign-in again.",
+      transactionId,
+    );
+  }
+  let client: BabyDaybookClient;
+  try {
+    client = await BabyDaybookClient.signInWithAppleCallback(callback, { fetch: context.fetch });
+  } catch {
+    throw new AuthorizationInteractionError(
+      "firebase",
+      "Baby Daybook did not accept this one-time Apple callback. Open Apple sign-in again and paste the new intent; do not reuse the previous one.",
+      transactionId,
+    );
+  }
   await finishAuthorization(client, transactionId, response, context);
 }
 
@@ -249,12 +297,38 @@ async function finishAuthorization(
   const subject = deriveOAuthSubject(client.session.userId, context.encryptionKey);
   context.database.saveBabyDaybookRefreshToken(subject, refreshToken);
   const result = await context.authorizationServer.completeAuthorization({ transactionId, subject });
-  response.writeHead(303, {
-    location: result.redirectUrl.href,
-    "cache-control": "no-store",
-    pragma: "no-cache",
-  });
-  response.end();
+  await sendFetchResponse(response, htmlResponse(renderCompletionPage(result.redirectUrl.href)));
+}
+
+class AuthorizationInteractionError extends Error {
+  constructor(
+    readonly stage: string,
+    readonly userMessage: string,
+    readonly transactionId?: string,
+  ) {
+    super(userMessage);
+  }
+}
+
+async function restartAuthorization(
+  response: ServerResponse,
+  context: CompletionContext,
+  transactionId: string,
+  errorMessage: string,
+): Promise<boolean> {
+  const transaction = context.database.getAuthorizationTransaction(transactionId);
+  if (!transaction || transaction.expiresAt <= Date.now()) return false;
+  const security = createAuthorizationInteractionSecurity();
+  context.database.putInteraction(transaction.id, security.state, transaction.expiresAt);
+  const appleUrl = createAppleAuthorizationUrl({ state: security.state });
+  await sendFetchResponse(response, htmlResponse(renderAuthorizationPage({
+    appleUrl: appleUrl.href,
+    csrfToken: security.csrfToken,
+    transactionId: transaction.id,
+    scopes: transaction.scopes,
+    errorMessage,
+  }), 200, { "set-cookie": security.setCookie }));
+  return true;
 }
 
 class OAuthBabyDaybookCommandService implements BabyDaybookCommandService {
@@ -442,7 +516,13 @@ function htmlResponse(body: string, status = 200, headers: Record<string, string
   });
 }
 
-function renderAuthorizationPage(input: { appleUrl: string; csrfToken: string; transactionId: string; scopes: readonly string[] }): string {
+function renderAuthorizationPage(input: {
+  appleUrl: string;
+  csrfToken: string;
+  transactionId: string;
+  scopes: readonly string[];
+  errorMessage?: string;
+}): string {
   const hidden = `
     <input type="hidden" name="csrf" value="${escapeHtml(input.csrfToken)}">
     <input type="hidden" name="transaction_id" value="${escapeHtml(input.transactionId)}">
@@ -450,6 +530,7 @@ function renderAuthorizationPage(input: { appleUrl: string; csrfToken: string; t
   return page("Authorize Baby Daybook", `
     <main>
       <h1>Connect Baby Daybook</h1>
+      ${input.errorMessage ? `<p class="error" role="alert">${escapeHtml(input.errorMessage)}</p>` : ""}
       <p>Sign in to your own Baby Daybook account. Credentials are sent only to Baby Daybook and encrypted refresh credentials are stored per OAuth user.</p>
       <p class="scope">Requested access: ${escapeHtml(input.scopes.join(", ") || "Baby Daybook MCP")}</p>
       <section>
@@ -475,6 +556,19 @@ function renderAuthorizationPage(input: { appleUrl: string; csrfToken: string; t
     </main>`);
 }
 
+function renderCompletionPage(redirectUrl: string): string {
+  const escapedUrl = escapeHtml(redirectUrl);
+  return page("Baby Daybook connected", `
+    <main>
+      <h1>Baby Daybook connected</h1>
+      <section>
+        <p>Authentication succeeded. Returning to the MCP client in two seconds.</p>
+        <p>If nothing opens, make sure this browser is running on the same computer as the MCP client, then select the button below.</p>
+        <a class="button" href="${escapedUrl}">Return to MCP client</a>
+      </section>
+    </main>`, `<meta http-equiv="refresh" content="2;url=${escapedUrl}">`);
+}
+
 function renderLandingPage(resource: string): string {
   return page("Baby Daybook MCP", `<main><h1>Baby Daybook MCP</h1><p>This public MCP service uses OAuth 2.1 with PKCE. Every user signs in to a separate Baby Daybook account.</p><p>MCP endpoint: <code>${escapeHtml(resource)}</code></p></main>`);
 }
@@ -483,9 +577,9 @@ function renderErrorPage(): string {
   return page("Authorization failed", "<main><h1>Authorization failed</h1><p>The transaction was invalid, expired, or could not be completed. Restart the MCP connection to begin a fresh authorization.</p></main>");
 }
 
-function page(title: string, body: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>
-    :root{color-scheme:light dark;font-family:ui-sans-serif,system-ui,sans-serif}body{margin:0;background:#f4f1ec;color:#201d19}main{max-width:44rem;margin:3rem auto;padding:0 1.25rem}section{background:#fff;border:1px solid #d8d0c5;border-radius:1rem;padding:1.25rem;margin:1rem 0;box-shadow:0 .4rem 1.5rem #2f24140d}h1,h2{line-height:1.1}h2{font-size:1.15rem}p,li{line-height:1.55}.scope{font-size:.9rem;color:#625a50}form{display:grid;gap:.65rem;margin-top:1rem}input,textarea,button,.button{font:inherit;border-radius:.6rem}input,textarea{border:1px solid #aaa096;padding:.75rem;background:#fff;color:#201d19}textarea{min-height:8rem;resize:vertical}button,.button{display:inline-block;border:0;padding:.75rem 1rem;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;cursor:pointer}code{overflow-wrap:anywhere}@media(prefers-color-scheme:dark){body{background:#171513;color:#eee8df}section{background:#211e1a;border-color:#494139}.scope{color:#bcb2a6}input,textarea{background:#171513;color:#eee8df;border-color:#665d53}}
+function page(title: string, body: string, extraHead = ""): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${extraHead}<title>${escapeHtml(title)}</title><style>
+    :root{color-scheme:light dark;font-family:ui-sans-serif,system-ui,sans-serif}body{margin:0;background:#f4f1ec;color:#201d19}main{max-width:44rem;margin:3rem auto;padding:0 1.25rem}section{background:#fff;border:1px solid #d8d0c5;border-radius:1rem;padding:1.25rem;margin:1rem 0;box-shadow:0 .4rem 1.5rem #2f24140d}h1,h2{line-height:1.1}h2{font-size:1.15rem}p,li{line-height:1.55}.scope{font-size:.9rem;color:#625a50}.error{padding:.9rem 1rem;border:1px solid #b91c1c;border-radius:.65rem;background:#fee2e2;color:#7f1d1d;font-weight:600}form{display:grid;gap:.65rem;margin-top:1rem}input,textarea,button,.button{font:inherit;border-radius:.6rem}input,textarea{border:1px solid #aaa096;padding:.75rem;background:#fff;color:#201d19}textarea{min-height:8rem;resize:vertical}button,.button{display:inline-block;border:0;padding:.75rem 1rem;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;cursor:pointer}code{overflow-wrap:anywhere}@media(prefers-color-scheme:dark){body{background:#171513;color:#eee8df}section{background:#211e1a;border-color:#494139}.scope{color:#bcb2a6}.error{background:#451a1a;color:#fecaca;border-color:#ef4444}input,textarea{background:#171513;color:#eee8df;border-color:#665d53}}
   </style></head><body>${body}</body></html>`;
 }
 
