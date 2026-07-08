@@ -40,10 +40,10 @@ The default Firebase configuration includes the Android package name and release
 npm install @kamilio/baby-daybook-sdk
 ```
 
-To install the CLI globally from this repository's current source:
+To install the CLI globally from npm:
 
 ```bash
-npm run baby-daybook:install:global
+npm install -g @kamilio/baby-daybook-sdk
 baby-daybook --help
 ```
 
@@ -127,7 +127,7 @@ baby-daybook http --port 8080 --path /mcp --allowed-host localhost:8080
 The CLI defaults to Toolcraft's stateless mode; pass `--stateful` to create persistent sessions with random UUIDs. Use `baby-daybook http --help` for JSON responses, host/origin allowlists, request limits, session limits, concurrency, proxy handling, and timeout controls. OAuth, observability, custom session stores, request-scoped services, and the complete upstream transport options are available through the ESM-only programmatic export:
 
 ```ts
-import { runBabyDaybookHTTPMCP } from "baby-daybook-sdk/toolcraft-http";
+import { runBabyDaybookHTTPMCP } from "@kamilio/baby-daybook-sdk/toolcraft-http";
 
 const handle = await runBabyDaybookHTTPMCP({
   hostname: "127.0.0.1",
@@ -154,11 +154,7 @@ https://baby-daybook-kjopek.fly.dev/mcp
 
 Connect that URL from an OAuth-capable MCP client. The client discovers protected-resource and authorization-server metadata, dynamically registers, and starts authorization code with PKCE. The hosted interaction offers Sign in with Apple using a one-time `intent://callback…` paste-back step and an email/password option for accounts that already have password sign-in enabled. Each OAuth subject receives a separate encrypted Baby Daybook refresh token; there is no shared account, static service token, or anonymous fallback.
 
-Maintainers deploy the bundled Node.js 24 OAuth server with:
-
-```bash
-npm run baby-daybook:deploy
-```
+Maintainers deploy the bundled Node.js 24 OAuth server from this repository's `Dockerfile` using the hosting platform's reviewed release workflow.
 
 The deployment uses Toolcraft's supported authorization server, SQLite on a persistent Fly volume, AES-256-GCM session encryption, ES256 access tokens, PKCE S256, exact redirect URIs, token rotation with replay revocation, secure interaction cookies, request limits, and rate limits. See the repository's `BABY_DAYBOOK_OAUTH.md` for the full contract and secret setup.
 
@@ -167,7 +163,7 @@ The deployment uses Toolcraft's supported authorization server, SQLite on a pers
 The regular package root remains the dual ESM/CommonJS low-level typed Baby Daybook SDK. The ESM-only `baby-daybook-sdk/toolcraft` export provides the shared command tree and generated in-process SDK:
 
 ```ts
-import { createBabyDaybookToolcraftSDK } from "baby-daybook-sdk/toolcraft";
+import { createBabyDaybookToolcraftSDK } from "@kamilio/baby-daybook-sdk/toolcraft";
 
 const tools = createBabyDaybookToolcraftSDK({
   env: {
@@ -184,7 +180,7 @@ All Toolcraft commands have `cli`, `mcp`, and `sdk` scope. The adapters share on
 ## Sign in
 
 ```ts
-import { BabyDaybookClient } from "baby-daybook-sdk";
+import { BabyDaybookClient } from "@kamilio/baby-daybook-sdk";
 
 const client = await BabyDaybookClient.signInWithEmail(
   process.env.BABY_DAYBOOK_EMAIL!,
@@ -214,7 +210,7 @@ await baby.setDaytimeRange({
 The app's average sleep-range calculator is available for sleep prediction and custom reporting. It aligns crossing-midnight sleeps before averaging their local clock times:
 
 ```ts
-import { calculateAverageSleepRange } from "baby-daybook-sdk";
+import { calculateAverageSleepRange } from "@kamilio/baby-daybook-sdk";
 
 const averageNight = calculateAverageSleepRange(daytimeRange, completedSleeps, "America/Chicago");
 ```
@@ -265,7 +261,7 @@ This keeps the existing Firebase user ID, babies, and activity data, while addin
 The repository includes a one-time headed-browser command that performs this migration without asking for an Apple password in the terminal:
 
 ```bash
-npm run baby-daybook:link-apple
+baby-daybook login apple
 ```
 
 The command opens a temporary Chrome, Edge, or Chromium profile, lets Apple handle credentials and two-factor authentication, captures Baby Daybook's native direct or redirected `intent://` callback through the browser debugging protocol (including Chrome's insecure-form interstitial without requiring its confirmation button), signs into the existing Firebase user, asks which email to link, generates a 192-bit URL-safe password, and requests email verification. It stores only the rotating Firebase refresh token in `~/.config/baby-daybook/auth.json`; the directory is created with mode `0700` and the file with mode `0600`. Save the generated password in your password manager because it is displayed once and is not written to that file. Use `--email`, `--browser`, `--auth-file`, or `--timeout-minutes` to override the interactive email, browser executable, session location, or 30-minute browser timeout.
@@ -273,14 +269,14 @@ The command opens a temporary Chrome, Edge, or Chromium profile, lets Apple hand
 An Apple app-specific password is not interchangeable with a Baby Daybook password and will not work with Firebase email/password authentication. The password must be linked after a successful Apple session, as the command does. To restore the saved session later:
 
 ```bash
-npm run baby-daybook:check-session
+baby-daybook session status
 ```
 
 This health check refreshes and safely re-persists the rotating session when needed, verifies that Firebase and the active SDK session identify the same account, reports whether email/password is linked, and prints only the number of accessible babies. Pass `--auth-file path` after `--` when using a non-default session file.
 
 ```ts
 import { readFile } from "node:fs/promises";
-import { BabyDaybookClient } from "baby-daybook-sdk";
+import { BabyDaybookClient } from "@kamilio/baby-daybook-sdk";
 
 const saved = JSON.parse(await readFile(`${process.env.HOME}/.config/baby-daybook/auth.json`, "utf8"));
 const client = await BabyDaybookClient.fromRefreshToken(saved.refreshToken);
@@ -609,7 +605,7 @@ import {
   formatGrowthWeight,
   formatTemperature,
   formatVolume,
-} from "baby-daybook-sdk";
+} from "@kamilio/baby-daybook-sdk";
 
 formatTemperature(37, "fahrenheit"); // "98.6 °F"
 formatVolume(120, "fluidOunces"); // "4.06 fl oz"
@@ -738,16 +734,10 @@ for await (const changes of baby.watch({ intervalMillis: 5_000, signal: controll
 From the repository root with Node.js 24 selected:
 
 ```bash
-npm run baby-daybook:build
-npm run baby-daybook:test
-npm run typecheck --workspace baby-daybook-sdk
-npm run lint --workspace baby-daybook-sdk
+npm run build
+npm test
+npm run typecheck
+npm run lint
 ```
 
-With a persisted session, the destructive live smoke test is explicitly gated behind `--write`. It creates a uniquely identified temporary baby, exercises representative profile, activity, group, growth, moment, note, teething, reminder, setting, attachment, statistics, export, backup, caregiver-read, and polling-sync paths, then removes the Storage object, hard-deletes writable child test records, tombstones the baby like the native app, and verifies the accessible-baby count returns to its initial value:
-
-```bash
-npm run baby-daybook:smoke-live -- --write
-```
-
-Tests use mocked Firebase protocol responses and never access a real account. Live verification requires owner-provided credentials or a refresh token and should use a dedicated test baby.
+Tests use mocked Firebase protocol responses and never access a real account. The repository does not run destructive live-account checks automatically; any manual verification with owner-provided credentials should use a dedicated test baby.
