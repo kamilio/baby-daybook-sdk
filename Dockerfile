@@ -1,9 +1,9 @@
 FROM node:24.14.0-bookworm-slim AS build
 
 WORKDIR /app
-COPY packages/baby-daybook-sdk/package.json packages/baby-daybook-sdk/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
-COPY packages/baby-daybook-sdk/ ./
+COPY . ./
 RUN npm run build
 
 FROM node:24.14.0-bookworm-slim AS runtime

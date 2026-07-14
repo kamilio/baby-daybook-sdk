@@ -24,6 +24,7 @@ import type {
 import { createBabyDaybookHTTPMCPServer } from "./toolcraft-http.js";
 import type { AuthSessionSnapshot, FetchLike } from "./types.js";
 import { BabyDaybookOAuthDatabase } from "./oauth-store.js";
+import { handleGarminSync } from "./garmin-relay.js";
 
 const APPLE_CALLBACK_MAX_BYTES = 32 * 1024;
 const FORM_MAX_BYTES = APPLE_CALLBACK_MAX_BYTES + 4096;
@@ -126,6 +127,10 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
       }
       if (pathname === "/mcp") {
         await mcpServer.handleRequest(request, response);
+        return;
+      }
+      if (pathname === "/garmin/sync" && request.method === "POST") {
+        await handleGarminSync(request, response, fetch);
         return;
       }
       if ((pathname === "/.well-known/oauth-protected-resource/mcp" || pathname === "/.well-known/oauth-protected-resource")

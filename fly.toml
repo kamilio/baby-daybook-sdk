@@ -1,0 +1,45 @@
+# fly.toml app configuration file generated for baby-daybook-kjopek on 2026-07-13T20:21:44-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'baby-daybook-kjopek'
+primary_region = 'ord'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  BABY_DAYBOOK_BASE_URL = 'https://baby-daybook-kjopek.fly.dev'
+  BABY_DAYBOOK_DB_PATH = '/data/baby-daybook.sqlite'
+  NODE_ENV = 'production'
+  PORT = '8080'
+
+[[mounts]]
+  source = 'baby_daybook_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 60
+    soft_limit = 40
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '15s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
