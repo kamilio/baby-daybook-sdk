@@ -55,6 +55,17 @@ describe("FirestoreClient", () => {
     expect(records).toHaveLength(1);
   });
 
+  it("lists a single ordered page", async () => {
+    const fetch = mockFetch((url) => {
+      expect(url).toContain("pageSize=2");
+      expect(url).toContain("pageToken=cursor");
+      expect(url).toContain("orderBy=startMillis+desc");
+      return jsonResponse({ documents: [wire("a", { uid: "a" })], nextPageToken: "next" });
+    });
+    await expect(client(fetch).listPage("x", { pageSize: 2, pageToken: "cursor", orderBy: "startMillis desc" }))
+      .resolves.toMatchObject({ documents: [{ id: "a" }], nextPageToken: "next" });
+  });
+
   it("writes with a server timestamp transform and can patch without one", async () => {
     const fetch = mockFetch(
       (url, init) => {

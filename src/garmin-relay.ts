@@ -40,9 +40,11 @@ export async function handleGarminSync(
       path: `babyData/babyUid_${input.babyUid}/dailyActions/${event.id}`,
       data: buildGarminEventDocument(event, session.userId, input.babyUid, updatedMillis, bottleGroupUid),
     })));
+    const latest = await latestEventMillis(firestore, input.babyUid);
     sendJson(response, 200, {
       ok: true,
       acked: input.events.map(({ id }) => id),
+      latest,
       refreshToken: session.snapshot.refreshToken,
       userId: session.userId,
     });
@@ -57,12 +59,44 @@ export function validateSyncRequest(value: unknown): GarminSyncRequest {
   const candidate = value as Record<string, unknown>;
   const refreshToken = requiredSafeString(candidate.refreshToken, 4096, false);
   const babyUid = requiredSafeString(candidate.babyUid, 128, true);
-  if (!Array.isArray(candidate.events) || candidate.events.length < 1 || candidate.events.length > MAX_EVENTS) {
+  if (!Array.isArray(candidate.events) || candidate.events.length > MAX_EVENTS) {
     throw new GarminRelayInputError();
   }
   const events = candidate.events.map(validateEvent);
   if (new Set(events.map(({ id }) => id)).size !== events.length) throw new GarminRelayInputError();
   return { refreshToken, babyUid, events };
+}
+
+interface LatestActivity {
+  type?: string;
+  startMillis?: number;
+  pee?: number | boolean;
+  poo?: number | boolean;
+  deleted?: boolean | number;
+}
+
+export async function latestEventMillis(
+  firestore: FirestoreClient,
+  babyUid: string,
+): Promise<{ bottle: number | null; wet: number | null; dirty: number | null }> {
+  const latest: { bottle: number | null; wet: number | null; dirty: number | null } = { bottle: null, wet: null, dirty: null };
+  let pageToken: string | undefined;
+  do {
+    const page = await firestore.listPage<LatestActivity>(`babyData/babyUid_${babyUid}/dailyActions`, {
+      pageSize: 300,
+      pageToken,
+      orderBy: "startMillis desc",
+    });
+    for (const { data } of page.documents) {
+      if (!Number.isSafeInteger(data.startMillis) || data.startMillis! < 0) continue;
+      if (data.type === "bottle" && latest.bottle === null) latest.bottle = data.startMillis!;
+      if (data.type === "diaper_change" && (data.pee === 1 || data.pee === true) && latest.wet === null) latest.wet = data.startMillis!;
+      if (data.type === "diaper_change" && (data.poo === 1 || data.poo === true) && latest.dirty === null) latest.dirty = data.startMillis!;
+      if (latest.bottle !== null && latest.wet !== null && latest.dirty !== null) return latest;
+    }
+    pageToken = page.nextPageToken;
+  } while (pageToken);
+  return latest;
 }
 
 function validateEvent(value: unknown): GarminEvent {

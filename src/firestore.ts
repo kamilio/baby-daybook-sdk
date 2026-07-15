@@ -42,14 +42,27 @@ export class FirestoreClient {
     const documents: FirestoreDocument<T>[] = [];
     let pageToken: string | undefined;
     do {
-      const url = new URL(`${this.baseUrl}/${encodePath(collectionPath)}`);
-      url.searchParams.set("pageSize", String(Math.min(Math.max(options.pageSize ?? 300, 1), 1000)));
-      if (pageToken) url.searchParams.set("pageToken", pageToken);
-      const response = await this.#request<{ documents?: FirestoreWireDocument[]; nextPageToken?: string }>(url.toString());
-      documents.push(...(response.documents ?? []).map(decodeDocument<T>));
-      pageToken = response.nextPageToken;
+      const page = await this.listPage<T>(collectionPath, { ...options, pageToken });
+      documents.push(...page.documents);
+      pageToken = page.nextPageToken;
     } while (pageToken);
-    return options.includeDeleted ? documents : documents.filter((document) => !(document.data as any)?.deleted);
+    return documents;
+  }
+
+  async listPage<T>(
+    collectionPath: string,
+    options: ListOptions & { pageToken?: string; orderBy?: string } = {},
+  ): Promise<{ documents: FirestoreDocument<T>[]; nextPageToken?: string }> {
+    const url = new URL(`${this.baseUrl}/${encodePath(collectionPath)}`);
+    url.searchParams.set("pageSize", String(Math.min(Math.max(options.pageSize ?? 300, 1), 1000)));
+    if (options.pageToken) url.searchParams.set("pageToken", options.pageToken);
+    if (options.orderBy) url.searchParams.set("orderBy", options.orderBy);
+    const response = await this.#request<{ documents?: FirestoreWireDocument[]; nextPageToken?: string }>(url.toString());
+    const documents = (response.documents ?? []).map(decodeDocument<T>);
+    return {
+      documents: options.includeDeleted ? documents : documents.filter((document) => !(document.data as any)?.deleted),
+      ...(response.nextPageToken ? { nextPageToken: response.nextPageToken } : {}),
+    };
   }
 
   async set<T extends Record<string, unknown>>(path: string, data: T, options: { merge?: boolean; serverTimestamp?: boolean } = {}): Promise<FirestoreDocument<T>> {
