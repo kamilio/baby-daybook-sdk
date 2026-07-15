@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildGarminEventDocument, latestEventMillis, validateSyncRequest } from "../src/garmin-relay.js";
+import { buildGarminEventDocument, eventsNotDeletedUpstream, latestEventMillis, validateSyncRequest } from "../src/garmin-relay.js";
 
 describe("Garmin relay validation", () => {
   it("accepts the bounded watch event schema", () => {
@@ -49,6 +49,17 @@ describe("Garmin relay validation", () => {
       ] });
     await expect(latestEventMillis({ listPage } as any, "baby")).resolves.toEqual({ bottle: 300, wet: 250, dirty: 200 });
     expect(listPage).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets upstream deletion win over a stale queued watch event", async () => {
+    const events = [
+      { id: "deleted", type: "bottle" as const, startMillis: 1, volume: 120 },
+      { id: "new", type: "diaper_change" as const, startMillis: 2, pee: true, poo: false },
+    ];
+    const get = vi.fn()
+      .mockResolvedValueOnce({ data: { deleted: true } })
+      .mockResolvedValueOnce(undefined);
+    await expect(eventsNotDeletedUpstream({ get } as any, "baby", events)).resolves.toEqual([events[1]]);
   });
 
   it("builds the complete native revision-4 activity shape", () => {

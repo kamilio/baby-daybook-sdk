@@ -33,10 +33,11 @@ export async function handleGarminSync(
     const session = await new BabyDaybookAuth({ fetch }).fromRefreshToken(input.refreshToken);
     const firestore = new FirestoreClient(session);
     const updatedMillis = Date.now();
-    const bottleGroupUid = input.events.some(({ type }) => type === "bottle")
+    const writableEvents = await eventsNotDeletedUpstream(firestore, input.babyUid, input.events);
+    const bottleGroupUid = writableEvents.some(({ type }) => type === "bottle")
       ? await firstBottleGroupUid(firestore, input.babyUid)
       : "";
-    await firestore.setMany(input.events.map((event) => ({
+    await firestore.setMany(writableEvents.map((event) => ({
       path: `babyData/babyUid_${input.babyUid}/dailyActions/${event.id}`,
       data: buildGarminEventDocument(event, session.userId, input.babyUid, updatedMillis, bottleGroupUid),
     })));
@@ -52,6 +53,20 @@ export async function handleGarminSync(
     const status = relayErrorStatus(error);
     sendJson(response, status, { ok: false, error: relayErrorCode(status) });
   }
+}
+
+export async function eventsNotDeletedUpstream(
+  firestore: Pick<FirestoreClient, "get">,
+  babyUid: string,
+  events: readonly GarminEvent[],
+): Promise<GarminEvent[]> {
+  const decisions = await Promise.all(events.map(async (event) => {
+    const existing = await firestore.get<{ deleted?: boolean | number }>(
+      `babyData/babyUid_${babyUid}/dailyActions/${event.id}`,
+    );
+    return existing?.data.deleted === true || existing?.data.deleted === 1 ? undefined : event;
+  }));
+  return decisions.filter((event): event is GarminEvent => event !== undefined);
 }
 
 export function validateSyncRequest(value: unknown): GarminSyncRequest {
