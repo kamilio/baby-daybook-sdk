@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSyncRequest } from "../src/garmin-relay.js";
+import { buildGarminEventDocument, validateSyncRequest } from "../src/garmin-relay.js";
 
 describe("Garmin relay validation", () => {
   it("accepts the bounded watch event schema", () => {
@@ -33,5 +33,31 @@ describe("Garmin relay validation", () => {
         { id: "same", type: "bottle", startMillis: 2 },
       ],
     })).toThrow();
+  });
+
+  it("builds the complete native revision-4 activity shape", () => {
+    expect(buildGarminEventDocument(
+      { id: "event-1", type: "diaper_change", startMillis: 1234, pee: true, poo: false },
+      "user-1",
+      "baby-1",
+      5678,
+    )).toEqual(expect.objectContaining({
+      uid: "event-1",
+      rev: 4,
+      groupUid: "",
+      notes: "",
+      inProgress: 0,
+      duration: 0,
+      volume: 0,
+      pee: 1,
+      poo: 0,
+    }));
+    expect(buildGarminEventDocument(
+      { id: "event-2", type: "bottle", startMillis: 1234, volume: 120 },
+      "user-1",
+      "baby-1",
+      5678,
+      "milk-1",
+    )).toEqual(expect.objectContaining({ groupUid: "milk-1", volume: 120, pee: 0, poo: 0 }));
   });
 });

@@ -33,9 +33,12 @@ export async function handleGarminSync(
     const session = await new BabyDaybookAuth({ fetch }).fromRefreshToken(input.refreshToken);
     const firestore = new FirestoreClient(session);
     const updatedMillis = Date.now();
+    const bottleGroupUid = input.events.some(({ type }) => type === "bottle")
+      ? await firstBottleGroupUid(firestore, input.babyUid)
+      : "";
     await firestore.setMany(input.events.map((event) => ({
       path: `babyData/babyUid_${input.babyUid}/dailyActions/${event.id}`,
-      data: eventDocument(event, session.userId, input.babyUid, updatedMillis),
+      data: buildGarminEventDocument(event, session.userId, input.babyUid, updatedMillis, bottleGroupUid),
     })));
     sendJson(response, 200, {
       ok: true,
@@ -83,11 +86,44 @@ function validateEvent(value: unknown): GarminEvent {
   return { id, type, startMillis, pee: event.pee === true, poo: event.poo === true };
 }
 
-function eventDocument(event: GarminEvent, userUid: string, babyUid: string, updatedMillis: number): Record<string, unknown> {
-  const common = { uid: event.id, userUid, babyUid, type: event.type, startMillis: event.startMillis, updatedMillis, inProgress: false };
-  return event.type === "bottle"
-    ? { ...common, ...(event.volume === undefined ? {} : { volume: event.volume }) }
-    : { ...common, pee: event.pee ? 1 : 0, poo: event.poo ? 1 : 0 };
+export function buildGarminEventDocument(
+  event: GarminEvent,
+  userUid: string,
+  babyUid: string,
+  updatedMillis: number,
+  bottleGroupUid = "",
+): Record<string, unknown> {
+  return {
+    uid: event.id,
+    userUid,
+    babyUid,
+    type: event.type,
+    startMillis: event.startMillis,
+    updatedMillis,
+    rev: 4,
+    groupUid: event.type === "bottle" ? bottleGroupUid : "",
+    notes: "",
+    inProgress: 0,
+    endMillis: 0,
+    duration: 0,
+    pauseMillis: 0,
+    leftDuration: 0,
+    rightDuration: 0,
+    side: "",
+    reaction: "",
+    amount: 0,
+    amountUnit: "",
+    temperature: 0,
+    hairWash: 0,
+    volume: event.type === "bottle" ? (event.volume ?? 0) : 0,
+    pee: event.type === "diaper_change" && event.pee ? 1 : 0,
+    poo: event.type === "diaper_change" && event.poo ? 1 : 0,
+  };
+}
+
+async function firstBottleGroupUid(firestore: FirestoreClient, babyUid: string): Promise<string> {
+  const groups = await firestore.list<{ uid?: string; daType?: string; deleted?: boolean }>(`babyData/babyUid_${babyUid}/groups`);
+  return groups.find(({ data }) => data.daType === "bottle" && !data.deleted)?.data.uid ?? "";
 }
 
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
