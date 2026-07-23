@@ -1,3 +1,4 @@
+import { isNativeTrue } from "./native-flags.js";
 import type { DailyAction } from "./types.js";
 
 export interface ActivityRangeOptions {
@@ -24,7 +25,7 @@ export function listActivitiesForRange(
       if (activity.startMillis >= options.fromMillis && activity.startMillis <= options.toMillis) return true;
       if (!durationTypes.has(activity.type) || activity.startMillis >= options.fromMillis) return false;
       return (activity.endMillis !== undefined && activity.endMillis > options.fromMillis)
-        || (activity.inProgress === true && nowMillis > options.fromMillis);
+        || (isNativeTrue(activity.inProgress) && nowMillis > options.fromMillis);
     })
     .sort((left, right) => right.startMillis - left.startMillis
       || left.type.localeCompare(right.type)

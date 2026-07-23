@@ -97,6 +97,26 @@ describe("PDF exports", () => {
     expect(pdf).not.toContain("Date and time");
   });
 
+  it("renders display titles for native blank activity types in every activity report section", () => {
+    const activityTypes = [{ uid: "bottle", userUid: "u", babyUid: "b", title: "" }];
+    const activities = [activity({ uid: "a", type: "bottle", startMillis: Date.UTC(2026, 0, 2, 8) })];
+    const activityPdf = new TextDecoder().decode(activitiesToPdf(activities, {
+      activityTypes,
+      generatedAt: 0,
+      timeZone: "UTC",
+    }));
+    const timelinePdf = new TextDecoder().decode(timelineToPdf(activities, {
+      activityTypes,
+      generatedAt: 0,
+      timeZone: "UTC",
+    }));
+
+    expect(activityPdf).toContain("Bottle: 1");
+    expect(activityPdf.match(/Bottle/g)).toHaveLength(3);
+    expect(activityPdf).not.toContain("  : 1");
+    expect(timelinePdf).toContain("Bottle");
+  });
+
   it("exports growth rows and app-equivalent chart categories", () => {
     const pdf = new TextDecoder().decode(growthToPdf([
       growth({ uid: "a", dateMillis: Date.UTC(2026, 0, 1), weight: 5, height: 60, headSize: 40, notes: "First" }),

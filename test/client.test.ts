@@ -36,7 +36,7 @@ describe("BabyDaybookClient", () => {
     expect(initializationWrites).toHaveLength(59);
     expect(initializationWrites.filter((write: { path: string }) => write.path.includes("/daTypes/"))).toHaveLength(20);
     expect(initializationWrites.find((write: { path: string }) => write.path.endsWith("/daTypes/food"))).toMatchObject({
-      data: { uid: "food", title: "", color: "#F69601", icon: "bib", category: "feeding", hasAmount: true, hasReaction: true },
+      data: { uid: "food", title: "", color: "#F69601", icon: "bib", category: "feeding", hasAmount: 1, hasReaction: 1 },
     });
     const groupWrites = initializationWrites.filter((write: { path: string }) => write.path.includes("/groups/"));
     expect(groupWrites).toHaveLength(39);
@@ -308,7 +308,7 @@ describe("BabyClient", () => {
     const { baby, activityRepo, reminderRepo } = configuredBaby();
     (baby as any).activityTypes = repo<ActivityType>([
       { uid: "sleeping", userUid: "user", babyUid: "baby", title: "Sleep" },
-      { uid: "bottle", userUid: "user", babyUid: "baby", title: "Bottle" },
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "" },
       { uid: "hidden", userUid: "user", babyUid: "baby", title: "Hidden" },
     ]);
     (baby as any).settings = repo<BabySetting>([
@@ -325,7 +325,7 @@ describe("BabyClient", () => {
 
     const items = await baby.getQuickLaunchItems({ nowMillis: 250, lastFeedingFromStart: true });
     expect(items).toEqual([
-      expect.objectContaining({ activityType: expect.objectContaining({ uid: "bottle" }), lastActivity: expect.objectContaining({ uid: "new-bottle" }) }),
+      expect.objectContaining({ activityType: expect.objectContaining({ uid: "bottle", title: "", displayTitle: "Bottle" }), lastActivity: expect.objectContaining({ uid: "new-bottle" }) }),
       expect.objectContaining({
         activityType: expect.objectContaining({ uid: "sleeping" }),
         lastActivity: expect.objectContaining({ uid: "sleep" }),
@@ -350,6 +350,51 @@ describe("BabyClient", () => {
     await expect(baby.switchBreastfeedingSide("activity", "right", 130)).resolves.toMatchObject({ side: "right", leftDuration: 25 });
     activityRepo.items = [started];
     await expect(baby.stopActivity("activity", 500)).resolves.toMatchObject({ endMillis: 500, duration: 400, inProgress: false });
+  });
+
+  it("logs typed point activities as completed native records", async () => {
+    const { baby } = configuredBaby();
+    (baby as any).activityTypes = repo<ActivityType>([
+      { uid: "pump", userUid: "user", babyUid: "baby", title: "", hasDuration: false },
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "", hasDuration: false },
+      { uid: "diaper_change", userUid: "user", babyUid: "baby", title: "", hasDuration: false },
+      { uid: "medicine", userUid: "user", babyUid: "baby", title: "", hasDuration: false, hasAmount: true },
+    ]);
+    (baby as any).groups = repo([
+      { uid: "formula", userUid: "user", babyUid: "baby", title: "Formula", daType: "bottle" },
+      { uid: "vitamin-d", userUid: "user", babyUid: "baby", title: "Vitamin D", daType: "medicine" },
+    ]);
+
+    await expect(baby.logPump({ volume: 120, side: "both", startMillis: 100 })).resolves.toMatchObject({
+      type: "pump", volume: 120, side: "both", inProgress: false, rev: 4,
+    });
+    await expect(baby.logBottle({ volume: 150, groupUid: "formula", startMillis: 101 })).resolves.toMatchObject({
+      type: "bottle", volume: 150, groupUid: "formula", inProgress: false,
+    });
+    await expect(baby.logDiaper({ pee: true, poo: true, startMillis: 102 })).resolves.toMatchObject({
+      type: "diaper_change", pee: true, poo: true, inProgress: false,
+    });
+    await expect(baby.logMedicine({ amount: 1, amountUnit: "drops", groupUid: "vitamin-d", startMillis: 103 })).resolves.toMatchObject({
+      type: "medicine", amount: 1, amountUnit: "drops", groupUid: "vitamin-d", inProgress: false,
+    });
+  });
+
+  it("rejects unsafe or type-incompatible point activity fields", async () => {
+    const { baby } = configuredBaby();
+    (baby as any).activityTypes = repo<ActivityType>([
+      { uid: "bottle", userUid: "user", babyUid: "baby", title: "", hasDuration: false },
+      { uid: "medicine", userUid: "user", babyUid: "baby", title: "", hasDuration: false, hasAmount: true },
+    ]);
+    (baby as any).groups = repo([
+      { uid: "vitamin-d", userUid: "user", babyUid: "baby", title: "Vitamin D", daType: "medicine" },
+    ]);
+
+    expect(() => baby.logMedicine({ amount: 1, amountUnit: "drops", groupUid: "" }))
+      .toThrow(/medicine group/i);
+    await expect(baby.logActivity({ type: "bottle", volume: 120, side: "left" }))
+      .rejects.toThrow(/side/i);
+    await expect(baby.logActivity({ type: "medicine", groupUid: "vitamin-d", amount: 1, amountUnit: "   " }))
+      .rejects.toThrow(/amount unit/i);
   });
 
   it("saves and tombstones edited activities with native sync stamps", async () => {
@@ -642,6 +687,26 @@ describe("BabyClient", () => {
     })).rejects.toThrow("Invalid base64 attachment data");
   });
 
+  it("encodes normalized baby flags when restoring a backup", async () => {
+    const { baby, client } = configuredBaby();
+    const backup = await baby.createBackup({ includeAttachments: false });
+
+    await baby.restoreBackup({
+      ...backup,
+      baby: {
+        ...backup.baby,
+        isPremature: true,
+        convertUnits: false,
+        sleepPredictionEnabled: true,
+      },
+    });
+
+    expect((client as any).firestore.set).toHaveBeenCalledWith(
+      "babyData/babyUid_baby",
+      expect.objectContaining({ isPremature: 1, convertUnits: 0, sleepPredictionEnabled: 1 }),
+    );
+  });
+
   it("persists a backup before migrating native imperial records to metric", async () => {
     const { baby, client, activityRepo, growthRepo } = configuredBaby();
     activityRepo.items = [
@@ -692,7 +757,7 @@ describe("BabyClient", () => {
     expect(growthRepo.save).toHaveBeenCalledTimes(1);
     expect((client as any).firestore.set).toHaveBeenCalledWith(
       expect.stringContaining("babyUid_baby"),
-      expect.objectContaining({ convertUnits: true, updatedMillis: 1_000, svt: 0 }),
+      expect.objectContaining({ convertUnits: 1, updatedMillis: 1_000, svt: 0 }),
       { merge: true },
     );
   });

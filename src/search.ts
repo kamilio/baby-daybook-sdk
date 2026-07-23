@@ -1,3 +1,4 @@
+import { isNativeTrue } from "./native-flags.js";
 import type { ActivitySearchOptions, DailyAction, DailyNote, DailyNoteSearchOptions } from "./types.js";
 
 export function searchActivities(activities: readonly DailyAction[], options: ActivitySearchOptions = {}): DailyAction[] {
@@ -17,7 +18,7 @@ export function searchActivities(activities: readonly DailyAction[], options: Ac
     .filter((activity) => options.toMillis === undefined || activity.startMillis <= options.toMillis)
     .filter((activity) => !query || activity.notes?.toLocaleLowerCase().includes(query))
     .filter((activity) => !reactions || (activity.reaction !== undefined && reactions.has(activity.reaction)))
-    .filter((activity) => !parameters || [...parameters].every((parameter) => activity[parameter] === true))
+    .filter((activity) => !parameters || [...parameters].every((parameter) => isNativeTrue(activity[parameter])))
     .sort((left, right) => right.startMillis - left.startMillis || left.type.localeCompare(right.type) || left.uid.localeCompare(right.uid));
   return paginate(matches, options.offset, options.limit);
 }

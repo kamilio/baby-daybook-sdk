@@ -1,3 +1,4 @@
+import { resolveActivityTypeDisplayTitle } from "./activity-types.js";
 import type { ActivityPdfOptions, ActivityType, DailyAction, DailyNote, GrowthEntry, GrowthPdfOptions, TimelinePdfOptions } from "./types.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
 
@@ -78,6 +79,7 @@ export function timelineToPdf(
     .sort((left, right) => left.startMillis - right.startMillis);
   const interval = options.hourLabelInterval ?? 3;
   const timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const activityTypes = new Map((options.activityTypes ?? []).map((type) => [type.uid, type]));
   const lines = [
     options.title ?? "Baby Daybook timeline report",
     options.babyName ? `Baby: ${options.babyName}` : undefined,
@@ -85,7 +87,7 @@ export function timelineToPdf(
     `Activities: ${rows.length}`,
     `Hour labels: every ${interval} hour${interval === 1 ? "" : "s"}`,
     "",
-    ...timelineLines(rows, interval, timeZone),
+    ...timelineLines(rows, activityTypes, interval, timeZone),
   ].filter((line): line is string => line !== undefined);
   return encodePdf(chunk(lines, LINES_PER_PAGE));
 }
@@ -98,7 +100,7 @@ function activityLine(activity: DailyAction, type?: ActivityType, timeZone = "UT
     : `${activity.amount}${activity.amountUnit ? ` ${activity.amountUnit}` : ""}`;
   return [
     fit(formatTimestampInZone(activity.startMillis, timeZone), 19),
-    fit(type?.title ?? activity.type, 20),
+    fit(resolveActivityTypeDisplayTitle(type ?? activity.type), 20),
     fit(duration, 10),
     fit(amount, 12),
     fit(activity.notes ?? "", 24),
@@ -123,7 +125,7 @@ function dailyListLines(
     lines.push(dayLabel(dayKey, options.babyBirthdayMillis, timeZone));
     if (options.includeDayTimeline !== false && dayActivities.length > 0) {
       lines.push("Timeline", hourLabels(options.hourLabelInterval ?? 3));
-      lines.push(...dayActivities.map((activity) => `  ${formatTimeInZone(activity.startMillis, timeZone)} ${activityTypes.get(activity.type)?.title ?? activity.type}`));
+      lines.push(...dayActivities.map((activity) => `  ${formatTimeInZone(activity.startMillis, timeZone)} ${resolveActivityTypeDisplayTitle(activityTypes.get(activity.type) ?? activity.type)}`));
     }
     const note = notes.get(dayKey);
     if (options.includeDayNotes !== false && note?.note.trim()) lines.push(`Day note: ${note.note.trim()}`);
@@ -149,7 +151,7 @@ function groupActivitiesByDay(activities: readonly DailyAction[], timeZone: stri
 function daySummaryLines(activities: readonly DailyAction[], activityTypes: ReadonlyMap<string, ActivityType>): string[] {
   const grouped = new Map<string, { count: number; durationMillis: number }>();
   for (const activity of activities) {
-    const title = activityTypes.get(activity.type)?.title ?? activity.type;
+    const title = resolveActivityTypeDisplayTitle(activityTypes.get(activity.type) ?? activity.type);
     const current = grouped.get(title) ?? { count: 0, durationMillis: 0 };
     const durationMillis = activity.duration ?? Math.max(0, (activity.endMillis ?? activity.startMillis) - activity.startMillis);
     grouped.set(title, { count: current.count + 1, durationMillis: current.durationMillis + durationMillis });
@@ -195,7 +197,12 @@ function trendLine(label: string, entries: readonly GrowthEntry[], select: (entr
   return `${label}: ${values.length} points, min ${formatMeasurement(minimum)} ${unit}, max ${formatMeasurement(maximum)} ${unit}, latest ${formatMeasurement(latest.value)} ${unit} on ${formatDate(latest.dateMillis)}`;
 }
 
-function timelineLines(activities: readonly DailyAction[], interval: number, timeZone: string): string[] {
+function timelineLines(
+  activities: readonly DailyAction[],
+  activityTypes: ReadonlyMap<string, ActivityType>,
+  interval: number,
+  timeZone: string,
+): string[] {
   const lines: string[] = [];
   let currentDay = "";
   for (const activity of activities) {
@@ -206,17 +213,17 @@ function timelineLines(activities: readonly DailyAction[], interval: number, tim
       lines.push(day, hourLabels(interval), "Time        Type                     End      Duration   Notes");
       lines.push("--------------------------------------------------------------------------");
     }
-    lines.push(timelineActivityLine(activity, timeZone));
+    lines.push(timelineActivityLine(activity, activityTypes.get(activity.type), timeZone));
   }
   return lines.length === 0 ? ["No activities"] : lines;
 }
 
-function timelineActivityLine(activity: DailyAction, timeZone: string): string {
+function timelineActivityLine(activity: DailyAction, type: ActivityType | undefined, timeZone: string): string {
   const endMillis = activity.endMillis ?? (activity.duration === undefined ? undefined : activity.startMillis + activity.duration);
   const durationMillis = activity.duration ?? (endMillis === undefined ? 0 : Math.max(0, endMillis - activity.startMillis));
   return [
     fit(formatTimeInZone(activity.startMillis, timeZone), 11),
-    fit(activity.type, 24),
+    fit(resolveActivityTypeDisplayTitle(type ?? activity.type), 24),
     fit(endMillis === undefined ? "" : formatTimeInZone(endMillis, timeZone), 8),
     fit(durationMillis > 0 ? formatDuration(durationMillis) : "", 10),
     fit(activity.notes ?? "", 20),

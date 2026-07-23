@@ -88,6 +88,21 @@ describe("FirestoreClient", () => {
     await firestore.delete("x/a");
   });
 
+  it("keeps explicit undefined merge fields in the update mask to delete them", async () => {
+    const fetch = mockFetch(
+      (_url, init) => {
+        const write = JSON.parse(String(init?.body)).writes[0];
+        expect(write.update.fields).toEqual({ uid: { stringValue: "a" } });
+        expect(write.updateMask).toEqual({ fieldPaths: ["uid", "convertUnits"] });
+        return jsonResponse({ commitTime: "now" });
+      },
+      jsonResponse(wire("a", { uid: "a" })),
+    );
+
+    await expect(client(fetch).set("x/a", { uid: "a", convertUnits: undefined }, { merge: true }))
+      .resolves.toMatchObject({ data: { uid: "a" } });
+  });
+
   it("commits multiple server-timestamped writes atomically", async () => {
     const fetch = mockFetch((url, init) => {
       expect(url.endsWith("documents:commit")).toBe(true);

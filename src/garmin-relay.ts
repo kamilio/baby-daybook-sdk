@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { BabyDaybookAuth } from "./auth.js";
+import { buildPointActivity, encodeDailyAction } from "./daily-actions.js";
 import { BabyDaybookApiError, BabyDaybookAuthError } from "./errors.js";
 import { FirestoreClient } from "./firestore.js";
 import type { FetchLike } from "./types.js";
@@ -142,32 +143,15 @@ export function buildGarminEventDocument(
   updatedMillis: number,
   bottleGroupUid = "",
 ): Record<string, unknown> {
-  return {
+  return encodeDailyAction(buildPointActivity({
     uid: event.id,
-    userUid,
-    babyUid,
     type: event.type,
     startMillis: event.startMillis,
-    updatedMillis,
-    rev: 4,
     groupUid: event.type === "bottle" ? bottleGroupUid : "",
-    notes: "",
-    inProgress: 0,
-    endMillis: 0,
-    duration: 0,
-    pauseMillis: 0,
-    leftDuration: 0,
-    rightDuration: 0,
-    side: "",
-    reaction: "",
-    amount: 0,
-    amountUnit: "",
-    temperature: 0,
-    hairWash: 0,
     volume: event.type === "bottle" ? (event.volume ?? 0) : 0,
-    pee: event.type === "diaper_change" && event.pee ? 1 : 0,
-    poo: event.type === "diaper_change" && event.poo ? 1 : 0,
-  };
+    pee: event.type === "diaper_change" && event.pee,
+    poo: event.type === "diaper_change" && event.poo,
+  }, { userUid, babyUid, updatedMillis }));
 }
 
 async function firstBottleGroupUid(firestore: FirestoreClient, babyUid: string): Promise<string> {

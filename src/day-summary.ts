@@ -1,5 +1,7 @@
+import { withActivityTypeDisplayTitle } from "./activity-types.js";
+import { isNativeTrue } from "./native-flags.js";
 import { listActivitiesForRange } from "./timeline.js";
-import type { ActivityGroup, ActivitySide, ActivityType, DailyAction } from "./types.js";
+import type { ActivityGroup, ActivitySide, ActivityType, ActivityTypeView, DailyAction } from "./types.js";
 
 export interface DayActivityTypeSummaryOptions {
   fromMillis: number;
@@ -23,7 +25,7 @@ export interface DayActivityTypeSummaryAmountByUnit {
 }
 
 export interface DayActivityTypeSummary {
-  activityType: ActivityType;
+  activityType: ActivityTypeView;
   activityCount: number;
   leftDurationMillis: number;
   rightDurationMillis: number;
@@ -55,7 +57,9 @@ export function buildDayActivityTypeSummaries(
   options: DayActivityTypeSummaryOptions,
   configuredTypeUids: readonly string[] = [],
 ): DayActivityTypeSummary[] {
-  const activeTypes = activityTypes.filter((activityType) => options.includeDeleted || !activityType.deleted);
+  const activeTypes = activityTypes
+    .filter((activityType) => options.includeDeleted || !activityType.deleted)
+    .map(withActivityTypeDisplayTitle);
   const typeMap = new Map(activeTypes.map((activityType) => [activityType.uid, activityType]));
   const orderedTypes = configuredTypeUids.length
     ? unique(configuredTypeUids).flatMap((uid) => {
@@ -93,7 +97,7 @@ export function buildDayActivityTypeSummaries(
   return summaries.sort((left, right) => (orderMap.get(left.activityType.uid) ?? -1) - (orderMap.get(right.activityType.uid) ?? -1));
 }
 
-function emptySummary(activityType: ActivityType): DayActivityTypeSummary {
+function emptySummary(activityType: ActivityTypeView): DayActivityTypeSummary {
   return {
     activityType,
     activityCount: 0,
@@ -119,7 +123,7 @@ function addActivity(
   options: DayActivityTypeSummaryOptions,
 ): void {
   const nowMillis = options.nowMillis ?? Date.now();
-  const isInProgress = summary.activityType.hasDuration === true && activity.inProgress === true;
+  const isInProgress = isNativeTrue(summary.activityType.hasDuration) && isNativeTrue(activity.inProgress);
   const isCurrentRange = isSameLocalDate(options.fromMillis, nowMillis);
   if (activity.startMillis >= options.fromMillis && activity.startMillis <= options.toMillis) summary.activityCount += 1;
   if (isInProgress && isCurrentRange) summary.inProgressActivity = activity;
@@ -175,7 +179,7 @@ function activityDurationInRange(
   side?: "left" | "right",
 ): number {
   const nowMillis = options.nowMillis ?? Date.now();
-  const inProgress = activity.inProgress === true;
+  const inProgress = isNativeTrue(activity.inProgress);
   const endMillis = inProgress ? nowMillis : (activity.endMillis ?? activity.startMillis);
   const chronologicalDuration = endMillis - activity.startMillis;
   const effectiveDuration = inProgress

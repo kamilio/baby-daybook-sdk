@@ -65,7 +65,7 @@ if (process.argv[2] === "login") {
     version: SDK_VERSION,
     rootUsageName: "baby-daybook",
     casing: "kebab",
-    controls: { output: true, debug: true, verbose: true, yes: true },
+    controls: { output: true, debug: true, verbose: true, yes: true, help: "concise" },
     services,
     errorReports: true,
   });

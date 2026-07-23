@@ -1,4 +1,5 @@
-import type { ActivityType, DailyAction } from "./types.js";
+import { withActivityTypeDisplayTitle } from "./activity-types.js";
+import type { ActivityType, ActivityTypeView, DailyAction } from "./types.js";
 
 export type StatisticsTabDataType =
   | "numberOfTimes"
@@ -10,7 +11,7 @@ export type StatisticsTabDataType =
   | "timeOfDay";
 
 export interface StatisticsActivityTypeItem {
-  activityType: ActivityType;
+  activityType: ActivityTypeView;
   activityCount: number;
   tabs: StatisticsTabDataType[];
 }
@@ -39,7 +40,9 @@ export function buildStatisticsScreenData(
   configuredTypeUids: readonly string[] = [],
   preferredTypeUid?: string,
 ): StatisticsScreenData {
-  const activeTypes = activityTypes.filter((activityType) => !activityType.deleted);
+  const activeTypes = activityTypes
+    .filter((activityType) => !activityType.deleted)
+    .map(withActivityTypeDisplayTitle);
   const typeMap = new Map(activeTypes.map((activityType) => [activityType.uid, activityType]));
   const orderedTypes = configuredTypeUids.length
     ? [...new Set(configuredTypeUids)].flatMap((uid) => {

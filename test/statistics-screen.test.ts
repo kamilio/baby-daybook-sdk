@@ -41,6 +41,12 @@ describe("native statistics screen data", () => {
     expect(first.selectedItem?.activityType.uid).toBe("bottle");
     expect(buildStatisticsScreenData([], []).selectedItem).toBeUndefined();
   });
+
+  it("adds a display title while preserving a native blank title", () => {
+    const data = buildStatisticsScreenData([type("sleeping", { title: "" })], []);
+
+    expect(data.selectedItem?.activityType).toMatchObject({ title: "", displayTitle: "Sleep" });
+  });
 });
 
 function type(uid: string, update: Partial<ActivityType> = {}): ActivityType {

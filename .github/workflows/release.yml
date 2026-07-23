@@ -34,9 +34,14 @@ jobs:
       - name: Select next patch version
         run: |
           PACKAGE_NAME="$(node -p "require('./package.json').name")"
-          REMOTE_VERSION="$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo 0.0.0)"
+          REMOTE_VERSION="$(npm view "$PACKAGE_NAME" version)"
           node -e 'if (process.argv[1].includes("-")) process.exit(1)' "$REMOTE_VERSION"
           npm version --no-git-tag-version --allow-same-version "$REMOTE_VERSION"
           npm version --no-git-tag-version patch
-          node -e 'if (require("./package.json").version.includes("-")) process.exit(1)'
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const version = require("./package.json").version;
+          if (version.includes("-")) process.exit(1);
+          fs.writeFileSync("src/version.ts", `export const SDK_VERSION = ${JSON.stringify(version)};\n`);
+          NODE
       - run: npm publish --provenance --access public --tag latest

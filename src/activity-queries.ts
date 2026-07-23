@@ -1,3 +1,4 @@
+import { isNativeTrue } from "./native-flags.js";
 import type { DailyAction } from "./types.js";
 
 export const BABY_DAYBOOK_ACTIVITY_FUTURE_GRACE_MILLIS = 60_000;
@@ -44,7 +45,7 @@ export function getInProgressActivities(activities: readonly DailyAction[], type
   const includedTypes = types ? new Set(types) : undefined;
   const latest = new Map<string, DailyAction>();
   for (const activity of sortNewestFirst(activities)) {
-    if (activity.deleted || activity.inProgress !== true || (includedTypes && !includedTypes.has(activity.type))) continue;
+    if (activity.deleted || !isNativeTrue(activity.inProgress) || (includedTypes && !includedTypes.has(activity.type))) continue;
     if (!latest.has(activity.type)) latest.set(activity.type, activity);
   }
   return [...latest.values()];
@@ -55,12 +56,12 @@ export function findOverlappingActivities(
   candidate: Pick<DailyAction, "uid" | "type" | "startMillis" | "endMillis" | "inProgress">,
   atMillis = Date.now(),
 ): DailyAction[] {
-  const candidateEnd = candidate.endMillis ?? (candidate.inProgress ? atMillis : candidate.startMillis);
+  const candidateEnd = candidate.endMillis ?? (isNativeTrue(candidate.inProgress) ? atMillis : candidate.startMillis);
   return activities.filter((activity) => {
     if (activity.deleted || activity.uid === candidate.uid || activity.type !== candidate.type) return false;
     const startsInside = activity.startMillis >= candidate.startMillis && activity.startMillis <= candidateEnd;
     const spansStart = activity.startMillis < candidate.startMillis
-      && (activity.inProgress === true || (activity.endMillis !== undefined && activity.endMillis > candidate.startMillis));
+      && (isNativeTrue(activity.inProgress) || (activity.endMillis !== undefined && activity.endMillis > candidate.startMillis));
     return startsInside || spansStart;
   });
 }

@@ -114,6 +114,17 @@ describe("native home day activity summaries", () => {
     );
     expect(summary).toMatchObject({ activityCount: 1, durationMillis: 0, inProgressActivity: { uid: "active" } });
   });
+
+  it("adds a display title while preserving a native blank title", () => {
+    const summary = buildDayActivityTypeSummaries(
+      [type("bottle", { title: "" })],
+      [],
+      [],
+      { fromMillis: 0, toMillis: 1 },
+    )[0]!;
+
+    expect(summary.activityType).toMatchObject({ uid: "bottle", title: "", displayTitle: "Bottle" });
+  });
 });
 
 function type(uid: string, update: Partial<ActivityType> = {}): ActivityType {

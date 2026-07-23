@@ -9,7 +9,9 @@ import {
   type LastActivityOptions,
 } from "./activity-queries.js";
 import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
+import { ActivityTypeRepository, encodeActivityType, withActivityTypeDisplayTitle } from "./activity-types.js";
 import { AuthSession, BabyDaybookAuth, type AppleCredential, type AuthOptions, type FirebaseAccount, type OAuthCredential } from "./auth.js";
+import { decodeBaby, encodeBaby } from "./baby-records.js";
 import { parseAppleCallbackUrl } from "./apple.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
@@ -19,6 +21,7 @@ import {
   type DayActivityTypeSummaryOptions,
 } from "./day-summary.js";
 import { createDefaultActivityGroups, createDefaultActivityTypes } from "./defaults.js";
+import { buildPointActivity, DailyActionRepository } from "./daily-actions.js";
 import {
   buildDevelopmentGrowthSummary,
   buildDevelopmentMomentsSummary,
@@ -33,6 +36,7 @@ import { CallableFunctionsClient, FamilyClient } from "./functions.js";
 import { sortGrowthEntries } from "./growth.js";
 import { groupMomentsByMonth } from "./moments.js";
 import { createNativeRandomUid } from "./native-id.js";
+import { isNativeTrue } from "./native-flags.js";
 import { paths } from "./paths.js";
 import { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 import { CollectionRepository } from "./repository.js";
@@ -82,6 +86,7 @@ import {
 } from "./statistics-range.js";
 import { FirebaseStorageClient } from "./storage.js";
 import { buildToothMap, listToothChartItems, toothUid } from "./teething.js";
+import { ToothRepository } from "./tooth-records.js";
 import {
   countActivitiesForRange,
   listActivitiesForRange,
@@ -127,6 +132,12 @@ import type {
   GrowthEntry,
   GrowthPdfOptions,
   ListOptions,
+  LogActivityInput,
+  LogBottleInput,
+  LogDiaperInput,
+  LogMedicineInput,
+  LogPumpInput,
+  LoggedActivity,
   Moment,
   MomentMonth,
   MomentMonthListOptions,
@@ -227,7 +238,7 @@ export class BabyDaybookClient {
 
   async getBaby(babyUid: string): Promise<Baby | undefined> {
     const document = await this.firestore.get<Baby>(paths.baby(babyUid));
-    return document ? { ...document.data, uid: document.data.uid ?? babyUid.replace(/^babyUid_/, "") } : undefined;
+    return document ? decodeBaby({ ...document.data, uid: document.data.uid ?? babyUid.replace(/^babyUid_/, "") }) : undefined;
   }
 
   async listGrowthComparisonBabies(activeBabyUid: string, options: ListOptions = {}): Promise<Baby[]> {
@@ -262,12 +273,12 @@ export class BabyDaybookClient {
     const groups = createDefaultActivityGroups(uid, now, options.resolveDefaultGroupTitle);
     const babyWrite: FirestoreSetWrite = {
       path: paths.baby(uid),
-      data: baby as unknown as Record<string, unknown>,
+      data: encodeBaby(baby),
     };
     const initializationWrites: FirestoreSetWrite[] = [
       ...activityTypes.map((activityType) => ({
         path: `${paths.babyCollection(uid, "daTypes")}/${activityType.uid}`,
-        data: activityType as unknown as Record<string, unknown>,
+        data: encodeActivityType(activityType),
       })),
       ...groups.map((group) => ({
         path: `${paths.babyCollection(uid, "groups")}/${group.uid}`,
@@ -333,13 +344,13 @@ export class BabyClient {
   constructor(client: BabyDaybookClient, babyUid: string) {
     this.client = client;
     this.babyUid = babyUid;
-    this.activityTypes = this.#repository("daTypes");
-    this.activities = this.#repository("dailyActions");
+    this.activityTypes = new ActivityTypeRepository(client.firestore, paths.babyCollection(this.babyUid, "daTypes"));
+    this.activities = new DailyActionRepository(client.firestore, paths.babyCollection(this.babyUid, "dailyActions"));
     this.groups = this.#repository("groups");
     this.growth = this.#repository("growth");
     this.moments = this.#repository("moments");
     this.dailyNotes = this.#repository("dailyNotes");
-    this.teething = this.#repository("teething");
+    this.teething = new ToothRepository(client.firestore, paths.babyCollection(this.babyUid, "teething"));
     this.reminders = new CollectionRepository(client.firestore, paths.reminders(client.session.userId, babyUid));
     this.settings = new CollectionRepository(client.firestore, paths.settings(client.session.userId, babyUid));
     this.acceptedInvites = new CollectionRepository(client.firestore, paths.babyAcceptedInvites(babyUid), "userUid");
@@ -702,7 +713,7 @@ export class BabyClient {
     if (!current) throw new Error(`Baby ${this.babyUid} does not exist`);
     const baby = { ...current, ...update, uid: this.babyUid, updatedMillis: atMillis, svt: 0 };
     if (!baby.name.length) throw new RangeError("Baby name must not be empty");
-    return (await this.client.firestore.set(paths.baby(this.babyUid), baby as unknown as Record<string, unknown>, { merge: true })).data as unknown as Baby;
+    return decodeBaby((await this.client.firestore.set(paths.baby(this.babyUid), encodeBaby(baby), { merge: true })).data as unknown as Baby);
   }
 
   delete(atMillis = Date.now()): Promise<Baby> {
@@ -748,6 +759,70 @@ export class BabyClient {
       updatedMillis: Date.now(),
       inProgress: input.inProgress ?? true,
     });
+  }
+
+  async logActivity(input: LogActivityInput): Promise<LoggedActivity> {
+    const typeUid = input.type.trim();
+    const [activityType, group] = await Promise.all([
+      this.activityTypes.get(typeUid),
+      input.groupUid ? this.groups.get(input.groupUid) : undefined,
+    ]);
+    if (!activityType || activityType.deleted) throw new RangeError(`Activity type ${typeUid || "(empty)"} does not exist`);
+    if (isNativeTrue(activityType.hasDuration)) {
+      throw new RangeError(`Activity type ${typeUid} uses a timer; call startActivity instead`);
+    }
+    if (input.groupUid && (!group || group.deleted || group.daType !== typeUid)) {
+      throw new RangeError(`Activity group ${input.groupUid} does not belong to ${typeUid}`);
+    }
+    if (input.volume !== undefined && !(["pump", "bottle", "drink"] as const).includes(typeUid as "pump" | "bottle" | "drink")) {
+      throw new RangeError(`Activity type ${typeUid} does not support volume`);
+    }
+    if (input.amount !== undefined && !isNativeTrue(activityType.hasAmount)) {
+      throw new RangeError(`Activity type ${typeUid} does not support an amount`);
+    }
+    if ((input.amount === undefined) !== (input.amountUnit === undefined)) {
+      throw new RangeError("Activity amount and amount unit must be provided together");
+    }
+    if (input.reaction !== undefined && !isNativeTrue(activityType.hasReaction)) {
+      throw new RangeError(`Activity type ${typeUid} does not support a reaction`);
+    }
+    if (input.side !== undefined && typeUid !== "pump") throw new RangeError("Only point-in-time pump activities support a side");
+    if (input.temperature !== undefined && typeUid !== "temperature") throw new RangeError("Only temperature activities support temperature values");
+    if ((input.pee !== undefined || input.poo !== undefined) && typeUid !== "diaper_change" && typeUid !== "potty") {
+      throw new RangeError(`Activity type ${typeUid} does not support pee or poo flags`);
+    }
+    if (input.hairWash !== undefined && typeUid !== "bath") throw new RangeError("Only bath activities support the hair-wash flag");
+    const amountUnit = input.amountUnit?.trim();
+    if (input.amountUnit !== undefined && !amountUnit) throw new RangeError("Activity amount unit must not be empty");
+    return this.activities.save(buildPointActivity({ ...input, amountUnit, type: typeUid }, {
+      userUid: this.client.session.userId,
+      babyUid: this.babyUid,
+    })) as Promise<LoggedActivity>;
+  }
+
+  logPump(input: LogPumpInput): Promise<LoggedActivity> {
+    if (!Number.isFinite(input.volume) || input.volume <= 0) throw new RangeError("Pump volume must be greater than zero");
+    if (!(["left", "right", "both"] as const).includes(input.side as "left" | "right" | "both")) {
+      throw new RangeError("Pump side must be left, right, or both");
+    }
+    return this.logActivity({ ...input, type: "pump" });
+  }
+
+  logBottle(input: LogBottleInput): Promise<LoggedActivity> {
+    if (!Number.isFinite(input.volume) || input.volume <= 0) throw new RangeError("Bottle volume must be greater than zero");
+    return this.logActivity({ ...input, type: "bottle" });
+  }
+
+  logDiaper(input: LogDiaperInput): Promise<LoggedActivity> {
+    return this.logActivity({ ...input, type: "diaper_change" });
+  }
+
+  logMedicine(input: LogMedicineInput): Promise<LoggedActivity> {
+    if (!Number.isFinite(input.amount) || input.amount <= 0) throw new RangeError("Medicine amount must be greater than zero");
+    const amountUnit = input.amountUnit.trim();
+    if (!amountUnit) throw new RangeError("Medicine amount unit must not be empty");
+    if (!input.groupUid.trim()) throw new RangeError("Medicine group must not be empty");
+    return this.logActivity({ ...input, amountUnit, type: "medicine" });
   }
 
   saveActivity(activity: DailyAction, atMillis = Date.now()): Promise<DailyAction> {
@@ -957,10 +1032,15 @@ export class BabyClient {
   }
 
   async exportTimelinePdf(options: TimelinePdfOptions = {}): Promise<Uint8Array> {
-    const baby = await this.get();
-    return timelineToPdf(await this.activities.list({ includeDeleted: options.includeDeleted }), {
+    const [baby, activities, activityTypes] = await Promise.all([
+      this.get(),
+      this.activities.list({ includeDeleted: options.includeDeleted }),
+      this.activityTypes.list({ includeDeleted: options.includeDeleted }),
+    ]);
+    return timelineToPdf(activities, {
       ...options,
       babyName: options.babyName ?? baby?.name,
+      activityTypes: options.activityTypes ?? activityTypes,
     });
   }
 
@@ -1049,7 +1129,9 @@ export class BabyClient {
       this.getDaTypesConfig(),
       this.getRelevantReminderSchedules(options),
     ]);
-    const activeTypes = activityTypes.filter((activityType) => !activityType.deleted);
+    const activeTypes = activityTypes
+      .filter((activityType) => !activityType.deleted)
+      .map(withActivityTypeDisplayTitle);
     const typeMap = new Map(activeTypes.map((activityType) => [activityType.uid, activityType]));
     const orderedTypes = configuredTypeUids.length
       ? configuredTypeUids.flatMap((uid) => {
@@ -1208,7 +1290,7 @@ export class BabyClient {
     if (backup.attachmentsIncluded) {
       for (const attachment of backup.attachments) await this.#restoreAttachment(attachment);
     }
-    await this.client.firestore.set(paths.baby(this.babyUid), backup.baby as unknown as Record<string, unknown>);
+    await this.client.firestore.set(paths.baby(this.babyUid), encodeBaby(backup.baby));
     await Promise.all([
       ...backup.activityTypes.map((item) => this.activityTypes.save(item)),
       ...backup.activities.map((item) => this.activities.save(item)),

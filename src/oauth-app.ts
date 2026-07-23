@@ -25,6 +25,7 @@ import { createBabyDaybookHTTPMCPServer } from "./toolcraft-http.js";
 import type { AuthSessionSnapshot, FetchLike } from "./types.js";
 import { BabyDaybookOAuthDatabase } from "./oauth-store.js";
 import { handleGarminSync } from "./garmin-relay.js";
+import { babyDaybookIconSvg } from "./branding.js";
 
 const APPLE_CALLBACK_MAX_BYTES = 32 * 1024;
 const FORM_MAX_BYTES = APPLE_CALLBACK_MAX_BYTES + 4096;
@@ -167,6 +168,17 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
       }
       if (pathname === "/health" && request.method === "GET") {
         sendJson(response, 200, { ok: true });
+        return;
+      }
+      if (pathname === "/icon.svg" && (request.method === "GET" || request.method === "HEAD")) {
+        response.writeHead(200, {
+          "content-type": "image/svg+xml; charset=utf-8",
+          "content-length": String(Buffer.byteLength(babyDaybookIconSvg)),
+          "cache-control": "public, max-age=86400",
+          "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+          "x-content-type-options": "nosniff",
+        });
+        response.end(request.method === "HEAD" ? undefined : babyDaybookIconSvg);
         return;
       }
       if (pathname === "/" && request.method === "GET") {
@@ -512,7 +524,7 @@ function htmlResponse(body: string, status = 200, headers: Record<string, string
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       pragma: "no-cache",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
       "x-frame-options": "DENY",
@@ -583,7 +595,7 @@ function renderErrorPage(): string {
 }
 
 function page(title: string, body: string, extraHead = ""): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${extraHead}<title>${escapeHtml(title)}</title><style>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/icon.svg" type="image/svg+xml">${extraHead}<title>${escapeHtml(title)}</title><style>
     :root{color-scheme:light dark;font-family:ui-sans-serif,system-ui,sans-serif}body{margin:0;background:#f4f1ec;color:#201d19}main{max-width:44rem;margin:3rem auto;padding:0 1.25rem}section{background:#fff;border:1px solid #d8d0c5;border-radius:1rem;padding:1.25rem;margin:1rem 0;box-shadow:0 .4rem 1.5rem #2f24140d}h1,h2{line-height:1.1}h2{font-size:1.15rem}p,li{line-height:1.55}.scope{font-size:.9rem;color:#625a50}.error{padding:.9rem 1rem;border:1px solid #b91c1c;border-radius:.65rem;background:#fee2e2;color:#7f1d1d;font-weight:600}form{display:grid;gap:.65rem;margin-top:1rem}input,textarea,button,.button{font:inherit;border-radius:.6rem}input,textarea{border:1px solid #aaa096;padding:.75rem;background:#fff;color:#201d19}textarea{min-height:8rem;resize:vertical}button,.button{display:inline-block;border:0;padding:.75rem 1rem;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;cursor:pointer}code{overflow-wrap:anywhere}@media(prefers-color-scheme:dark){body{background:#171513;color:#eee8df}section{background:#211e1a;border-color:#494139}.scope{color:#bcb2a6}.error{background:#451a1a;color:#fecaca;border-color:#ef4444}input,textarea{background:#171513;color:#eee8df;border-color:#665d53}}
   </style></head><body>${body}</body></html>`;
 }

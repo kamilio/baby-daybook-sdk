@@ -4,7 +4,7 @@ The standalone `baby-daybook` CLI, MCP servers, and generated Toolcraft SDKs bun
 
 ## Poe Platform Toolcraft packages
 
-Included packages: `@poe-code/agent-defs@0.0.1`, `@poe-code/agent-human-in-loop@0.0.1`, `@poe-code/agent-mcp-config@0.0.1`, `@poe-code/config-mutations@0.0.1`, `@poe-code/frontmatter@0.0.1`, `@poe-code/process-runner@0.0.1`, `@poe-code/task-list@0.0.1`, `auth-store@0.0.1`, `fast-string-truncated-width@3.0.3`, `fast-string-width@3.0.2`, `fast-wrap-ansi@0.2.2`, `ignore@5.3.2`, `jose@6.2.3`, `jsonc-parser@3.3.1`, `mcp-oauth@0.0.1`, `mcp-oauth-server@0.1.0`, `sisteransi@1.0.5`, `smol-toml@1.6.1`, `tiny-http-mcp-server@0.1.4`, `tiny-mcp-client@0.1.0`, `tiny-stdio-mcp-server@0.1.0`, `toolcraft-design@0.0.2`, `toolcraft-schema@0.0.126`, `toolcraft@0.0.126`, `yaml@2.9.0`.
+Included packages: `@poe-code/agent-defs@0.0.1`, `@poe-code/agent-human-in-loop@0.0.1`, `@poe-code/agent-mcp-config@0.0.1`, `@poe-code/config-mutations@0.0.1`, `@poe-code/frontmatter@0.0.1`, `@poe-code/process-runner@0.0.1`, `@poe-code/task-list@0.0.1`, `@poe-code/user-error@0.0.1`, `auth-store@0.0.1`, `fast-string-truncated-width@3.0.3`, `fast-string-width@3.0.2`, `fast-wrap-ansi@0.2.2`, `ignore@5.3.2`, `jose@6.2.3`, `jsonc-parser@3.3.1`, `mcp-oauth@0.0.1`, `mcp-oauth-server@0.1.0`, `sisteransi@1.0.5`, `smol-toml@1.6.1`, `tiny-http-mcp-server@0.1.7`, `tiny-mcp-client@0.1.0`, `tiny-stdio-mcp-server@0.1.0`, `toolcraft-design@0.0.2`, `toolcraft-schema@0.0.152`, `toolcraft@0.0.152`, `yaml@2.9.0`.
 
 MIT License
 

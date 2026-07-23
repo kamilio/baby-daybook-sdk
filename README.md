@@ -28,7 +28,7 @@ Unofficial, typed JavaScript SDK plus a Toolcraft CLI and stdio/Streamable HTTP 
 - Native sleep-duration constraint loosening and clamping used by prediction adjustments.
 - The native 20-position primary-tooth map, ten-row eruption/shed chart, deterministic tooth IDs, colors, and state precedence.
 - Raw Firestore, Firebase Storage, and callable-function clients for forward-compatible access.
-- A 72-command Toolcraft tree exposed identically through a typed SDK, the `baby-daybook` CLI, and an MCP stdio server.
+- A workflow-oriented 79-command Toolcraft tree exposed identically through a typed SDK, the `baby-daybook` CLI, and MCP servers.
 
 The SDK does not bypass subscription checks. Operations remain subject to the authenticated user's Firebase security-rule permissions and Baby Daybook account status.
 
@@ -56,14 +56,16 @@ export BABY_DAYBOOK_EMAIL="parent@example.com"
 export BABY_DAYBOOK_PASSWORD="your-linked-password"
 
 baby-daybook login apple
-baby-daybook session status
+baby-daybook manage account status
 baby-daybook babies list
-baby-daybook activities list BABY_UID
-baby-daybook activities start BABY_UID sleeping
-baby-daybook growth add BABY_UID --weight 8.2 --height 70
-baby-daybook notes set BABY_UID "Slept well"
+baby-daybook log bottle 5 --volume-unit fluidOunces
+baby-daybook log diaper wet-and-dirty
+baby-daybook timeline recent
+baby-daybook timeline timer start BABY_UID sleeping
+baby-daybook journal growth add BABY_UID --weight 8.2 --height 70
+baby-daybook journal notes set BABY_UID "Slept well"
 baby-daybook sleep predict BABY_UID
-baby-daybook statistics sleep BABY_UID --interval last7Days
+baby-daybook sleep statistics BABY_UID --interval last7Days
 ```
 
 `baby-daybook login apple` opens a temporary Chrome, Edge, or Chromium profile and captures Baby Daybook's native callback automatically. It never asks you to paste the callback. Use `--browser`, `--auth-file`, or `--timeout-minutes` to override the browser executable, session location, or 30-minute timeout. The login command requires Node.js 22 or newer; the remaining SDK, CLI, and MCP features support Node.js 20 or newer.
@@ -73,15 +75,15 @@ Use `BABY_DAYBOOK_REFRESH_TOKEN` for an explicit refresh token or `BABY_DAYBOOK_
 Destructive commands require confirmation. For reviewed automation, pass `--yes`:
 
 ```bash
-baby-daybook activities delete BABY_UID ACTIVITY_UID --yes
-baby-daybook caregivers remove BABY_UID CAREGIVER_UID --yes
+baby-daybook timeline delete BABY_UID ACTIVITY_UID --yes
+baby-daybook manage caregivers remove BABY_UID CAREGIVER_UID --yes
 ```
 
 Use `--output json` for scripts and agents. Run group or command help to inspect exact parameters:
 
 ```bash
-baby-daybook activities --help
-baby-daybook activities start --help
+baby-daybook timeline --help
+baby-daybook timeline timer start --help
 ```
 
 ## MCP server
@@ -108,11 +110,11 @@ Example MCP client configuration:
 }
 ```
 
-The MCP server exposes names such as `babies__list`, `activities__start`, `sleep__predict`, and `backup__create`. It omits the redundant root prefix and publishes input and output schemas for every tool.
+MCP exposes a flat `tools/list`, so all 79 tools remain visible. Nested command groups become name prefixes such as `log__bottle`, `timeline__timer__start`, and `advanced__backup__create`; the redundant root prefix is omitted. Every tool publishes input and output schemas plus explicit read-only, destructive, idempotent, and open-world annotations. The dedicated `log` tools use a precise activity output schema; other data commands return JSON-compatible results under `data`.
 
 ## Streamable HTTP MCP server
 
-Run the identical 72-tool tree over Streamable HTTP:
+Run the identical 79-tool tree over Streamable HTTP:
 
 ```bash
 baby-daybook http
@@ -154,9 +156,9 @@ https://baby-daybook-kjopek.fly.dev/mcp
 
 Connect that URL from an OAuth-capable MCP client. The client discovers protected-resource and authorization-server metadata, dynamically registers, and starts authorization code with PKCE. The hosted interaction offers Sign in with Apple using a one-time `intent://callback…` paste-back step and an email/password option for accounts that already have password sign-in enabled. Each OAuth subject receives a separate encrypted Baby Daybook refresh token; there is no shared account, static service token, or anonymous fallback.
 
-Maintainers deploy the bundled Node.js 24 OAuth server from this repository's `Dockerfile` using the hosting platform's reviewed release workflow.
+Maintainers deploy the bundled Node.js 24 OAuth server from this repository's `Dockerfile` and `fly.toml`.
 
-The deployment uses Toolcraft's supported authorization server, SQLite on a persistent Fly volume, AES-256-GCM session encryption, ES256 access tokens, PKCE S256, exact redirect URIs, token rotation with replay revocation, secure interaction cookies, request limits, and rate limits. See the repository's `BABY_DAYBOOK_OAUTH.md` for the full contract and secret setup.
+The deployment uses Toolcraft's supported authorization server, SQLite on a persistent Fly volume, AES-256-GCM session encryption, ES256 access tokens, PKCE S256, exact redirect URIs, token rotation with replay revocation, secure interaction cookies, request limits, and rate limits.
 
 ## Toolcraft SDK
 
@@ -173,9 +175,20 @@ const tools = createBabyDaybookToolcraftSDK({
 
 const babies = await tools.babies.list({ includeDeleted: false });
 const prediction = await tools.sleep.predict({ babyUid: babies.data[0].uid });
+const bottle = await tools.log.bottle({ volume: 5, volumeUnit: "fluidOunces" });
 ```
 
-All Toolcraft commands have `cli`, `mcp`, and `sdk` scope. The adapters share one handler implementation, so validation, confirmation, authentication, and returned data do not drift between surfaces.
+All Toolcraft commands have `cli`, `mcp`, and `sdk` scope, preserving exact command parity across the three surfaces. The adapters share one handler implementation, so validation, authentication, and returned data do not drift. The CLI requires `--yes` for reviewed destructive actions, while MCP clients receive the corresponding destructive annotations.
+
+The command hierarchy is intentionally task-first:
+
+- `log` — pump, bottle, diaper, medicine, and another completed point activity.
+- `timeline`, `sleep`, `journal`, `reminders`, and `insights` — everyday reads and care workflows.
+- `manage` — account, baby-profile, caregiver, activity-type, group, and setting administration.
+- `reports` — CSV and PDF exports.
+- `advanced` — raw JSON patches, attachments, backups, and synchronization internals.
+
+MCP has no collapsible group hierarchy: `manage` and `advanced` lower administrative tools' prominence through clear name prefixes, but do not hide them. This is intentional so CLI, MCP, and SDK expose the same 79 commands.
 
 ## Sign in
 
@@ -269,7 +282,7 @@ The command opens a temporary Chrome, Edge, or Chromium profile, lets Apple hand
 An Apple app-specific password is not interchangeable with a Baby Daybook password and will not work with Firebase email/password authentication. The password must be linked after a successful Apple session, as the command does. To restore the saved session later:
 
 ```bash
-baby-daybook session status
+baby-daybook manage account status
 ```
 
 This health check refreshes and safely re-persists the rotating session when needed, verifies that Firebase and the active SDK session identify the same account, reports whether email/password is linked, and prints only the number of accessible babies. Pass `--auth-file path` after `--` when using a non-default session file.
@@ -339,6 +352,17 @@ await baby.stopActivity(feeding.uid);
 await baby.saveActivity({ ...feeding, notes: "Good latch" });
 await baby.deleteActivity(feeding.uid);
 ```
+
+Completed point events have dedicated methods and never create an active timer:
+
+```ts
+await baby.logPump({ volume: 135, side: "both" });
+await baby.logBottle({ volume: 150, groupUid: formulaGroupUid });
+await baby.logDiaper({ pee: true, poo: true });
+await baby.logMedicine({ amount: 1, amountUnit: "drops", groupUid: vitaminDGroupUid });
+```
+
+The Toolcraft `log` façade adds single-baby auto-selection, exact baby-name lookup, fluid-ounce conversion, and safe group-title resolution. Native records keep canonical milliliters and integer `0/1` flags at the Firestore boundary while SDK callers receive booleans.
 
 `saveActivity` mirrors the Android editor by preserving type-specific fields while applying the native update and synchronization stamps. `deleteActivity` writes the same synchronized tombstone used by the app rather than hard-deleting history.
 
@@ -650,6 +674,8 @@ const quickLaunch = await baby.getQuickLaunchItems({
 ```
 
 Each item contains its configured activity type, latest activity when present, and first relevant reminder schedule when present. Stored activity-type configuration order is preserved; unknown or deleted type IDs are skipped.
+
+Baby Daybook intentionally stores an empty `title` for built-in activity types because the native app localizes them from their stable UID. Composed read models expose `activityType.displayTitle` for rendering; the activity-type CLI/MCP list does the same. Raw repositories, synchronization, and backups keep the native `title` unchanged. Use `resolveActivityTypeDisplayTitle(activityType)` when presenting a raw activity type, and do not persist the derived display title.
 
 The Home day-summary cards are available with the native aggregation and ordering rules:
 

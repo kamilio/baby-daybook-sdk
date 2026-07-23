@@ -43,6 +43,14 @@ describe("Baby Daybook OAuth app", () => {
     expect(metadata).toMatchObject({ issuer: baseUrl, authorization_endpoint: `${baseUrl}/authorize`, token_endpoint: `${baseUrl}/token` });
     const protectedMetadata = await readJson<Record<string, unknown>>(await fetch(`${baseUrl}/.well-known/oauth-protected-resource/mcp`));
     expect(protectedMetadata).toMatchObject({ resource: `${baseUrl}/mcp`, authorization_servers: [baseUrl] });
+    const icon = await fetch(`${baseUrl}/icon.svg`);
+    expect(icon.status).toBe(200);
+    expect(icon.headers.get("content-type")).toBe("image/svg+xml; charset=utf-8");
+    expect(await icon.text()).toContain("<title id=\"title\">Baby Daybook</title>");
+    const iconHead = await fetch(`${baseUrl}/icon.svg`, { method: "HEAD" });
+    expect(iconHead.status).toBe(200);
+    expect(iconHead.headers.get("content-length")).toBe(icon.headers.get("content-length"));
+    expect(await iconHead.text()).toBe("");
     const unauthorized = await fetch(`${baseUrl}/mcp`, { method: "POST" });
     expect(unauthorized.status).toBe(401);
     expect(unauthorized.headers.get("www-authenticate")).toContain(`${baseUrl}/.well-known/oauth-protected-resource/mcp`);
@@ -130,9 +138,10 @@ async function authorizeApple(baseUrl: string, expectedFirebaseUser: string, ret
     scope: "baby-daybook offline_access",
     state: randomBytes(16).toString("base64url"),
   }).toString();
-  const pageResponse = await fetch(authorize);
-  expect(pageResponse.status).toBe(200);
-  let page = await pageResponse.text();
+    const pageResponse = await fetch(authorize);
+    expect(pageResponse.status).toBe(200);
+    let page = await pageResponse.text();
+    expect(page).toContain('<link rel="icon" href="/icon.svg" type="image/svg+xml">');
   let cookie = pageResponse.headers.getSetCookie()[0]?.split(";", 1)[0];
   let csrf = hiddenValue(page, "csrf");
   let transactionId = hiddenValue(page, "transaction_id");

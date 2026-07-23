@@ -1,3 +1,4 @@
+import { isNativeTrue } from "./native-flags.js";
 import type { DeletionFlag } from "./types.js";
 
 export type StatisticsTimeInterval =
@@ -851,24 +852,24 @@ export function matchesStatisticsActivityParameter(
   switch (parameter) {
     case "pee":
     case "wet":
-      return activity.pee === true;
+      return isNativeTrue(activity.pee);
     case "poo":
     case "dirty":
-      return activity.poo === true;
+      return isNativeTrue(activity.poo);
     case "peeAndPoo":
     case "wetAndDirty":
-      return activity.pee === true && activity.poo === true;
+      return isNativeTrue(activity.pee) && isNativeTrue(activity.poo);
     case "empty":
     case "dry":
-      return activity.pee !== true && activity.poo !== true;
+      return !isNativeTrue(activity.pee) && !isNativeTrue(activity.poo);
     case "left":
       return (activity.leftDuration ?? 0) > 0 || activity.side === "left" || activity.side === "both";
     case "right":
       return (activity.rightDuration ?? 0) > 0 || activity.side === "right" || activity.side === "both";
     case "hairWash":
-      return activity.hairWash === true;
+      return isNativeTrue(activity.hairWash);
     case "noHairWash":
-      return activity.hairWash !== true;
+      return !isNativeTrue(activity.hairWash);
   }
 }
 

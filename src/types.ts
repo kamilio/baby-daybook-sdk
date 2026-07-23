@@ -94,11 +94,16 @@ export interface ActivityType extends BabyDataRecord {
   hasReaction?: boolean;
 }
 
+export interface ActivityTypeView extends ActivityType {
+  displayTitle: string;
+}
+
 export type CreateActivityTypeInput = Omit<ActivityType, "uid" | "userUid" | "babyUid" | "updatedMillis" | "svt" | "deleted"> & {
   uid?: string;
 };
 
 export interface DailyAction extends BabyDataRecord {
+  rev?: number;
   type: string;
   startMillis: number;
   notes?: string;
@@ -119,6 +124,49 @@ export interface DailyAction extends BabyDataRecord {
   poo?: boolean;
   hairWash?: boolean;
 }
+
+export type LoggedActivity = DailyAction & Required<Pick<DailyAction,
+  | "updatedMillis" | "rev" | "notes" | "groupUid" | "endMillis" | "pauseMillis" | "duration"
+  | "leftDuration" | "rightDuration" | "inProgress" | "side" | "temperature" | "volume"
+  | "amount" | "amountUnit" | "reaction" | "pee" | "poo" | "hairWash"
+>>;
+
+export interface LogActivityInput {
+  uid?: string;
+  type: string;
+  startMillis?: number;
+  notes?: string;
+  groupUid?: string;
+  side?: ActivitySide;
+  temperature?: number;
+  volume?: number;
+  amount?: number;
+  amountUnit?: string;
+  reaction?: ActivityReaction;
+  pee?: boolean;
+  poo?: boolean;
+  hairWash?: boolean;
+}
+
+export type LogPumpInput = Pick<LogActivityInput, "uid" | "startMillis" | "notes"> & {
+  volume: number;
+  side: ActivitySide;
+};
+
+export type LogBottleInput = Pick<LogActivityInput, "uid" | "startMillis" | "notes" | "groupUid"> & {
+  volume: number;
+};
+
+export type LogDiaperInput = Pick<LogActivityInput, "uid" | "startMillis" | "notes"> & {
+  pee: boolean;
+  poo: boolean;
+};
+
+export type LogMedicineInput = Pick<LogActivityInput, "uid" | "startMillis" | "notes"> & {
+  groupUid: string;
+  amount: number;
+  amountUnit: string;
+};
 
 export interface ActivityGroup extends BabyDataRecord {
   title: string;
@@ -260,7 +308,7 @@ export interface ReminderScheduleListOptions extends ListOptions {
 }
 
 export interface QuickLaunchItem {
-  activityType: ActivityType;
+  activityType: ActivityTypeView;
   lastActivity?: DailyAction;
   reminderSchedule?: ReminderSchedule;
 }

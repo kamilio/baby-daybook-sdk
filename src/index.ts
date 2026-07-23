@@ -9,6 +9,14 @@ export {
 } from "./activity-queries.js";
 export type { ActivityAmount, LastActivityOptions } from "./activity-queries.js";
 export { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-groups.js";
+export {
+  BUILT_IN_ACTIVITY_TYPE_DISPLAY_TITLES,
+  decodeActivityType,
+  encodeActivityType,
+  resolveActivityTypeDisplayTitle,
+  withActivityTypeDisplayTitle,
+} from "./activity-types.js";
+export { buildPointActivity, decodeDailyAction, encodeDailyAction } from "./daily-actions.js";
 export { AuthSession, BabyDaybookAuth } from "./auth.js";
 export type { AppleCredential, AuthOptions, FirebaseAccount, FirebaseProviderInfo, OAuthCredential } from "./auth.js";
 export {
@@ -19,6 +27,7 @@ export {
   parseAppleCallbackUrl,
 } from "./apple.js";
 export type { AppleAuthorizationOptions } from "./apple.js";
+export { decodeBaby, encodeBaby } from "./baby-records.js";
 export { captureAppleCallback, extractAppleCallbackFromCdpEvent, resolveBrowserExecutable } from "./apple-browser-auth.js";
 export type { CaptureAppleCallbackOptions } from "./apple-browser-auth.js";
 export { BabyDaybookClient, BabyClient } from "./client.js";
@@ -71,6 +80,8 @@ export type {
 } from "./functions.js";
 export { paths } from "./paths.js";
 export { createNativeRandomUid } from "./native-id.js";
+export { encodeNativeFlag, isNativeTrue, normalizeNativeFlag } from "./native-flags.js";
+export type { NativeBooleanFlag } from "./native-flags.js";
 export { formatMomentMonthId, groupMomentsByMonth } from "./moments.js";
 export { activitiesToPdf, growthToPdf, timelineToPdf } from "./pdf.js";
 export { CollectionRepository } from "./repository.js";
