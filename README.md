@@ -523,6 +523,8 @@ const timelinePdf = await baby.exportTimelinePdf({ hourLabelInterval: 3 });
 
 Daily-list reports follow the app's section order: day label, timeline, daily note, summary, and individual activity rows. Daily notes are matched using Baby Daybook's `yyyyMMdd` document IDs in the selected timezone. Growth reports include measurement rows and independently selectable weight, height, and head-size trend sections. Timeline reports group activities by day and reproduce the app's hour-label concept.
 
+Growth PDFs treat zero and negative measurement placeholders as absent, matching the development summary's positive-value rule. Each measurement is handled independently: missing values leave blank table cells and do not affect that measurement's trend count, minimum, maximum, or latest value and date. Dated records, notes, and valid measurements in the same row remain included; exports do not modify stored records. This rule applies before metric or imperial conversion.
+
 ## Family sharing
 
 ```ts

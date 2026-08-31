@@ -323,13 +323,13 @@ function formatDuration(millis: number): string {
 }
 
 function convertWeight(value: number | undefined, unit: "kg" | "lb"): number | undefined {
-  if (value === undefined) return undefined;
-  return unit === "lb" ? value * 2.2046226218 : value;
+  if (value !== undefined && value > 0) return unit === "lb" ? value * 2.2046226218 : value;
+  return undefined;
 }
 
 function convertLength(value: number | undefined, unit: "cm" | "in"): number | undefined {
-  if (value === undefined) return undefined;
-  return unit === "in" ? value / 2.54 : value;
+  if (value !== undefined && value > 0) return unit === "in" ? value / 2.54 : value;
+  return undefined;
 }
 
 function formatMeasurement(value: number | undefined): string {
