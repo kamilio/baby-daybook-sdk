@@ -604,6 +604,23 @@ Version 2 backups embed every active original attachment as base64 by default, s
 
 The SDK backup is a portable JSON snapshot of baby data, per-caregiver reminders and settings, attachment metadata, and optional attachment contents. It intentionally excludes caregiver access-control relationships, caregiver profiles, and purchases. Baby Daybook's Android backup command instead copies the app's nine-table private SQLite database to a `.db` file; the two formats are intentionally not interchangeable.
 
+`restoreBackup` still resolves to `undefined` on success. It restores attachments sequentially, then the baby profile, then the nine record sections concurrently. If any record save fails, it waits for every started save and readback to settle before rejecting; a failed restore no longer leaves sibling SDK promises writing behind the caller's recovery work. A prerequisite failure does not start later stages.
+
+Write-stage failures throw `BabyDaybookRestoreError` (a `BabyDaybookError` with code `BACKUP_RESTORE_FAILED`). Its `outcomes` lists each target and its `fulfilled`, `rejected`, or `not-started` status. Targets identify the backup section and record UID, or the attachment category, item UID, and filename. Rejected outcomes retain the original `reason`; `errors` contains all those reasons and `cause` is the first in report order. Format and attachment-manifest validation errors still reject before writes begin.
+
+```ts
+import { BabyDaybookRestoreError } from "@kamilio/baby-daybook-sdk";
+
+try {
+  await baby.restoreBackup(backup);
+} catch (error) {
+  if (error instanceof BabyDaybookRestoreError) console.error(error.outcomes);
+  throw error;
+}
+```
+
+Restore is not transactional: completed writes are not rolled back. A rejected operation may have committed remotely before a response or readback failed, so its status does not prove that nothing was written. Settling SDK promises cannot cancel work the server may still perform after a transport failure. Inspect the affected targets and reconcile uncertain outcomes before retrying; do not blindly rerun an old backup over newer corrections. Await the restore before beginning recovery.
+
 ## Baby settings
 
 ```ts

@@ -12,6 +12,7 @@ import { hasActivityGroupWithSameName, sortActivityGroups } from "./activity-gro
 import { ActivityTypeRepository, encodeActivityType, withActivityTypeDisplayTitle } from "./activity-types.js";
 import { AuthSession, BabyDaybookAuth, type AppleCredential, type AuthOptions, type FirebaseAccount, type OAuthCredential } from "./auth.js";
 import { decodeBaby, encodeBaby } from "./baby-records.js";
+import { restoreRecordOperations, runBackupRestore, type BackupRestoreOperation } from "./backup-restore.js";
 import { parseAppleCallbackUrl } from "./apple.js";
 import { BABY_DAYBOOK_ACTIVITY_TYPE_COLORS, BUILT_IN_ACTIVITY_TYPES } from "./constants.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
@@ -1239,20 +1240,24 @@ export class BabyClient {
     if (backup.format !== "baby-daybook-sdk-backup" || backup.version !== 2) throw new Error("Unsupported Baby Daybook backup format");
     if (backup.baby.uid !== this.babyUid) throw new Error(`Backup belongs to baby ${backup.baby.uid}, not ${this.babyUid}`);
     this.#validateBackupAttachments(backup);
-    if (backup.attachmentsIncluded) {
-      for (const attachment of backup.attachments) await this.#restoreAttachment(attachment);
-    }
-    await this.client.firestore.set(paths.baby(this.babyUid), encodeBaby(backup.baby));
-    await Promise.all([
-      ...backup.activityTypes.map((item) => this.activityTypes.save(item)),
-      ...backup.activities.map((item) => this.activities.save(item)),
-      ...backup.groups.map((item) => this.groups.save(item)),
-      ...backup.growth.map((item) => this.growth.save(item)),
-      ...backup.moments.map((item) => this.moments.save(item)),
-      ...backup.dailyNotes.map((item) => this.dailyNotes.save(item)),
-      ...backup.teething.map((item) => this.teething.save(item)),
-      ...backup.reminders.map((item) => this.reminders.save(item)),
-      ...backup.settings.map((item) => this.settings.save(item)),
+    const prerequisites: BackupRestoreOperation[] = (backup.attachmentsIncluded ? backup.attachments : []).map((attachment) => ({
+      target: { section: "attachments", category: attachment.category, itemUid: attachment.itemUid, fileName: attachment.fileName },
+      restore: () => this.#restoreAttachment(attachment),
+    }));
+    prerequisites.push({
+      target: { section: "baby", uid: this.babyUid },
+      restore: () => this.client.firestore.set(paths.baby(this.babyUid), encodeBaby(backup.baby)),
+    });
+    await runBackupRestore(prerequisites, [
+      ...restoreRecordOperations("activityTypes", backup.activityTypes, (item) => this.activityTypes.save(item)),
+      ...restoreRecordOperations("activities", backup.activities, (item) => this.activities.save(item)),
+      ...restoreRecordOperations("groups", backup.groups, (item) => this.groups.save(item)),
+      ...restoreRecordOperations("growth", backup.growth, (item) => this.growth.save(item)),
+      ...restoreRecordOperations("moments", backup.moments, (item) => this.moments.save(item)),
+      ...restoreRecordOperations("dailyNotes", backup.dailyNotes, (item) => this.dailyNotes.save(item)),
+      ...restoreRecordOperations("teething", backup.teething, (item) => this.teething.save(item)),
+      ...restoreRecordOperations("reminders", backup.reminders, (item) => this.reminders.save(item)),
+      ...restoreRecordOperations("settings", backup.settings, (item) => this.settings.save(item)),
     ]);
   }
 

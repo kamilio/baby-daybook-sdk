@@ -68,7 +68,7 @@ export {
   roundBabyDaytimeRange,
   validateBabyDaytimeRange,
 } from "./daytime-range.js";
-export { BabyDaybookApiError, BabyDaybookAuthError, BabyDaybookError } from "./errors.js";
+export { BabyDaybookApiError, BabyDaybookAuthError, BabyDaybookError, BabyDaybookRestoreError } from "./errors.js";
 export { decodeFields, decodeValue, encodeFields, encodeValue, FirestoreClient } from "./firestore.js";
 export type { FirestoreSetWrite } from "./firestore.js";
 export { calculateGrowthPercentile, calculateGrowthValueAtPercentile, growthAgeAtDate, sortGrowthEntries } from "./growth.js";

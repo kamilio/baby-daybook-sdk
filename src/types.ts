@@ -486,6 +486,17 @@ export interface BabyDaybookBackup {
   attachments: BabyDaybookBackupAttachment[];
 }
 
+export type BabyDaybookRestoreRecordSection = "activityTypes" | "activities" | "groups" | "growth" | "moments" | "dailyNotes" | "teething" | "reminders" | "settings";
+
+export type BabyDaybookRestoreTarget =
+  | { section: "baby" | BabyDaybookRestoreRecordSection; uid: string }
+  | { section: "attachments"; category: AttachmentCategory; itemUid: string; fileName: string };
+
+export type BabyDaybookRestoreOutcome = { target: BabyDaybookRestoreTarget } & (
+  | { status: "not-started" | "fulfilled" }
+  | { status: "rejected"; reason: unknown }
+);
+
 export interface ActivitySummary {
   count: number;
   totalDurationMillis: number;
