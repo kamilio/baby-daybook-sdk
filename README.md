@@ -357,6 +357,8 @@ await baby.saveActivity({ ...feeding, notes: "Good latch" });
 await baby.deleteActivity(feeding.uid);
 ```
 
+Stopping a breastfeeding or pumping timer saves its final left/right segment together with the completion fields in one write, preserving previously accumulated side durations. A paused side is settled only through its pause time; selecting `both` credits the remaining segment to both side counters. Daily feeding and pumping summaries expose these values as `leftDurationMillis` and `rightDurationMillis`, rather than the generic `durationMillis` field.
+
 Completed point events have dedicated methods and never create an active timer:
 
 ```ts
