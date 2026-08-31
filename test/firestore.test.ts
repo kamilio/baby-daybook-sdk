@@ -8,6 +8,7 @@ describe("FirestoreClient", () => {
       string: "value",
       integer: 4,
       double: 1.5,
+      wholeDouble: 4,
       boolean: true,
       nil: null,
       date: new Date("2026-01-01T00:00:00.000Z"),
@@ -15,9 +16,10 @@ describe("FirestoreClient", () => {
       array: ["x", 2],
       map: { nested: "yes" },
       ignored: undefined,
-    });
+    }, ["wholeDouble"]);
     const decoded = decodeFields(encoded);
     expect(decoded).toMatchObject({ string: "value", integer: 4, double: 1.5, boolean: true, nil: null, array: ["x", 2], map: { nested: "yes" } });
+    expect(encoded.wholeDouble).toEqual({ doubleValue: 4 });
     expect(decoded.date).toBe(Date.parse("2026-01-01T00:00:00.000Z"));
     expect(decoded.bytes).toEqual(new Uint8Array([1, 2]));
     expect(() => encodeFields({ invalid: Number.NaN })).toThrow(BabyDaybookApiError);
@@ -128,6 +130,30 @@ describe("FirestoreClient", () => {
     await expect(firestore.setMany(Array.from({ length: 501 }, (_, index) => ({ path: `x/${index}`, data: {} }))))
       .rejects.toThrow("at most 500 writes");
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects non-conflict batch-write failures instead of acknowledging them", async () => {
+    const fetch = mockFetch(jsonResponse({
+      status: [{ code: 9, message: "Unrelated precondition failed", details: [{ reason: "other" }] }],
+    }));
+
+    await expect(client(fetch).createManyIfAbsent([{ path: "x/a", data: { uid: "a" } }]))
+      .rejects.toMatchObject({ code: "9", message: "Unrelated precondition failed" });
+  });
+
+  it("validates create-only batch writes before making a request", async () => {
+    const fetch = mockFetch();
+    const firestore = client(fetch);
+
+    await expect(firestore.createManyIfAbsent([])).resolves.toEqual([]);
+    await expect(firestore.createManyIfAbsent([
+      { path: "x/a", data: {} },
+      { path: "x/a", data: {} },
+    ])).rejects.toThrow("same document");
+    await expect(firestore.createManyIfAbsent(
+      Array.from({ length: 501 }, (_, index) => ({ path: `x/${index}`, data: {} })),
+    )).rejects.toThrow("at most 500");
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
 

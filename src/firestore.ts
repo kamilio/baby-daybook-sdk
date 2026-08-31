@@ -15,7 +15,10 @@ export interface FirestoreSetWrite {
   path: string;
   data: Record<string, unknown>;
   merge?: boolean;
+  doubleFields?: readonly string[];
 }
+
+export type FirestoreCreateWrite = Omit<FirestoreSetWrite, "merge">;
 
 export class FirestoreClient {
   readonly session: AuthSession;
@@ -65,7 +68,11 @@ export class FirestoreClient {
     };
   }
 
-  async set<T extends Record<string, unknown>>(path: string, data: T, options: { merge?: boolean; serverTimestamp?: boolean } = {}): Promise<FirestoreDocument<T>> {
+  async set<T extends Record<string, unknown>>(
+    path: string,
+    data: T,
+    options: { merge?: boolean; serverTimestamp?: boolean; doubleFields?: readonly string[] } = {},
+  ): Promise<FirestoreDocument<T>> {
     if (options.serverTimestamp !== false) {
       const fields = { ...data };
       delete fields.svt;
@@ -76,7 +83,7 @@ export class FirestoreClient {
           headers: await this.#headers(),
           body: JSON.stringify({
             writes: [{
-              update: { name: this.#documentName(path), fields: encodeFields(fields) },
+              update: { name: this.#documentName(path), fields: encodeFields(fields, options.doubleFields) },
               ...(options.merge ? { updateMask: { fieldPaths: Object.keys(fields) } } : {}),
               updateTransforms: [{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }],
             }],
@@ -93,7 +100,7 @@ export class FirestoreClient {
     const response = await this.#request<FirestoreWireDocument>(url.toString(), {
       method: "PATCH",
       headers: await this.#headers(),
-      body: JSON.stringify({ fields: encodeFields(data) }),
+      body: JSON.stringify({ fields: encodeFields(data, options.doubleFields) }),
     });
     return decodeDocument<T>(response);
   }
@@ -105,16 +112,51 @@ export class FirestoreClient {
       method: "POST",
       headers: await this.#headers(),
       body: JSON.stringify({
-        writes: writes.map(({ path, data, merge }) => {
+        writes: writes.map(({ path, data, merge, doubleFields }) => {
           const fields = { ...data };
           delete fields.svt;
           return {
-            update: { name: this.#documentName(path), fields: encodeFields(fields) },
+            update: { name: this.#documentName(path), fields: encodeFields(fields, doubleFields) },
             ...(merge ? { updateMask: { fieldPaths: Object.keys(fields) } } : {}),
             updateTransforms: [{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }],
           };
         }),
       }),
+    });
+  }
+
+  async createManyIfAbsent(writes: readonly FirestoreCreateWrite[]): Promise<boolean[]> {
+    if (writes.length === 0) return [];
+    if (writes.length > 500) throw new RangeError("Firestore batch writes support at most 500 writes");
+    if (new Set(writes.map(({ path }) => path)).size !== writes.length) {
+      throw new RangeError("Firestore batch writes cannot target the same document more than once");
+    }
+    const response = await this.#request<{ status?: FirestoreWriteStatus[] }>(`${this.baseUrl}:batchWrite`, {
+      method: "POST",
+      headers: await this.#headers(),
+      body: JSON.stringify({
+        writes: writes.map(({ path, data, doubleFields }) => {
+          const fields = { ...data };
+          delete fields.svt;
+          return {
+            update: { name: this.#documentName(path), fields: encodeFields(fields, doubleFields) },
+            currentDocument: { exists: false },
+            updateTransforms: [{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }],
+          };
+        }),
+      }),
+    });
+    if (response.status?.length !== writes.length) {
+      throw new BabyDaybookApiError("Firestore returned an incomplete batch-write status list");
+    }
+    return response.status.map((status) => {
+      const code = status.code ?? 0;
+      if (code === 0) return true;
+      if (code === 6) return false;
+      throw new BabyDaybookApiError(status.message ?? `Firestore batch write failed with status ${code}`, {
+        code: String(code),
+        details: status.details,
+      });
     });
   }
 
@@ -140,8 +182,14 @@ export class FirestoreClient {
   }
 }
 
-export function encodeFields(data: Record<string, unknown>): Record<string, FirestoreValue> {
-  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined).map(([key, value]) => [key, encodeValue(value)]));
+export function encodeFields(
+  data: Record<string, unknown>,
+  doubleFields: readonly string[] = [],
+): Record<string, FirestoreValue> {
+  const forcedDoubles = new Set(doubleFields);
+  return Object.fromEntries(Object.entries(data)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, forcedDoubles.has(key) ? encodeDouble(value) : encodeValue(value)]));
 }
 
 export function encodeValue(value: unknown): FirestoreValue {
@@ -177,6 +225,19 @@ export function decodeValue(value: FirestoreValue): any {
 
 export function decodeFields(fields: Record<string, FirestoreValue>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, decodeValue(value)]));
+}
+
+function encodeDouble(value: unknown): FirestoreValue {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new BabyDaybookApiError("Firestore double values must be finite numbers");
+  }
+  return { doubleValue: value };
+}
+
+interface FirestoreWriteStatus {
+  code?: number;
+  message?: string;
+  details?: unknown;
 }
 
 function decodeDocument<T>(document: FirestoreWireDocument): FirestoreDocument<T> {
