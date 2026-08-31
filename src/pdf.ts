@@ -95,9 +95,9 @@ export function timelineToPdf(
 function activityLine(activity: DailyAction, type?: ActivityType, timeZone = "UTC"): string {
   const durationMillis = activity.duration ?? Math.max(0, (activity.endMillis ?? activity.startMillis) - activity.startMillis);
   const duration = durationMillis > 0 ? formatDuration(durationMillis) : "";
-  const amount = activity.amount === undefined
-    ? activity.volume === undefined ? "" : String(activity.volume)
-    : `${activity.amount}${activity.amountUnit ? ` ${activity.amountUnit}` : ""}`;
+  const amount = ["bottle", "pump", "drink"].includes(activity.type)
+    ? activity.volume === undefined ? "" : `${activity.volume} ml`
+    : activity.amount === undefined ? "" : `${activity.amount}${activity.amountUnit ? ` ${activity.amountUnit}` : ""}`;
   return [
     fit(formatTimestampInZone(activity.startMillis, timeZone), 19),
     fit(resolveActivityTypeDisplayTitle(type ?? activity.type), 20),
