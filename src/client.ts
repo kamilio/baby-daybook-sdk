@@ -977,7 +977,7 @@ export class BabyClient {
   ): Promise<StatisticsDateRangeNavigation> {
     const baby = await this.get();
     if (!baby) throw new Error(`Baby ${this.babyUid} does not exist`);
-    if (baby.birthdayMillis === undefined) throw new Error(`Baby ${this.babyUid} does not have a birthday`);
+    if (interval === "sinceBirthday" && baby.birthdayMillis === undefined) throw new Error(`Baby ${this.babyUid} does not have a birthday`);
     const range = getStatisticsPredefinedDateRange(interval, baby.birthdayMillis, nowMillis);
     return buildStatisticsDateRangeNavigation(range, baby.birthdayMillis, nowMillis);
   }

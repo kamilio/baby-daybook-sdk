@@ -418,17 +418,18 @@ export function canLoadNextStatisticsDateRange(
 
 export function canLoadPreviousStatisticsDateRange(
   range: Readonly<StatisticsDateRange> | undefined,
-  babyBirthdayMillis: number,
+  babyBirthdayMillis?: number,
 ): boolean {
   if (!range) return false;
   validateRange(range);
+  if (babyBirthdayMillis === undefined) return true;
   assertFinite(babyBirthdayMillis, "Baby birthday");
   return range.fromMillis > babyBirthdayMillis;
 }
 
 export function buildStatisticsDateRangeNavigation(
   range: Readonly<StatisticsDateRange>,
-  babyBirthdayMillis: number,
+  babyBirthdayMillis?: number,
   nowMillis = Date.now(),
 ): StatisticsDateRangeNavigation {
   validateRange(range);

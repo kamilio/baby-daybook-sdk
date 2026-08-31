@@ -756,6 +756,8 @@ It returns configured activity types with all-time active record counts and the 
 
 Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
 
+Ordinary presets (`last7Days`, `last14Days`, `last30Days`, `thisMonth`, and `lastMonth`) work without a profile birthday, including the default `sleep statistics` command. Only `sinceBirthday` requires one. When the birthday is unknown, previous-page navigation remains available because no lower bound is known; the SDK does not invent a birthday or alter the profile. `canLoadPreviousStatisticsDateRange` and `buildStatisticsDateRangeNavigation` also accept an omitted birthday. Supplied birthdays retain the existing lower-bound behavior, while next-page navigation remains bounded by the current date.
+
 ```ts
 const navigation = await baby.getStatisticsDateRange("last7Days");
 // navigation.range, navigation.canLoadPrevious, navigation.canLoadNext
