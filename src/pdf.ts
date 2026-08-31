@@ -7,6 +7,15 @@ const PAGE_HEIGHT = 792;
 const MARGIN = 40;
 const LINE_HEIGHT = 14;
 const LINES_PER_PAGE = 49;
+const FONT_SIZE = 10;
+const HELVETICA_WIDTHS = [
+  278, 278, 355, 556, 556, 889, 667, 222, 333, 333, 389, 584, 278, 333, 278, 278,
+  556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556,
+  1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778,
+  667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556,
+  222, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556,
+  556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584,
+] as const;
 
 export function activitiesToPdf(
   activities: readonly DailyAction[],
@@ -130,12 +139,41 @@ function dailyListLines(
       lines.push(...dayActivities.map((activity) => `  ${formatTimeInZone(activity.startMillis, timeZone)} ${resolveActivityTypeDisplayTitle(activityTypes.get(activity.type) ?? activity.type)}`));
     }
     const note = notes.get(dayKey);
-    if (options.includeDayNotes !== false && note?.note.trim()) lines.push(`Day note: ${note.note.trim()}`);
+    if (options.includeDayNotes !== false && note?.note.trim()) lines.push(...wrapDailyNote(note.note));
     if (options.includeDaySummaries !== false && dayActivities.length > 0) lines.push(...daySummaryLines(dayActivities, activityTypes));
     if (options.includeActivities !== false && dayActivities.length > 0) {
       lines.push("Date and time       Type                 Duration   Value        Notes");
       lines.push("--------------------------------------------------------------------------");
       lines.push(...dayActivities.map((activity) => activityLine(activity, activityTypes.get(activity.type), timeZone)));
+    }
+  }
+  return lines;
+}
+
+function wrapDailyNote(note: string): string[] {
+  const maxWidth = (PAGE_WIDTH - 2 * MARGIN) * 1000 / FONT_SIZE;
+  const lines: string[] = [];
+  for (const paragraph of `Day note: ${note}`.replace(/\r\n?/g, "\n").replaceAll("\t", "    ").split("\n")) {
+    const characters = [...paragraph];
+    if (characters.length === 0) lines.push("");
+    let start = 0;
+    while (start < characters.length) {
+      let end = start;
+      let width = 0;
+      let lastSpace = -1;
+      while (end < characters.length) {
+        const character = characters[end]!;
+        const code = character.charCodeAt(0);
+        const printableCode = code >= 32 && code <= 126 ? code : 63;
+        const advance = HELVETICA_WIDTHS[printableCode - 32]!;
+        if (width + advance > maxWidth) break;
+        width += advance;
+        end += 1;
+        if (character === " ") lastSpace = end;
+      }
+      const split = end < characters.length && lastSpace > start ? lastSpace : end;
+      lines.push(characters.slice(start, split).join(""));
+      start = split;
     }
   }
   return lines;
@@ -273,7 +311,7 @@ function pageStream(lines: readonly string[], page: number, pageCount: number): 
   const content = [...lines, "", `Page ${page} of ${pageCount}`];
   return [
     "BT",
-    "/F1 10 Tf",
+    `/F1 ${FONT_SIZE} Tf`,
     `${MARGIN} ${PAGE_HEIGHT - MARGIN} Td`,
     ...content.flatMap((line, index) => index === 0
       ? [`(${escapePdfText(line)}) Tj`]

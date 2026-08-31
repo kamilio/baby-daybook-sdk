@@ -1,6 +1,19 @@
 # Third-Party Notices
 
-The standalone `baby-daybook` CLI, MCP servers, and generated Toolcraft SDKs bundle portions of the packages listed below. The low-level Baby Daybook SDK entry point does not bundle these packages.
+The standalone `baby-daybook` CLI, MCP servers, and generated Toolcraft SDKs bundle portions of the packages listed below. The low-level Baby Daybook SDK entry point does not bundle these packages. All entry points also include the numeric font metrics described separately below.
+
+## Adobe Helvetica font metrics
+
+The printable-ASCII advance widths in `src/pdf.ts` are derived from `Helvetica.afm`, version 002.000, in Adobe's Core 14 AFM distribution: `https://download.macromedia.com/pub/developer/opentype/tech-notes/Core14_AFMs.zip`.
+
+Modification: the ASCII character advances were extracted into a numeric TypeScript array; other AFM data and font programs are not included.
+
+Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated. All Rights Reserved.
+Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
+
+The distribution's permission notice follows unchanged:
+
+This file and the 14 PostScript(R) AFM files it accompanies may be used, copied, and distributed for any purpose and without charge, with or without modification, provided that all copyright notices are retained; that the AFM files are not distributed without this file; that all modifications to this file or any of the AFM files are prominently noted in the modified file(s); and that this paragraph is not modified. Adobe Systems has no responsibility or obligation to support the use of the AFM files.
 
 ## Poe Platform Toolcraft packages
 

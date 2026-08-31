@@ -529,6 +529,8 @@ Activity PDF rows use the recorded volume in milliliters for bottle, pump, and d
 
 Activity CSV exports append `temperature` and `temperatureUnit` after the existing columns, preserving their order. Temperature readings stay numeric in canonical Celsius with `temperatureUnit` set to `celsius`; both cells stay blank for other activity types or an absent reading. CSV and PDF retain stored precision and explicit zero readings without converting units or interpreting the measurement. Native temperature defaults on unrelated activity types are not exported as readings.
 
+Daily notes in activity PDFs wrap to the page's printable width using the rendered font's character advances. Explicit line endings, blank paragraphs, indentation, and complete words are preserved; tabs expand to four spaces. Unbroken text wider than a line is split without truncation. Pagination counts the wrapped physical lines, so long notes continue onto subsequent pages without hiding their ending or overwriting page footers. Exporting leaves the stored note unchanged.
+
 ## Family sharing
 
 ```ts
