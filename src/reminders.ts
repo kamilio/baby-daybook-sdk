@@ -163,32 +163,43 @@ function activitySatisfiesOccurrence(candidate: number, context: ReminderSchedul
 function nextRepeatDaysMillis(reminder: Reminder, nowMillis: number): number | undefined {
   const repeatDays = reminder.repeatDays ?? 0;
   if (repeatDays <= 0) return undefined;
-  let candidate = jumpCalendarDays(reminder.dateMillis, repeatDays, nowMillis);
-  while (candidate <= nowMillis) candidate = addCalendarDays(candidate, repeatDays);
+  let repeatIndex = estimateCalendarRepeats(reminder.dateMillis, repeatDays, nowMillis);
+  let candidate = addCalendarDays(reminder.dateMillis, repeatIndex * repeatDays);
+  while (candidate <= nowMillis) {
+    repeatIndex += 1;
+    candidate = addCalendarDays(reminder.dateMillis, repeatIndex * repeatDays);
+  }
   return candidate;
 }
 
 function expiredRepeatDaysMillis(reminder: Reminder, nowMillis: number): number | undefined {
   const repeatDays = reminder.repeatDays ?? 0;
   if (repeatDays <= 0 || reminder.dateMillis >= nowMillis) return undefined;
-  let candidate = jumpCalendarDays(reminder.dateMillis, repeatDays, nowMillis);
-  while (candidate >= nowMillis) candidate = addCalendarDays(candidate, -repeatDays);
-  while (addCalendarDays(candidate, repeatDays) < nowMillis) candidate = addCalendarDays(candidate, repeatDays);
+  let repeatIndex = estimateCalendarRepeats(reminder.dateMillis, repeatDays, nowMillis);
+  let candidate = addCalendarDays(reminder.dateMillis, repeatIndex * repeatDays);
+  while (candidate >= nowMillis) {
+    repeatIndex -= 1;
+    candidate = addCalendarDays(reminder.dateMillis, repeatIndex * repeatDays);
+  }
+  let nextCandidate = addCalendarDays(reminder.dateMillis, (repeatIndex + 1) * repeatDays);
+  while (nextCandidate < nowMillis) {
+    repeatIndex += 1;
+    candidate = nextCandidate;
+    nextCandidate = addCalendarDays(reminder.dateMillis, (repeatIndex + 1) * repeatDays);
+  }
   return candidate;
 }
 
-function jumpCalendarDays(startMillis: number, repeatDays: number, targetMillis: number): number {
-  const estimatedRepeats = Math.max(0, Math.floor((targetMillis - startMillis) / (repeatDays * DAY_MILLIS)) - 1);
-  return addCalendarDays(startMillis, estimatedRepeats * repeatDays);
+function estimateCalendarRepeats(startMillis: number, repeatDays: number, targetMillis: number): number {
+  return Math.max(0, Math.floor((targetMillis - startMillis) / (repeatDays * DAY_MILLIS)) - 1);
 }
 
 function nextRepeatWeekdaysMillis(reminder: Reminder, nowMillis: number): number | undefined {
   const weekdays = parseReminderWeekdays(reminder.repeatWeekdays);
   if (weekdays.length === 0) return undefined;
-  let candidate = timeOnLocalDay(nowMillis, reminder.dateMillis);
   for (let offset = 0; offset < 8; offset += 1) {
+    const candidate = timeOnLocalDay(nowMillis, reminder.dateMillis, offset);
     if (candidate > nowMillis && weekdays.includes(candidateWeekday(candidate))) return candidate;
-    candidate = addCalendarDays(candidate, 1);
   }
   return undefined;
 }
@@ -196,19 +207,18 @@ function nextRepeatWeekdaysMillis(reminder: Reminder, nowMillis: number): number
 function expiredRepeatWeekdaysMillis(reminder: Reminder, nowMillis: number): number | undefined {
   const weekdays = parseReminderWeekdays(reminder.repeatWeekdays);
   if (weekdays.length === 0) return undefined;
-  let candidate = timeOnLocalDay(nowMillis, reminder.dateMillis);
   for (let offset = 0; offset < 8; offset += 1) {
+    const candidate = timeOnLocalDay(nowMillis, reminder.dateMillis, -offset);
     if (candidate < nowMillis && weekdays.includes(candidateWeekday(candidate))) return candidate;
-    candidate = addCalendarDays(candidate, -1);
   }
   return undefined;
 }
 
-function timeOnLocalDay(dayMillis: number, timeMillis: number): number {
+function timeOnLocalDay(dayMillis: number, timeMillis: number, dayOffset: number): number {
   const day = new Date(dayMillis);
   const time = new Date(timeMillis);
-  day.setHours(time.getHours(), time.getMinutes(), time.getSeconds(), time.getMilliseconds());
-  return day.getTime();
+  time.setFullYear(day.getFullYear(), day.getMonth(), day.getDate() + dayOffset);
+  return time.getTime();
 }
 
 function addCalendarDays(millis: number, days: number): number {

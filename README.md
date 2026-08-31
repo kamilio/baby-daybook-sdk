@@ -594,6 +594,8 @@ await baby.deleteReminder(reminder.uid);
 
 New basic reminders use the app's three-hour interval and native 16-character ID format. Saving clears fields that do not belong to the selected mode, resets dismissal, and enforces a minimum one-day interval for `advanced_repeat_days`. The relevant-reminder helper matches the home screen: expired reminders are always included, upcoming reminders enter the list strictly less than 30 minutes before their occurrence, and `getEarliestReminderDisplayMillis` returns the next time a caller should refresh. Dismissal stamps `dismissedMillis` and `updatedMillis` while resetting `svt` to zero for synchronization.
 
+Day-interval and weekday recurrences use the host process's local time zone and the clock encoded in the stored `dateMillis`, including seconds and milliseconds. Each candidate date is reconstructed independently, so crossing a daylight-saving gap cannot shift later reminders or revive dismissed occurrences during backward scans. A nonexistent local time advances by the size of that date's clock gap; an ambiguous repeated time uses the earlier offset, following JavaScript `Date` resolution. This adjustment applies only to that occurrence, not to other dates or the stored reminder. One-time timestamps and activity-relative elapsed intervals are unchanged.
+
 ## Attachments and backups
 
 ```ts
