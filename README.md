@@ -156,6 +156,8 @@ https://baby-daybook-kjopek.fly.dev/mcp
 
 Connect that URL from an OAuth-capable MCP client. The client discovers protected-resource and authorization-server metadata, dynamically registers, and starts authorization code with PKCE. The hosted interaction offers Sign in with Apple using a one-time `intent://callback…` paste-back step and an email/password option for accounts that already have password sign-in enabled. Each OAuth subject receives a separate encrypted Baby Daybook refresh token; there is no shared account, static service token, or anonymous fallback.
 
+After a successful Apple or email reconnection, the next tool request loads the replacement Baby Daybook session without a server restart. Late refresh or sign-out callbacks from an older client cannot overwrite or remove that replacement, and an older failed request cannot evict the new cached client. A cached-session refresh failure discards that client but retains persisted sign-in state for recovery. Already-running tool operations are not automatically cancelled or replayed.
+
 Maintainers deploy the bundled Node.js 24 OAuth server from this repository's `Dockerfile` and `fly.toml`.
 
 The deployment uses Toolcraft's supported authorization server, SQLite on a persistent Fly volume, AES-256-GCM session encryption, ES256 access tokens, PKCE S256, exact redirect URIs, token rotation with replay revocation, secure interaction cookies, request limits, and rate limits.

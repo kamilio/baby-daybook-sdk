@@ -149,7 +149,7 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
         return;
       }
       if (pathname === "/interaction/apple" && request.method === "POST") {
-        const context = { baseUrl, database, authorizationServer, fetch, encryptionKey: options.encryptionKey };
+        const context = { baseUrl, database, sessions, authorizationServer, fetch, encryptionKey: options.encryptionKey };
         try {
           await completeAppleAuthorization(request, response, context);
         } catch (error) {
@@ -163,7 +163,7 @@ export async function createBabyDaybookOAuthApp(options: BabyDaybookOAuthAppOpti
         return;
       }
       if (pathname === "/interaction/email" && request.method === "POST") {
-        await completeEmailAuthorization(request, response, { baseUrl, database, authorizationServer, fetch, encryptionKey: options.encryptionKey });
+        await completeEmailAuthorization(request, response, { baseUrl, database, sessions, authorizationServer, fetch, encryptionKey: options.encryptionKey });
         return;
       }
       if (pathname === "/health" && request.method === "GET") {
@@ -231,6 +231,7 @@ export function decodeSessionEncryptionKey(value: string): Buffer {
 interface CompletionContext {
   baseUrl: string;
   database: BabyDaybookOAuthDatabase;
+  sessions: OAuthBabyDaybookSessionManager;
   authorizationServer: OAuthAuthorizationServer;
   fetch: FetchLike;
   encryptionKey: Uint8Array;
@@ -313,6 +314,7 @@ async function finishAuthorization(
   if (!refreshToken) throw new Error("Baby Daybook did not issue a refresh token");
   const subject = deriveOAuthSubject(client.session.userId, context.encryptionKey);
   context.database.saveBabyDaybookRefreshToken(subject, refreshToken);
+  context.sessions.invalidate(subject);
   const result = await context.authorizationServer.completeAuthorization({ transactionId, subject });
   await sendFetchResponse(response, htmlResponse(renderCompletionPage(result.redirectUrl.href)));
 }
@@ -367,19 +369,32 @@ class OAuthBabyDaybookSessionManager {
     private readonly fetch: FetchLike,
   ) {}
 
-  getClient(subject: string): Promise<BabyDaybookClient> {
-    const existing = this.#clients.get(subject);
-    if (existing) return existing;
-    const created = this.#createClient(subject).catch((error) => {
-      this.#clients.delete(subject);
-      throw error;
-    });
-    this.#clients.set(subject, created);
-    return created;
+  invalidate(subject: string): void {
+    this.#clients.delete(subject);
   }
 
-  async #createClient(subject: string): Promise<BabyDaybookClient> {
+  async getClient(subject: string): Promise<BabyDaybookClient> {
+    let pending = this.#clients.get(subject);
+    if (!pending) {
+      const created: Promise<BabyDaybookClient> = Promise.resolve().then(() =>
+        this.#createClient(subject, () => this.#clients.get(subject) === created),
+      );
+      this.#clients.set(subject, created);
+      pending = created;
+    }
+    try {
+      const client = await pending;
+      await client.session.getIdToken();
+      return client;
+    } catch (error) {
+      if (this.#clients.get(subject) === pending) this.#clients.delete(subject);
+      throw error;
+    }
+  }
+
+  async #createClient(subject: string, isCurrent: () => boolean): Promise<BabyDaybookClient> {
     const persist = async (session: AuthSessionSnapshot | undefined) => {
+      if (!isCurrent()) return;
       if (session?.refreshToken) this.database.saveBabyDaybookRefreshToken(subject, session.refreshToken);
       else {
         this.database.deleteBabyDaybookSession(subject);
