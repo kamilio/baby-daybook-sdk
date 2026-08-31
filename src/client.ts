@@ -874,6 +874,7 @@ export class BabyClient {
     const activity = await this.activities.get(uid);
     if (!activity) throw new Error(`Activity ${uid} does not exist`);
     const running = isNativeTrue(activity.inProgress);
+    if (!running && !activity.pauseMillis) return activity;
     const hasActiveSide = (activity.type === "breastfeeding" || activity.type === "pump")
       && (activity.side === "left" || activity.side === "right" || activity.side === "both")
       && (running || (activity.pauseMillis ?? 0) > 0);
@@ -896,6 +897,10 @@ export class BabyClient {
   async pauseActivity(uid: string, pauseMillis = Date.now()): Promise<DailyAction> {
     const activity = await this.activities.get(uid);
     if (!activity) throw new Error(`Activity ${uid} does not exist`);
+    if (!isNativeTrue(activity.inProgress)) {
+      if (activity.pauseMillis) return activity;
+      throw new Error(`Activity ${uid} is not running`);
+    }
     return this.activities.save({ ...activity, pauseMillis, inProgress: false, updatedMillis: Date.now() });
   }
 

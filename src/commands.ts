@@ -477,8 +477,8 @@ const activitiesStart = createCommand({
 });
 
 const activityUidParams = S.Object({ babyUid, uid });
-const activitiesStop = updateCommand({ name: "stop", description: "Stop an in-progress activity", positional: ["babyUid", "uid"], params: S.Object({ babyUid, uid, atMillis: optionalMillis }), handler: (context) => withBaby(context, (baby) => baby.stopActivity(context.params.uid, context.params.atMillis)) });
-const activitiesPause = updateCommand({ name: "pause", description: "Pause an in-progress activity", positional: ["babyUid", "uid"], params: S.Object({ babyUid, uid, atMillis: optionalMillis }), handler: (context) => withBaby(context, (baby) => baby.pauseActivity(context.params.uid, context.params.atMillis)) });
+const activitiesStop = updateCommand({ name: "stop", description: "Stop a running or paused activity; completed activities are unchanged", positional: ["babyUid", "uid"], params: S.Object({ babyUid, uid, atMillis: optionalMillis }), handler: (context) => withBaby(context, (baby) => baby.stopActivity(context.params.uid, context.params.atMillis)) });
+const activitiesPause = updateCommand({ name: "pause", description: "Pause a running activity; already-paused activities are unchanged", positional: ["babyUid", "uid"], params: S.Object({ babyUid, uid, atMillis: optionalMillis }), handler: (context) => withBaby(context, (baby) => baby.pauseActivity(context.params.uid, context.params.atMillis)) });
 const activitiesResume = updateCommand({ name: "resume", description: "Resume a paused activity", positional: ["babyUid", "uid"], params: S.Object({ babyUid, uid, atMillis: optionalMillis }), handler: (context) => withBaby(context, (baby) => baby.resumeActivity(context.params.uid, context.params.atMillis)) });
 const activitiesDelete = deleteCommand({ name: "delete", description: "Delete an activity", positional: ["babyUid", "uid"], params: activityUidParams, confirm: true, handler: (context) => withBaby(context, (baby) => baby.deleteActivity(context.params.uid)) });
 const activitiesUpdate = updateCommand({
