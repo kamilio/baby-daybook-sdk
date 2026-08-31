@@ -13,6 +13,7 @@ WORKDIR /app
 RUN mkdir -p /data && chown node:node /data
 COPY --from=build --chown=node:node /app/dist/oauth-server.js /app/dist/oauth-server.js
 COPY --from=build --chown=node:node /app/dist/oauth-server.js.map /app/dist/oauth-server.js.map
+COPY --from=build --chown=node:node /app/data/pdf-fonts /app/data/pdf-fonts
 USER node
 EXPOSE 8080
 CMD ["node", "--enable-source-maps", "/app/dist/oauth-server.js"]

@@ -81,8 +81,11 @@
   "devDependencies": {
     "@eslint/js": "^9.30.0",
     "@types/node": "^22.15.0",
+    "@types/fontkit": "2.0.9",
     "@vitest/coverage-v8": "^3.2.6",
     "eslint": "^9.30.0",
+    "bidi-js": "1.0.3",
+    "fontkit": "2.0.4",
     "toolcraft": "0.0.152",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",

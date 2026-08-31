@@ -1,6 +1,12 @@
 # Third-Party Notices
 
-The standalone `baby-daybook` CLI, MCP servers, and generated Toolcraft SDKs bundle portions of the packages listed below. The low-level Baby Daybook SDK entry point does not bundle these packages. All entry points also include the numeric font metrics described separately below.
+The standalone `baby-daybook` CLI, MCP servers, and generated Toolcraft SDKs bundle portions of the packages listed below. All entry points, including the low-level SDK, also bundle the Unicode PDF rendering packages and numeric font metrics described separately below.
+
+## Unicode PDF rendering
+
+All entry points bundle `fontkit@2.0.4`, `bidi-js@1.0.3`, and their supporting packages. Available upstream license texts and copyright notices are included in `data/pdf-fonts/SOFTWARE-LICENSES.txt`, including Apache 2.0 for `@swc/helpers` and the Google Brotli decoder sources, and MIT for the remaining packages. Where a package declares MIT but ships no license file, its author metadata and the standard MIT permission text are included explicitly.
+
+The unmodified Noto font assets in `data/pdf-fonts` are distributed under the SIL Open Font License 1.1. Original notices are retained in `OFL-Noto.txt`, `OFL-CJK.txt`, and `OFL-Emoji.txt` alongside the fonts. `manifest.json` records each font's pinned upstream URL, SHA-256, and derived Unicode coverage ranges. Fonts are subsetted only when embedding used glyphs into an exported PDF; the distributed font files are unmodified. The download and manifest-generation script is `scripts/update-pdf-fonts.mjs`.
 
 ## Adobe Helvetica font metrics
 

@@ -1,6 +1,7 @@
 import { resolveActivityTypeDisplayTitle } from "./activity-types.js";
 import type { ActivityPdfOptions, ActivityType, DailyAction, DailyNote, GrowthEntry, GrowthPdfOptions, TimelinePdfOptions } from "./types.js";
 import { formatBabyDaybookDayId } from "./day-id.js";
+import { containsUnicode, encodeUnicodePdf, splitPdfGraphemes, unicodeTextWidth } from "./pdf-unicode.js";
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
@@ -154,6 +155,10 @@ function wrapDailyNote(note: string): string[] {
   const maxWidth = (PAGE_WIDTH - 2 * MARGIN) * 1000 / FONT_SIZE;
   const lines: string[] = [];
   for (const paragraph of `Day note: ${note}`.replace(/\r\n?/g, "\n").replaceAll("\t", "    ").split("\n")) {
+    if (containsUnicode(paragraph)) {
+      lines.push(...wrapUnicodeNote(paragraph, maxWidth));
+      continue;
+    }
     const characters = [...paragraph];
     if (characters.length === 0) lines.push("");
     let start = 0;
@@ -175,6 +180,40 @@ function wrapDailyNote(note: string): string[] {
       lines.push(characters.slice(start, split).join(""));
       start = split;
     }
+  }
+  return lines;
+}
+
+function wrapUnicodeNote(paragraph: string, maxWidth: number): string[] {
+  const characters = splitPdfGraphemes(paragraph);
+  const lines: string[] = [];
+  const widths = new Map<string, number>();
+  let start = 0;
+  while (start < characters.length) {
+    let lower = start + 1;
+    const fits = (end: number) => {
+      const candidate = characters.slice(start, end).join("");
+      let width = widths.get(candidate);
+      if (width === undefined) {
+        width = containsUnicode(candidate) ? unicodeTextWidth(candidate) : [...candidate].reduce((sum, character) => sum + HELVETICA_WIDTHS[character.charCodeAt(0) - 32]!, 0);
+        widths.set(candidate, width);
+      }
+      return width <= maxWidth;
+    };
+    let upper = Math.min(characters.length, start + 128);
+    while (upper < characters.length && fits(upper)) upper = Math.min(characters.length, start + 2 * (upper - start));
+    while (lower <= upper) {
+      const middle = Math.floor((lower + upper) / 2);
+      if (fits(middle)) lower = middle + 1;
+      else upper = middle - 1;
+    }
+    let end = Math.max(start + 1, upper);
+    if (end < characters.length) {
+      const space = characters.lastIndexOf(" ", end - 1);
+      if (space >= start) end = space + 1;
+    }
+    lines.push(characters.slice(start, end).join(""));
+    start = end;
   }
   return lines;
 }
@@ -277,6 +316,9 @@ function hourLabels(interval: number): string {
 }
 
 function encodePdf(pages: readonly (readonly string[])[]): Uint8Array {
+  if (pages.some((lines) => lines.some(containsUnicode))) return encodeUnicodePdf(pages, {
+    width: PAGE_WIDTH, height: PAGE_HEIGHT, margin: MARGIN, lineHeight: LINE_HEIGHT, fontSize: FONT_SIZE, asciiText: escapePdfText,
+  });
   const objects = new Map<number, string>();
   const pageNumbers: number[] = [];
   for (let index = 0; index < pages.length; index += 1) pageNumbers.push(4 + index * 2);
@@ -379,8 +421,10 @@ function formatMeasurement(value: number | undefined): string {
 
 function fit(value: string, width: number): string {
   const normalized = value.replaceAll(/\s+/g, " ").trim();
-  if (normalized.length > width) return `${normalized.slice(0, Math.max(0, width - 1))}…`;
-  return normalized.padEnd(width);
+  const characters = splitPdfGraphemes(normalized);
+  const fitted = characters.length > width ? `${characters.slice(0, Math.max(0, width - 1)).join("")}…` : normalized;
+  const isolated = containsUnicode(fitted) ? `\u2066${fitted}\u2069` : fitted;
+  return isolated + " ".repeat(Math.max(0, width - characters.length));
 }
 
 function chunk<T>(values: readonly T[], size: number): T[][] {

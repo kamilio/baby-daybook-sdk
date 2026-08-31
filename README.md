@@ -531,6 +531,12 @@ Activity CSV exports append `temperature` and `temperatureUnit` after the existi
 
 Daily notes in activity PDFs wrap to the page's printable width using the rendered font's character advances. Explicit line endings, blank paragraphs, indentation, and complete words are preserved; tabs expand to four spaces. Unbroken text wider than a line is split without truncation. Pagination counts the wrapped physical lines, so long notes continue onto subsequent pages without hiding their ending or overwriting page footers. Exporting leaves the stored note unchanged.
 
+All three PDF modes preserve Unicode names, titles, and notes using embedded, subsetted Noto fonts with searchable/copyable text. Bundled fonts cover Latin accents, Greek, Cyrillic, Arabic, Hebrew, major South and Southeast Asian scripts, Chinese, Japanese, Korean, and monochrome emoji. Mixed right-to-left text and combining sequences are shaped before rendering. Table-field length limits count whole grapheme clusters, so shortening a field cannot split an accent or emoji sequence. Wide Unicode rows scale to fit the page; daily notes wrap without truncation. ASCII-only reports retain the compact Helvetica format, and the pure export functions remain synchronous. No font downloads or system fonts are needed at runtime. Characters outside the bundled fonts' coverage produce an explicit error naming their Unicode code points instead of silent replacement; CSV remains available for that text.
+
+Keep `data/pdf-fonts` alongside `dist` when manually copying a built SDK or server. The npm package and Docker image include these assets and their SIL Open Font License notices. From a source checkout, `node scripts/update-pdf-fonts.mjs` reproduces the pinned upstream font assets and coverage manifest.
+
+Reports retain their left-to-right column layout. Unicode table cells include direction-isolation marks so right-to-left labels and notes cannot reorder adjacent dates or numeric values; copied table text can retain these invisible formatting marks.
+
 ## Family sharing
 
 ```ts
