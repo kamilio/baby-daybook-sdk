@@ -608,6 +608,8 @@ const statistics = await baby.getActivityStatistics({
 });
 ```
 
+Activity statistics and `insights.activities` include temperature aggregates only from `temperature` activities with a defined temperature value. Native zero defaults and stray temperature fields on bottles or other activity types do not count as measurements. Ordinary activity counts, volumes, and other dimensions are unchanged. Explicit zero values on temperature activities remain included, consistent with the type-specific temperature chart; native record defaults are not rewritten.
+
 The native app stores attachments under generated UUID image filenames. Firebase Storage triggers create and tombstone the corresponding Firestore file metadata; those metadata collections are read-only to clients, and the SDK never attempts forbidden direct writes. Metadata propagation is asynchronous, so callers that immediately create a backup after uploading should poll `baby.fileMetadata(category).list()` until the new file appears.
 
 Version 2 backups embed every active original attachment as base64 by default, so restored image and video records do not point at missing Storage objects. Native `thumb_` preview files are not embedded because downloads already fall back to the original; applications can regenerate thumbnails after restore. Backup creation fails if an active metadata record points at a missing file rather than silently creating an incomplete archive. Use `includeAttachments: false` only for lightweight same-account snapshots where the original Firebase Storage objects will remain available.

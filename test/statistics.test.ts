@@ -23,7 +23,7 @@ describe("activity statistics", () => {
     expect(report.byReaction).toEqual({ liked: 2 });
     expect(report.byHour[8]).toBe(1);
     expect(report.byHour[20]).toBe(1);
-    expect(report.temperatures).toEqual({ count: 1, sum: 37.2, average: 37.2, minimum: 37.2, maximum: 37.2 });
+    expect(report.temperatures).toEqual({ count: 0, sum: 0 });
   });
 
   it("separates daytime sleep, night sleep, naps, and awake time", () => {

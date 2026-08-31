@@ -44,7 +44,7 @@ export function buildActivityStatistics(
     if (activity.amountUnit && activity.amount !== undefined) addNumber(report.byAmountUnit[activity.amountUnit] ??= numeric(), activity.amount);
     if (activity.reaction) report.byReaction[activity.reaction] = (report.byReaction[activity.reaction] ?? 0) + 1;
     report.byHour[new Date(activity.startMillis).getHours()]! += 1;
-    if (activity.temperature !== undefined) addNumber(report.temperatures, activity.temperature);
+    if (activity.type === "temperature" && activity.temperature !== undefined) addNumber(report.temperatures, activity.temperature);
 
     const day = getDay(days, activity.startMillis, daytimeStartMinutes, daytimeEndMinutes);
     addMetric(day, durationMillis, amount, volume);
