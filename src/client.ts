@@ -1336,7 +1336,8 @@ export class BabyClient {
     const interval = options.intervalMillis ?? 5_000;
     const previous = new Map<string, CloudRecord>();
     while (!options.signal?.aborted) {
-      const current = await this.#snapshot();
+      const current = await this.#snapshot(options.signal);
+      if (options.signal?.aborted) return;
       const changes: ChangeEvent[] = [];
       for (const [key, value] of current) {
         const old = previous.get(key);
@@ -1355,7 +1356,7 @@ export class BabyClient {
     return new CollectionRepository<T>(this.client.firestore, paths.babyCollection(this.babyUid, collection));
   }
 
-  async #snapshot(): Promise<Map<string, CloudRecord>> {
+  async #snapshot(signal?: AbortSignal): Promise<Map<string, CloudRecord>> {
     const [baby, acceptedInvites, pendingInvites, ...baseEntries] = await Promise.all([
       this.get(),
       this.acceptedInvites.list({ includeDeleted: true }),
@@ -1373,6 +1374,7 @@ export class BabyClient {
         .list({ includeDeleted: true })
         .then((items) => [`${category}Files` as BabySyncCollectionName, items] as const)),
     ]);
+    if (signal?.aborted) return new Map();
     const caregiverUids = new Set<string>();
     if (baby && !baby.deleted) caregiverUids.add(baby.userUid);
     for (const invite of acceptedInvites) if (!invite.deleted) caregiverUids.add(invite.userUid);

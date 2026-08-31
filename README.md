@@ -822,6 +822,8 @@ for await (const changes of baby.watch({ intervalMillis: 5_000, signal: controll
 }
 ```
 
+Aborting the signal ends the watch without delivering a pending snapshot, including an initial batch still being read. Cancellation during the base collection reads also skips the later caregiver reads; cancellation during an interval wait clears that timer. Reads already in progress (including their pagination) may finish before the pending iterator request settles, and upstream read errors still propagate. Cancellation is local to that watcher and does not affect other watches or one-time snapshots.
+
 ## Development
 
 From the repository root with Node.js 24 selected:
