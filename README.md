@@ -698,7 +698,7 @@ const momentsCard = await baby.getDevelopmentMoments(3);
 
 `getDevelopmentGrowth` keeps the newest growth record's identity and backfills each missing measurement from older records, matching the Android repository. `getDevelopmentMoments` counts all active moments, limits moments in `dateMillis DESC, uid` order, and then returns active preview-file metadata for that limited set.
 
-The Home and Timeline screens use an overlap-aware range query. It includes ordinary activities whose start is inside the inclusive range, plus duration activities that began earlier and either end after the range starts or remain in progress:
+The Home and Timeline screens use an overlap-aware range query. It includes ordinary activities whose start is inside the inclusive range, plus duration activities that began earlier and either end after the range starts or remain in progress. Either boundary may be omitted: `fromMillis` alone leaves the upper end open, and `toMillis` alone leaves the lower end open. The same policy applies to `timeline list`, including its CLI and MCP forms. Supplied zero timestamps are real bounds. Calls with both boundaries keep their existing overlap rules; a command with neither boundary retains its unfiltered repository listing:
 
 ```ts
 const activities = await baby.listActivitiesForRange({
@@ -757,6 +757,8 @@ It returns configured activity types with all-time active record counts and the 
 Native Statistics date presets and previous/next navigation are available too. Ranges use local calendar days, matching the app across daylight-saving changes:
 
 Ordinary presets (`last7Days`, `last14Days`, `last30Days`, `thisMonth`, and `lastMonth`) work without a profile birthday, including the default `sleep statistics` command. Only `sinceBirthday` requires one. When the birthday is unknown, previous-page navigation remains available because no lower bound is known; the SDK does not invent a birthday or alter the profile. `canLoadPreviousStatisticsDateRange` and `buildStatisticsDateRangeNavigation` also accept an omitted birthday. Supplied birthdays retain the existing lower-bound behavior, while next-page navigation remains bounded by the current date.
+
+For `sleep statistics`, each explicit `fromMillis` or `toMillis` overrides that endpoint of the selected interval (`last7Days` by default). If only one is supplied, the other comes from the preset; if both are supplied, the preset and profile lookup are bypassed. An inverted combined range returns a range error instead of silently ignoring the requested date. To query a period wholly outside the preset, supply both endpoints or select an appropriate interval. Partial ranges that need `sinceBirthday` still require a birthday.
 
 ```ts
 const navigation = await baby.getStatisticsDateRange("last7Days");
