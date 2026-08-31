@@ -877,16 +877,16 @@ export class BabyClient {
     const hasActiveSide = (activity.type === "breastfeeding" || activity.type === "pump")
       && (activity.side === "left" || activity.side === "right" || activity.side === "both")
       && (running || (activity.pauseMillis ?? 0) > 0);
-    const sideEndMillis = !running && activity.pauseMillis ? Math.min(endMillis, activity.pauseMillis) : endMillis;
-    const sideElapsed = Math.max(0, sideEndMillis - activity.startMillis - (activity.leftDuration ?? 0) - (activity.rightDuration ?? 0));
+    const effectiveEndMillis = !running && activity.pauseMillis ? Math.min(endMillis, activity.pauseMillis) : endMillis;
+    const sideElapsed = Math.max(0, effectiveEndMillis - activity.startMillis - (activity.leftDuration ?? 0) - (activity.rightDuration ?? 0));
     return this.activities.save({
       ...activity,
       ...(hasActiveSide ? {
         leftDuration: (activity.leftDuration ?? 0) + (activity.side === "left" || activity.side === "both" ? sideElapsed : 0),
         rightDuration: (activity.rightDuration ?? 0) + (activity.side === "right" || activity.side === "both" ? sideElapsed : 0),
       } : {}),
-      endMillis,
-      duration: Math.max(0, endMillis - activity.startMillis),
+      endMillis: effectiveEndMillis,
+      duration: Math.max(0, effectiveEndMillis - activity.startMillis),
       inProgress: false,
       pauseMillis: undefined,
       updatedMillis: Date.now(),

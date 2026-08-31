@@ -357,6 +357,8 @@ await baby.saveActivity({ ...feeding, notes: "Good latch" });
 await baby.deleteActivity(feeding.uid);
 ```
 
+Stopping a paused timer records its pause boundary as `endMillis` and excludes the paused tail from `duration`, sleep charts, and timeline overlap. An explicitly earlier stop time is still honored. `updatedMillis` records the completion write time; a resumed timer uses its requested stop time with the existing pause-adjusted start.
+
 Stopping a breastfeeding or pumping timer saves its final left/right segment together with the completion fields in one write, preserving previously accumulated side durations. A paused side is settled only through its pause time; selecting `both` credits the remaining segment to both side counters. Daily feeding and pumping summaries expose these values as `leftDurationMillis` and `rightDurationMillis`, rather than the generic `durationMillis` field.
 
 Completed point events have dedicated methods and never create an active timer:
