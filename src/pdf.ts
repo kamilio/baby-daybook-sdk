@@ -104,7 +104,7 @@ function activityLine(activity: DailyAction, type?: ActivityType, timeZone = "UT
     fit(formatTimestampInZone(activity.startMillis, timeZone), 19),
     fit(resolveActivityTypeDisplayTitle(type ?? activity.type), 20),
     fit(duration, 10),
-    fit(amount, 12),
+    activity.type === "temperature" ? amount.padEnd(12) : fit(amount, 12),
     fit(activity.notes ?? "", 24),
   ].join(" ");
 }

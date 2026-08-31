@@ -97,6 +97,16 @@ afterEach(() => {
 });
 
 describe("temperature export fidelity", () => {
+  it.each([37.45678901234567, 1.2345678901234568e-10])("keeps the complete %s reading and unit beyond the standard value column", async (temperature) => {
+    const current = fixture();
+    await current.baby.logActivity({ uid: "precise", type: "temperature", startMillis: START, temperature, notes: "Recorded reading" });
+    expect(csvRecords(await current.baby.exportActivitiesCsv())[0]).toMatchObject({ temperature: String(temperature), temperatureUnit: "celsius" });
+    const pdf = await current.baby.exportActivitiesPdf(OPTIONS);
+    expect(pdfRows(pdf)[0]!.slice(52)).toBe(`${temperature} C Recorded reading${" ".repeat(8)}`);
+    expect(current.records.get(`${ROOT}/dailyActions/precise`)?.temperature).toBe(temperature);
+    expect(current.writes).toHaveLength(1);
+  });
+
   it.each([37.4, 36.75, 0, -1.25, 40])("preserves a publicly logged %s Celsius reading in client and typed exports", async (temperature) => {
     const current = fixture();
     const logged = await current.baby.logActivity({ uid: "reading", type: "temperature", startMillis: START, temperature, notes: "Recorded reading" });
