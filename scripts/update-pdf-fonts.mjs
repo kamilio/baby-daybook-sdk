@@ -44,9 +44,10 @@ for (const source of sources) {
   manifest.push({ ...source, sha256: createHash("sha256").update(bytes).digest("hex"), ranges });
   console.log(source.file, bytes.length, ranges.length);
 }
-await download(`${noto}/LICENSE`, "OFL-Noto.txt");
-await download(`${cjk}/Sans/LICENSE`, "OFL-CJK.txt");
-await download(`${google}/ofl/notoemoji/OFL.txt`, "OFL-Emoji.txt");
+for (const [url, file] of [[`${noto}/LICENSE`, "OFL-Noto.txt"], [`${cjk}/Sans/LICENSE`, "OFL-CJK.txt"], [`${google}/ofl/notoemoji/OFL.txt`, "OFL-Emoji.txt"]]) {
+  const text = (await download(url, file)).toString("utf8").replaceAll(/[\t ]+$/gm, "").trimEnd();
+  await writeFile(new URL(file, destination), `${text}\n`);
+}
 await writeFile(new URL("manifest.json", destination), `${JSON.stringify(manifest, null, 2)}\n`);
 const packages = ["fontkit", "bidi-js", "@swc/helpers", "brotli", "clone", "dfa", "fast-deep-equal", "restructure", "tiny-inflate", "unicode-properties", "unicode-trie", "base64-js", "pako", "require-from-string"];
 const notices = [];
@@ -66,5 +67,5 @@ for (const name of packages) {
   }
   notices.push(`${name}@${metadata.version}\n${"=".repeat(60)}\n${text}`);
 }
-await writeFile(new URL("SOFTWARE-LICENSES.txt", destination), `${notices.join("\n\n")}\n`);
+await writeFile(new URL("SOFTWARE-LICENSES.txt", destination), `${notices.join("\n\n").replaceAll(/[\t ]+$/gm, "").trimEnd()}\n`);
 console.log(fileURLToPath(destination));
