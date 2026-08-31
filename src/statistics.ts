@@ -7,8 +7,6 @@ import type {
   NumericStatistics,
 } from "./types.js";
 
-const DAY_MILLIS = 86_400_000;
-
 export function buildActivityStatistics(
   activities: readonly DailyAction[],
   options: ActivityStatisticsOptions = {},
@@ -59,7 +57,7 @@ export function buildActivityStatistics(
       if (split.daytimeMillis >= split.nightMillis) report.sleep.napCount += 1;
       day.daytimeSleepMillis += split.daytimeMillis;
       day.nightSleepMillis += split.nightMillis;
-      day.awakeMillis = Math.max(0, daytimeEndMinutes * 60_000 - daytimeStartMinutes * 60_000 - day.daytimeSleepMillis);
+      day.awakeMillis = Math.max(0, day.awakeMillis - split.daytimeMillis);
     }
   }
 
@@ -121,7 +119,7 @@ function getDay(
     ...metric(),
     daytimeSleepMillis: 0,
     nightSleepMillis: 0,
-    awakeMillis: (daytimeEndMinutes - daytimeStartMinutes) * 60_000,
+    awakeMillis: Math.max(0, localDayTime(millis, daytimeEndMinutes) - localDayTime(millis, daytimeStartMinutes)),
   };
   days.set(date, created);
   return created;
@@ -135,13 +133,12 @@ function splitDaytime(
 ): { daytimeMillis: number; nightMillis: number } {
   if (endMillis <= startMillis) return { daytimeMillis: 0, nightMillis: 0 };
   let daytimeMillis = 0;
-  let cursor = startOfLocalDay(startMillis);
-  const finalDay = startOfLocalDay(endMillis);
-  while (cursor <= finalDay) {
-    const daytimeStart = cursor + daytimeStartMinutes * 60_000;
-    const daytimeEnd = cursor + daytimeEndMinutes * 60_000;
+  let cursor = localDayTime(startMillis, 0);
+  while (cursor < endMillis) {
+    const daytimeStart = localDayTime(cursor, daytimeStartMinutes);
+    const daytimeEnd = localDayTime(cursor, daytimeEndMinutes);
     daytimeMillis += overlap(startMillis, endMillis, daytimeStart, daytimeEnd);
-    cursor += DAY_MILLIS;
+    cursor = localDayTime(cursor, 24 * 60);
   }
   return { daytimeMillis, nightMillis: endMillis - startMillis - daytimeMillis };
 }
@@ -150,9 +147,9 @@ function overlap(startA: number, endA: number, startB: number, endB: number): nu
   return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
 }
 
-function startOfLocalDay(millis: number): number {
+function localDayTime(millis: number, minutes: number): number {
   const date = new Date(millis);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return date.setHours(0, minutes, 0, 0);
 }
 
 function localDateKey(date: Date): string {
