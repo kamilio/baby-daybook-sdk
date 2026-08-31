@@ -1328,6 +1328,10 @@ export class BabyClient {
     for (const key of expected) if (!actual.has(key)) throw new Error(`Missing attachment data: ${key}`);
   }
 
+  async getSyncSnapshot(): Promise<ChangeEvent[]> {
+    return [...await this.#snapshot()].map(([key, value]) => toChange(key, value, "added"));
+  }
+
   async *watch(options: { intervalMillis?: number; signal?: AbortSignal } = {}): AsyncGenerator<ChangeEvent[]> {
     const interval = options.intervalMillis ?? 5_000;
     const previous = new Map<string, CloudRecord>();

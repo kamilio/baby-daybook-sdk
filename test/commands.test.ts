@@ -424,7 +424,7 @@ function universalClient(): Record<string, unknown> {
     exportActivitiesPdf: vi.fn(async () => new Uint8Array([1])),
     exportGrowthPdf: vi.fn(async () => new Uint8Array([1])),
     exportTimelinePdf: vi.fn(async () => new Uint8Array([1])),
-    watch: vi.fn(() => (async function* () { yield []; })()),
+    getSyncSnapshot: vi.fn(async () => []),
   }, {
     get(target, property, receiver) {
       if (property === "then") return undefined;

@@ -807,6 +807,8 @@ Pause other apps and automations that write measurements until the migration fin
 
 ## Change polling
 
+For a one-time read, use `await baby.getSyncSnapshot()` or `baby-daybook advanced sync snapshot <baby-uid>` (typed SDK: `advanced.sync.snapshot`; MCP: `advanced__sync__snapshot`). Each invocation reads the current synchronization collections, including all pages and tombstones, without starting a polling subscription. It returns the same `added` record-event shape as a watch's initial nonempty batch. A missing profile with empty collections returns `[]` (`{ data: [] }` through commands); any available records are still returned if the profile is missing. Upstream read failures propagate rather than becoming an empty success. This is one read pass, not an atomic cross-collection database snapshot.
+
 The mobile app uses Firestore listeners. The REST SDK offers an async polling stream that reports equivalent added, modified, and deleted records without requiring the Firebase browser bundle:
 
 ```ts

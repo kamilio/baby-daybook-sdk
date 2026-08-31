@@ -569,7 +569,7 @@ const exportTimelinePdf = readCommand({ name: "timeline-pdf", description: "Expo
 const backupCreate = readCommand({ name: "create", description: "Create a portable JSON backup", positional: ["babyUid"], params: S.Object({ babyUid, includeAttachments: S.Optional(S.Boolean({ default: false })) }), handler: (context) => withBaby(context, (baby) => baby.createBackup({ includeAttachments: context.params.includeAttachments })) });
 const backupRestore = deleteOkCommand({ name: "restore", description: "Restore a portable JSON backup", positional: ["babyUid"], params: S.Object({ babyUid, backupJson: S.String({ minLength: 2, maxLength: MAX_JSON }) }), confirm: true, handler: (context) => withBaby(context, (baby) => baby.restoreBackup(parseObject(context.params.backupJson, "backupJson") as any)) });
 
-const syncSnapshot = readCommand({ name: "snapshot", description: "Read the complete polling synchronization snapshot", positional: ["babyUid"], params: S.Object({ babyUid }), handler: (context) => withBaby(context, async (baby) => { const controller = new AbortController(); const changes = baby.watch({ intervalMillis: 60_000, signal: controller.signal }); try { const first = await changes.next(); return first.value ?? []; } finally { controller.abort(); await changes.return(undefined); } }) });
+const syncSnapshot = readCommand({ name: "snapshot", description: "Read the complete synchronization snapshot once", positional: ["babyUid"], params: S.Object({ babyUid }), handler: (context) => withBaby(context, (baby) => baby.getSyncSnapshot()) });
 
 export const babyDaybookCommands = defineGroup({
   name: "baby-daybook",
