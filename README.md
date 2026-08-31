@@ -160,6 +160,8 @@ After a successful Apple or email reconnection, the next tool request loads the 
 
 Maintainers deploy the bundled Node.js 24 OAuth server from this repository's `Dockerfile` and `fly.toml`.
 
+The Garmin relay combines complementary legacy wet/dirty diaper events within one minute. New merges persist the consumed watch event IDs in `garminMergedEventIds` on the combined record, in the same write as the merge. Retrying either the merged event or its full original batch does not create another diaper or rewrite that record. Soft-deleted records retain their replay identity. Records merged before this change have no saved incoming event ID; existing duplicates are not automatically repaired. This behavior does not change replay handling for other activity types or explicit activity edits.
+
 The deployment uses Toolcraft's supported authorization server, SQLite on a persistent Fly volume, AES-256-GCM session encryption, ES256 access tokens, PKCE S256, exact redirect URIs, token rotation with replay revocation, secure interaction cookies, request limits, and rate limits.
 
 ## Toolcraft SDK

@@ -146,12 +146,17 @@ async function mergeComplementaryGarminDiaper(
   event: GarminEvent,
   updatedMillis: number,
 ): Promise<boolean> {
+  const collectionPath = `babyData/babyUid_${babyUid}/dailyActions`;
+  const activities = await firestore.list<Record<string, unknown>>(collectionPath, { includeDeleted: true });
+  if (activities.some(({ id, data }) => id === event.id
+    || (Array.isArray(data.garminMergedEventIds) && data.garminMergedEventIds.includes(event.id)))) {
+    return true;
+  }
+
   const isWetOnly = event.pee === true && event.poo !== true;
   const isDirtyOnly = event.poo === true && event.pee !== true;
   if (!isWetOnly && !isDirtyOnly) return false;
 
-  const collectionPath = `babyData/babyUid_${babyUid}/dailyActions`;
-  const activities = await firestore.list<Record<string, unknown>>(collectionPath);
   const complementary = activities
     .filter(({ id, data }) => id !== event.id
       && data.deleted !== true && data.deleted !== 1
@@ -170,6 +175,10 @@ async function mergeComplementaryGarminDiaper(
     pee: 1,
     poo: 1,
     updatedMillis,
+    garminMergedEventIds: [
+      ...(Array.isArray(complementary.data.garminMergedEventIds) ? complementary.data.garminMergedEventIds : []),
+      event.id,
+    ],
   }, { doubleFields: ["volume"] });
   return true;
 }
