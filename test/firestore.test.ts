@@ -3,6 +3,18 @@ import { AuthSession, BabyDaybookApiError, FirestoreClient, decodeFields, encode
 import { jsonResponse, mockFetch } from "./helpers.js";
 
 describe("FirestoreClient", () => {
+  it("includes update-time preconditions in atomic writes without replacing unrelated fields", async () => {
+    const updateTime = "2026-08-31T00:00:00.000000Z";
+    const fetch = mockFetch((_url, init) => {
+      const write = JSON.parse(String(init?.body)).writes[0];
+      expect(write.currentDocument).toEqual({ updateTime });
+      expect(write.updateMask).toEqual({ fieldPaths: ["volume"] });
+      expect(write.updateTransforms).toEqual([{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }]);
+      return jsonResponse({ error: { message: "Record changed" } }, 409);
+    });
+    await expect(client(fetch).setMany([{ path: "x/a", data: { volume: 118.25 }, merge: true, updateTime }])).rejects.toThrow("Record changed");
+  });
+
   it("encodes and decodes Firestore values", () => {
     const encoded = encodeFields({
       string: "value",

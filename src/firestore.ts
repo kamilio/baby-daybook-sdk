@@ -15,10 +15,11 @@ export interface FirestoreSetWrite {
   path: string;
   data: Record<string, unknown>;
   merge?: boolean;
+  updateTime?: string;
   doubleFields?: readonly string[];
 }
 
-export type FirestoreCreateWrite = Omit<FirestoreSetWrite, "merge">;
+export type FirestoreCreateWrite = Omit<FirestoreSetWrite, "merge" | "updateTime">;
 
 export class FirestoreClient {
   readonly session: AuthSession;
@@ -112,12 +113,13 @@ export class FirestoreClient {
       method: "POST",
       headers: await this.#headers(),
       body: JSON.stringify({
-        writes: writes.map(({ path, data, merge, doubleFields }) => {
+        writes: writes.map(({ path, data, merge, doubleFields, updateTime }) => {
           const fields = { ...data };
           delete fields.svt;
           return {
             update: { name: this.#documentName(path), fields: encodeFields(fields, doubleFields) },
             ...(merge ? { updateMask: { fieldPaths: Object.keys(fields) } } : {}),
+            ...(updateTime === undefined ? {} : { currentDocument: { updateTime } }),
             updateTransforms: [{ fieldPath: "svt", setToServerValue: "REQUEST_TIME" }],
           };
         }),

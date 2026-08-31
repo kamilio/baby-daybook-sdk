@@ -726,7 +726,9 @@ Chart periods and comparison queries use the native thresholds and adjacent equa
 When reproducing the app's one-time profile conversion, use `migrateUnitsToMetric`. The callback must durably store the supplied metadata-only recovery backup before the SDK changes any record:
 
 ```ts
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+
+const backupPath = "baby-daybook-pre-unit-conversion.json";
 
 await baby.migrateUnitsToMetric({
   temperatureFahrenheit: true,
@@ -734,15 +736,27 @@ await baby.migrateUnitsToMetric({
   growthWeightPoundsAndOunces: true,
   growthHeightInches: true,
   growthHeadSizeInches: true,
+  loadBackup: async () => {
+    try {
+      return JSON.parse(await readFile(backupPath, "utf8"));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    }
+  },
   persistBackup: (backup) => writeFile(
-    "baby-daybook-pre-unit-conversion.json",
+    backupPath,
     JSON.stringify(backup, null, 2),
-    { mode: 0o600 },
+    { mode: 0o600, flag: "wx" },
   ),
 });
 ```
 
-This follows the native backup-first order, converts only active nonzero values, preserves each converted activity or growth record's timestamp, resets its sync version, and marks the baby profile's `convertUnits` flag after the records succeed. If `persistBackup` rejects, no data is mutated.
+`loadBackup` is required, including for callers upgrading from the earlier write-only callback API. A missing reader rejects before any backup or record is written. Return `undefined` only when no migration backup exists. `persistBackup` must durably create the original backup without replacing an existing file; use a separate recovery file per baby and retain it after failures. The SDK records the source-unit options in that backup and refuses a different baby, changed options, invalid source values, or an unmarked older backup. Review older backups manually rather than guessing their units or overwriting them.
+
+Retries reload the same original snapshot, including after a process restart. Records already equal to their metric targets are skipped, and a completed profile makes a retry a no-op. Only active nonzero measurements are converted; timestamps and unrelated fields are preserved. Each write checks the document's Firestore update time, so a racing edit rejects instead of being overwritten. Deleted records are not recreated. Conversion counts describe writes performed by the current invocation, not all earlier attempts.
+
+Pause other apps and automations that write measurements until the migration finishes. The SDK checks for conflicting values and new records outside the source snapshot, but it does not lock other applications. If it reports a conflict, retain the original backup and reconcile the affected records before retrying; do not create a replacement backup from a partially converted dataset. The baby's `convertUnits` flag is set only after the current records are checked again. If loading or persisting the original backup fails, no unit data is mutated.
 
 ## Change polling
 

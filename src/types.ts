@@ -445,12 +445,16 @@ export interface CreateBackupOptions {
   includeAttachments?: boolean;
 }
 
-export interface BabyUnitMigrationOptions {
+export interface BabyUnitMigrationSourceUnits {
   temperatureFahrenheit: boolean;
   volumeFluidOunces: boolean;
   growthWeightPoundsAndOunces: boolean;
   growthHeightInches: boolean;
   growthHeadSizeInches: boolean;
+}
+
+export interface BabyUnitMigrationOptions extends BabyUnitMigrationSourceUnits {
+  loadBackup: () => BabyDaybookBackup | undefined | Promise<BabyDaybookBackup | undefined>;
   persistBackup: (backup: BabyDaybookBackup) => void | Promise<void>;
   atMillis?: number;
 }
@@ -466,6 +470,7 @@ export interface BabyDaybookBackup {
   format: "baby-daybook-sdk-backup";
   version: 2;
   createdAt: string;
+  unitMigration?: { version: 1; sourceUnits: BabyUnitMigrationSourceUnits };
   baby: Baby;
   activityTypes: ActivityType[];
   activities: DailyAction[];
