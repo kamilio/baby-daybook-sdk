@@ -95,9 +95,11 @@ export function timelineToPdf(
 function activityLine(activity: DailyAction, type?: ActivityType, timeZone = "UTC"): string {
   const durationMillis = activity.duration ?? Math.max(0, (activity.endMillis ?? activity.startMillis) - activity.startMillis);
   const duration = durationMillis > 0 ? formatDuration(durationMillis) : "";
-  const amount = ["bottle", "pump", "drink"].includes(activity.type)
-    ? activity.volume === undefined ? "" : `${activity.volume} ml`
-    : activity.amount === undefined ? "" : `${activity.amount}${activity.amountUnit ? ` ${activity.amountUnit}` : ""}`;
+  const amount = activity.type === "temperature"
+    ? activity.temperature === undefined ? "" : `${activity.temperature} C`
+    : ["bottle", "pump", "drink"].includes(activity.type)
+      ? activity.volume === undefined ? "" : `${activity.volume} ml`
+      : activity.amount === undefined ? "" : `${activity.amount}${activity.amountUnit ? ` ${activity.amountUnit}` : ""}`;
   return [
     fit(formatTimestampInZone(activity.startMillis, timeZone), 19),
     fit(resolveActivityTypeDisplayTitle(type ?? activity.type), 20),
@@ -131,7 +133,7 @@ function dailyListLines(
     if (options.includeDayNotes !== false && note?.note.trim()) lines.push(`Day note: ${note.note.trim()}`);
     if (options.includeDaySummaries !== false && dayActivities.length > 0) lines.push(...daySummaryLines(dayActivities, activityTypes));
     if (options.includeActivities !== false && dayActivities.length > 0) {
-      lines.push("Date and time       Type                 Duration   Amount       Notes");
+      lines.push("Date and time       Type                 Duration   Value        Notes");
       lines.push("--------------------------------------------------------------------------");
       lines.push(...dayActivities.map((activity) => activityLine(activity, activityTypes.get(activity.type), timeZone)));
     }

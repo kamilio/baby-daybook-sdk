@@ -525,7 +525,9 @@ Daily-list reports follow the app's section order: day label, timeline, daily no
 
 Growth PDFs treat zero and negative measurement placeholders as absent, matching the development summary's positive-value rule. Each measurement is handled independently: missing values leave blank table cells and do not affect that measurement's trend count, minimum, maximum, or latest value and date. Dated records, notes, and valid measurements in the same row remain included; exports do not modify stored records. This rule applies before metric or imperial conversion.
 
-Activity PDF rows use the recorded volume in milliliters for bottle, pump, and drink activities, rather than their native zero-valued amount placeholder. Other activity types retain their recorded amount and amount unit. Missing quantities stay blank, and exporting does not change stored records.
+Activity PDF rows use the recorded volume in milliliters for bottle, pump, and drink activities, rather than their native zero-valued amount placeholder. Temperature activities show their recorded Celsius value with an ASCII `C` unit label. Other activity types retain their recorded amount and amount unit. Missing quantities stay blank, and exporting does not change stored records.
+
+Activity CSV exports append `temperature` and `temperatureUnit` after the existing columns, preserving their order. Temperature readings stay numeric in canonical Celsius with `temperatureUnit` set to `celsius`; both cells stay blank for other activity types or an absent reading. CSV and PDF retain stored precision and explicit zero readings without converting units or interpreting the measurement. Native temperature defaults on unrelated activity types are not exported as readings.
 
 ## Family sharing
 

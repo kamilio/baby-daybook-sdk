@@ -20,8 +20,12 @@ export function summarizeActivities(activities: readonly DailyAction[]): Activit
 }
 
 export function activitiesToCsv(activities: readonly DailyAction[]): string {
-  const headers = ["uid", "type", "startMillis", "endMillis", "duration", "side", "volume", "amount", "amountUnit", "reaction", "pee", "poo", "hairWash", "notes"];
-  const rows = activities.map((activity) => headers.map((header) => csvCell((activity as any)[header])).join(","));
+  const headers = ["uid", "type", "startMillis", "endMillis", "duration", "side", "volume", "amount", "amountUnit", "reaction", "pee", "poo", "hairWash", "notes", "temperature", "temperatureUnit"];
+  const rows = activities.map((activity) => {
+    const temperature = activity.type === "temperature" ? activity.temperature : undefined;
+    const values: Record<string, unknown> = { ...activity, temperature, temperatureUnit: temperature === undefined ? undefined : "celsius" };
+    return headers.map((header) => csvCell(values[header])).join(",");
+  });
   return [headers.join(","), ...rows].join("\n");
 }
 
